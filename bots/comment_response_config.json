@@ -1,0 +1,125 @@
+{
+    "Bot": [
+        {
+            "key": "DEL_THRESHOLD",
+            "description": "Delete comments with score below X.",
+            "type": "int",
+            "val": -2,
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "HISTORICAL_DAYS",
+            "description": "Process comments X days old.",
+            "type": "int",
+            "val": 1,
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "PAUSE_AFTER",
+            "description": "Pause after no comments received in stream X times in a row.",
+            "type": "int",
+            "val": 3,
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "REPLY_FOOTER",
+            "description": "Text to append to comment replies.",
+            "type": "str",
+            "val": "^^I ^^am ^^a ^^bot. ^^Downvoted ^^replies ^^will ^^be ^^deleted. ^^[[source/doc](https://github.com/toddrob99/redball/wiki/Comment-Response-Bot)] ^^[[feedback](https://reddit.com/r/redball/)]",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "REQ_NAME",
+            "description": "Only reply to comments that include the bot's name.",
+            "type": "bool",
+            "val": true,
+            "options": [true,false],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "SUBREDDIT",
+            "description": "Subreddit(s) to monitor. Use + to separate multiple values.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        }
+    ],
+    "Keyword Response": [
+        {
+            "key": "braves",
+            "description": "",
+            "type": "str",
+            "val": "*barves",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "bravos",
+            "description": "",
+            "type": "str",
+            "val": "*barvos",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ],
+    "Logging": [
+        {
+            "key": "CONSOLE_LOG_LEVEL",
+            "description": "Console Log Level",
+            "type": "str",
+            "val": "DEBUG",
+            "options": ["DEBUG", "INFO", "WARNING", "ERROR"],
+            "subkeys": [],
+            "parent_key": "LOG_TO_CONSOLE"
+        },
+        {
+            "key": "FILE_LOG_LEVEL",
+            "description": "File Log Level",
+            "type": "str",
+            "val": "DEBUG",
+            "options": ["DEBUG", "INFO", "WARNING", "ERROR"],
+            "subkeys": [],
+            "parent_key": "LOG_TO_FILE"
+        },
+        {
+            "key": "LOG_TO_CONSOLE",
+            "description": "Log to Console",
+            "type": "bool",
+            "val": true,
+            "options": [true, false],
+            "subkeys": ["CONSOLE_LOG_LEVEL"],
+            "parent_key": ""
+        },
+        {
+            "key": "LOG_TO_FILE",
+            "description": "Log to File",
+            "type": "bool",
+            "val": true,
+            "options": [true, false],
+            "subkeys": ["FILE_LOG_LEVEL"],
+            "parent_key": ""
+        },
+        {
+            "key": "PROPAGATE",
+            "description": "Propagate Logs",
+            "type": "bool",
+            "val": false,
+            "options": [true, false],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ]
+}
