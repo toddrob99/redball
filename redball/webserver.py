@@ -182,6 +182,7 @@ def restart_webServer():
 
 
 def check_auth(*args, **kwargs):
+    log.debug("Checking authentication against session: {}".format(cherrypy.session.items()))
     u = cherrypy.session.get("_cp_username")
     if u:
         if not user.check_privilege(u, "rb_web", refresh=True,):
@@ -280,50 +281,59 @@ class WebInterface(object):
                 )
             else:
                 u = user.get_user_info(userid=kwargs["login|userid"], sensitive=False)
-                userid = u["userid"]
-                pwh = u["password"]
-                if user.check_password(kwargs["login|password"], pwh):
-                    log.debug(
-                        "User [{}] successfully authenticated for access to the web interface.".format(
-                            userid
-                        )
-                    )
-                    local_args.update(
-                        {
-                            "info": "You have successfully logged in as {}. Welcome!".format(
-                                userid
-                            ),
-                            "infocontainer_hide": "",
-                        }
-                    )
-                    cherrypy.session.regenerate()
-                    cherrypy.session.update(
-                        {"_cp_username": userid, "_cp_loginTime": time.time()}
-                    )
-                    cherrypy.request.login = userid
-                    redball.LOGGED_IN_USERS.update(
-                        {
-                            userid: {
-                                "PRIVS": user.get_user_info(
-                                    userid=userid, field="privileges"
-                                ),
-                                "privDate": time.time(),
-                            }
-                        }
-                    )
-                    user.log_login(u["id"])
-                    if r:
-                        log.debug("redirecting to {}".format(r))
-                        raise cherrypy.HTTPRedirect(urllib.parse.unquote(r))
-                    else:
-                        raise cherrypy.HTTPRedirect("/")
-                else:
+                if not u.get('userid'):
+                    log.debug("Invalid userid [{}]".format(kwargs["login|userid"]))
                     local_args.update(
                         {
                             "errors": "Your user id and password do not match our records. Please try again.",
                             "errorcontainer_hide": "",
                         }
                     )
+                else:
+                    userid = u["userid"]
+                    pwh = u["password"]
+                    if user.check_password(kwargs["login|password"], pwh):
+                        log.debug(
+                            "User [{}] successfully authenticated for access to the web interface.".format(
+                                userid
+                            )
+                        )
+                        local_args.update(
+                            {
+                                "info": "You have successfully logged in as {}. Welcome!".format(
+                                    userid
+                                ),
+                                "infocontainer_hide": "",
+                            }
+                        )
+                        cherrypy.session.regenerate()
+                        cherrypy.session.update(
+                            {"_cp_username": userid, "_cp_loginTime": time.time()}
+                        )
+                        cherrypy.request.login = userid
+                        redball.LOGGED_IN_USERS.update(
+                            {
+                                userid: {
+                                    "PRIVS": user.get_user_info(
+                                        userid=userid, field="privileges"
+                                    ),
+                                    "privDate": time.time(),
+                                }
+                            }
+                        )
+                        user.log_login(u["id"])
+                        if r:
+                            log.debug("redirecting to {}".format(r))
+                            raise cherrypy.HTTPRedirect(urllib.parse.unquote(r))
+                        else:
+                            raise cherrypy.HTTPRedirect("/")
+                    else:
+                        local_args.update(
+                            {
+                                "errors": "Your user id and password do not match our records. Please try again.",
+                                "errorcontainer_hide": "",
+                            }
+                        )
 
         return serve_page(templateName="login.mako", **local_args)
 

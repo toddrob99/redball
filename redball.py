@@ -6,6 +6,7 @@ https://github.com/toddrob99/redball
 """
 
 from apscheduler.schedulers.background import BackgroundScheduler
+import os
 import sys
 import signal
 import threading
@@ -88,8 +89,17 @@ if __name__ == "__main__":
     # Start web server
     from redball import webserver
 
+    if args.port:
+        web_port = args.port
+        redball.log.debug("Using port {} from args...".format(args.port))
+    elif os.environ.get('PORT'):
+        web_port = int(os.environ["PORT"])
+        redball.log.debug("Using port {} from environment variables...".format(os.environ['PORT']))
+    else:
+        web_port = None
+
     redball.WEB_THREAD = threading.Thread(
-        target=webserver.init_webserver, args=(args.port,), name="rb-web", daemon=True
+        target=webserver.init_webserver, args=(web_port,), name="rb-web", daemon=True
     )
     redball.WEB_THREAD.start()
 
