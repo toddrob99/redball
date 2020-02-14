@@ -1,0 +1,447 @@
+html,body {
+	height: 100%;
+	/*box-sizing: border-box;*/
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	font-family:verdana,tahoma, sans-serif;
+	font-size:0.8em;
+	position: relative;
+	/*padding-bottom: 3rem;*/
+	min-height: 100%;
+}
+
+a {
+	color: #343642;
+	font-weight: bold;
+	text-decoration: none;
+}
+
+a:hover {
+	color: #B30000;
+	text-decoration: none;
+	font-weight: bold;
+}
+
+h1 { margin: 10px 0px; }
+h2 { margin: 8px 0px; }
+h3 { margin: 5px 0px; }
+
+hr { margin: 15px 0px; }
+
+header[role=banner] {
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	width: 100%;
+	height: 50px;
+	background: #eee;
+	color: #343642;
+}
+header[role=banner] div#logo {
+	padding-top:5px;
+	padding-left: 5px;
+	font-size: 1.5em;
+	color: #343642;
+	vertical-align: middle;
+}
+header[role=banner] a {
+	color: #343642;
+	text-decoration: none;
+}
+header[role=banner] a:hover, a.loginlinks:hover {
+	color: #B30000 !important;
+}
+header[role=banner] div#loginstatus {
+	line-height: 100%;
+	text-align: right;
+	float: right;
+	padding: 5px 5px;
+	width: auto; 
+	min-width: 146px;
+	color: #343642;
+}
+header[role=banner] div#userbox {
+	height: 100%;
+	line-height: 100%;
+	text-align: center-right;
+	float: right;
+	/*padding-right: 10px;
+	padding-top: 20px;*/
+	width: auto; 
+	min-width: 146px;
+}
+header[role=banner] a.loginlinks {
+	display: inline-block;
+	height: 30px;
+	line-height: 30px;
+	padding: 0 5%;
+	background: #292a34;
+	border: 1px solid #fff;
+	color: #343642;
+	border-radius: 3px;
+}
+
+header[role=banner]::after {
+	/* clearfix */
+	content: '';
+	display: table;
+	clear: both;
+}
+
+div#pageheader {
+	padding: 0px 4px;
+}
+
+div#errorcontainer {
+	margin-top: 5px;
+	margin-bottom: 5px;
+	min-height: 100%;
+	border-radius: 3px;
+	border: 1px solid #777;
+	background-color: #ff8282;
+	padding: 4px;
+}
+
+div#infocontainer {
+	margin-top: 5px;
+	margin-bottom: 5px;
+	min-height: 100%;
+	border-radius: 3px;
+	border: 1px solid #777;
+	background-color: #ffff82;
+	padding: 4px;
+}
+
+div#pageconainer {
+	padding: 53px 3px 18px 3px; 
+	min-height: calc(100% - 91px);
+}
+
+div#main {
+	padding: 0px 5px;
+	overflow: auto;
+}
+
+div#footer {
+  position: relative;
+  margin-top: -18px; /* negative value of footer height */
+  height: 18px;
+  clear: both;
+  padding: 10px 3px;
+  background-color: #efefef;
+  text-align: center;
+  color: #777;
+}
+
+div#menu {
+	position:absolute;
+	top: 0px;
+	left: 350px;
+	height: 50px;
+	display: inline;
+}
+
+ul.menu {
+	margin: auto;
+	padding: 0px;
+	display:table;
+}
+
+ul.menu li {
+	width: 125px;
+	height: 50px;
+	background-color: #eee;
+	display: table-cell;
+	vertical-align: middle;
+	margin: 0px 0px;
+	padding: 0px;
+	text-align: center;
+}
+
+ul.menu li:hover {
+	background-color: #e3e3e3;
+}
+
+ul.menu li.active {
+	background-color: #e3e3e3;
+	border-bottom: 2px solid #ccc;
+	height: 50px;
+}
+
+.hide {
+	display: none !important;
+}
+
+.helptext {
+	font-size: smaller;
+}
+
+.redBold {
+	color: #b30000;
+	font-weight: bold;
+}
+
+.greenBold {
+	color: #00b300;
+	font-weight: bold;
+}
+
+.indent {
+	padding-left: 15px;
+}
+.indent input, .indent select, .indent textarea {
+	margin-left: 15px;
+	width: 92% !important;
+}
+.indent-twice {
+	padding-left: 30px;
+}
+.indent-twice input, .indent-twice select, .indent-twice textarea {
+	margin-left: 30px;
+	width: 88% !important;
+}
+.indent-thrice {
+	padding-left: 45px;
+}
+.indent-thrice input, .indent-thrice select, .indent-thrice textarea {
+	margin-left: 45px;
+	width: 84% !important;
+}
+.indent-fource {
+	padding-left: 60px;
+}
+.indent-fource input, .indent-fource select, .indent-fource textarea {
+	margin-left: 60px;
+	width: 80% !important;
+}
+
+form {
+	display: inline;
+	line-height: 1.5em;
+}
+
+input.text, select.text, textarea.text {
+	margin-bottom:8px;
+	margin-top: 3px;
+	width:96%;
+	padding: .2em;
+}
+
+div#sysConfig_botType textarea{
+	min-height: 200px;
+}
+div#botType_new textarea{
+	min-height: 100px;
+}
+
+label {
+	font-weight: bold;
+}
+
+div#controlgroup, #botConfig_upload_file {
+	margin-bottom: 8px;
+}
+#botConfig_upload_file_input {
+	display:none;
+}
+#botConfig_upload_file_div {
+	display: block;
+    float: none;
+    width: auto;
+    margin-bottom: 8px;
+    text-align: left;
+}
+
+div.layoutGrid {
+	display: grid;
+	grid-auto-rows: 0;
+	grid-gap: 15px 15px;
+	padding: 10px;
+}
+div.gridItem, div.singleBot {
+	vertical-align: top;
+	display: inline-block;
+	width: auto;
+	height: auto;
+	border: 1px solid #ddd;
+	background-color: #eee;
+	padding: 10px;
+	margin: 3px;
+	border-radius: 3px;
+	box-shadow: 0 0 4px #666;
+}
+
+div.configGrid {
+  grid-template-columns: repeat(auto-fill, minmax(425px, 1fr));
+}
+div.configCategory {
+	min-width: 395px;
+	max-width: 600px;
+}
+span.configCategoryName {
+	font-weight: bold;
+	font-size: 1.5em;
+	display: block;
+	margin-bottom: 15px;
+}
+
+div.botGrid {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+div.bot {
+	min-width: 130px;
+	min-height: 130px;
+	max-width: 400px;
+}
+
+span.botName {
+	font-weight: bold;
+	font-size: 1.5em;
+	display: block;
+	margin-bottom: 15px;
+}
+span.botDetail {
+	display: block;
+	margin-bottom: 5px;
+}
+span.botControls {
+	display: block;
+	margin-top: 10px;
+}
+div.singleBot {
+	min-width: 100px;
+	max-width: 200px;
+	vertical-align: top;
+	display: inline-block;
+	width: auto;
+	height: auto;
+	border: 1px solid #ddd;
+	background-color: #eee;
+	padding: 10px;
+	margin: 3px;
+	border-radius: 3px;
+	box-shadow: 0 0 4px #666;
+}
+div.botState {
+	max-width: 500px !important;
+}
+
+div.redditAuth, div.user, div.botType {
+	max-width: 96%;
+	border: 1px solid #ccc;
+	padding: 5px;
+	margin: 3px;
+	display: -moz-inline-stack;
+	display: inline-block;
+	vertical-align: top;
+	border-radius: 3px;
+	line-height: 2.1em;
+}
+
+div#user select {
+	height: 150px;
+}
+
+div.logsGrid {
+  grid-template-columns: repeat(auto-fill, minmax(425px, 1fr));
+}
+
+div.logs {
+	min-width: 130px;
+	max-width: 400px;
+}
+span.logType {
+	font-weight: bold;
+	font-size: 1.5em;
+	display: block;
+	margin-bottom: 15px;
+}
+span.logFile {
+	display: block;
+	line-height: 1.5em;
+}
+
+div.changePassword {
+	vertical-align: top;
+	display: inline-block;
+	min-width: 130px;
+	min-height: 130px;
+	width: auto;
+	height: auto;
+	max-width: 425px;
+	border: 1px solid #ddd;
+	background-color: #eee;
+	padding: 10px;
+	margin: 3px;
+	border-radius: 3px;
+	box-shadow: 0 0 4px #666;
+}
+
+div.login {
+	vertical-align: top;
+	display: inline-block;
+	min-width: 130px;
+	min-height: 130px;
+	width: auto;
+	height: auto;
+	max-width: 425px;
+	border: 1px solid #ddd;
+	background-color: #eee;
+	padding: 10px;
+	margin: 3px;
+	border-radius: 3px;
+	box-shadow: 0 0 4px #666;
+}
+
+.refreshInterval {
+	float: right;
+	display: inline;
+	vertical-align: top;
+}
+.refreshInterval select {
+	width: auto;
+	margin: 0px;
+}
+
+#loadingcontainer {
+	position: fixed;
+	z-index: 1000;
+	height: 100%;
+	width: 100%;
+}
+
+#blackout {
+	position: fixed;
+	z-index: 1000;
+	height: 100%;
+	width: 100%;
+	background-color: #999;
+	opacity:0.4;
+	filter:alpha(opacity=40); /* For IE8 and earlier */
+}
+
+#loadingdiv {
+	position: relative;
+	z-index: 1001;
+	top: 50%;
+	left: 45%;
+	height: 80px;
+	width: 100px;
+	border: 1px solid #777;
+	background-color: #eee;
+	opacity:1.0;
+	filter:alpha(opacity=100); /* For IE8 and earlier */
+}
+
+#loadingdiv img {
+	margin-left: 32px;
+}
+
+#loadingtext {
+	margin-left: 15px;
+	line-height: 2em;
+}

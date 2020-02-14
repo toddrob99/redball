@@ -1,0 +1,9 @@
+cherrypy
+requests
+apscheduler
+pytz
+tzlocal
+praw
+mlb-statsapi
+pyOpenSSL
+mako

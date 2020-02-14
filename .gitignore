@@ -1,3 +1,14 @@
+local/
+data/
+logs/
+certs/
+*.db
+*.pem
+*.cer
+*custom*.mako
+
+.vscode/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
