@@ -27,7 +27,7 @@ ${'###'}\
 % if data[0]['myTeam']['seasonState'] != 'post:in':
 ## division scoreboard
 ${'###Around the Division' if any(x for x in data[0]['leagueSchedule'] if data[0]['myTeam']['division']['id'] in [x['teams']['away']['team']['division']['id'], x['teams']['home']['team']['division']['id']] and x['gamePk'] not in data.keys()) else 'Around the Division: There are no other division teams playing!'}
-<%include file="division_scoreboard.mako" />
+<%include file="division_scoreboard.mako" args="gamePk=list(data.keys())" />
 % else:
 ## league scoreboard
 ${'###Around the League' if any(x for x in data[0]['leagueSchedule'] if x['gamePk'] not in data.keys()) else 'Around the League: There are no other games!'}
