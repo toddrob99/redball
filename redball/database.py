@@ -188,7 +188,6 @@ def build_tables(tables, logg=log):
                         ('Logging', 'FILE_LOG_LEVEL', 'File Log Level', 'str', '"DEBUG"', ?, '[]', 'LOG_TO_FILE', 'False'),
                         ('Logging', 'LOG_TO_CONSOLE', 'Log to Console', 'bool', 'true', ?, '["CONSOLE_LOG_LEVEL"]', '', 'False'),
                         ('Logging', 'CONSOLE_LOG_LEVEL', 'Console Log Level', 'str', '"INFO"', ?, '[]', 'LOG_TO_CONSOLE', 'False'),
-                        ('API', 'API_KEY', 'API Key', 'str', '""', '[]', '[]', '', 'True'),
                         ('Web/Security', 'HTTP_ROOT', 'HTTP root for web interface (e.g. http://localhost:8087, http://127.0.0.1:8087)', 'str', '"http://localhost:8087"', '[]', '[]', '', 'False'),
                         ('Web/Security', 'HTTP_PORT', 'HTTP port for web interface', 'int', 8087, '[]', '[]', '', 'False'),
                         ('Web/Security', 'AUTH_TYPE', 'Authentication Method', 'str', '"Form"', ?, '[]', '', 'False'),
