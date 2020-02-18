@@ -26,7 +26,7 @@ import statsapi
 
 import praw
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 
 def run(bot, settings):
@@ -40,9 +40,10 @@ class Bot(object):
         self.settings = settings
         self.staleThreads = []
         self.BOT_PATH = os.path.dirname(os.path.realpath(__file__))
-        self.BOT_TEMPLATE_PATH = [os.path.join(self.BOT_PATH, "templates")]
+        self.BOT_TEMPLATE_PATH = []
         if self.settings.get("Bot", {}).get("TEMPLATE_PATH", "") != "":
             self.BOT_TEMPLATE_PATH.append(self.settings["Bot"]["TEMPLATE_PATH"])
+        self.BOT_TEMPLATE_PATH.append(os.path.join(self.BOT_PATH, "templates"))
 
         self.LOOKUP = TemplateLookup(directories=self.BOT_TEMPLATE_PATH)
 
@@ -58,7 +59,7 @@ class Bot(object):
             clear_first=True,
             propagate=False,
         )
-        self.log.debug("Bot received settings: {}".format(self.settings))
+        self.log.debug("Game Thread Bot v{} received settings: {}".format(__version__, self.settings))
 
         # Check db for tables and create if necessary
         self.dbTablePrefix = self.settings.get("Database").get(
