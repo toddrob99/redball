@@ -26,7 +26,7 @@ import statsapi
 
 import praw
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 
 def run(bot, settings):
@@ -59,7 +59,11 @@ class Bot(object):
             clear_first=True,
             propagate=False,
         )
-        self.log.debug("Game Thread Bot v{} received settings: {}".format(__version__, self.settings))
+        self.log.debug(
+            "Game Thread Bot v{} received settings: {}. Template path: {}".format(
+                __version__, self.settings, self.BOT_TEMPLATE_PATH
+            )
+        )
 
         # Check db for tables and create if necessary
         self.dbTablePrefix = self.settings.get("Database").get(
@@ -1458,9 +1462,7 @@ class Bot(object):
                         )
                     elif text == "":
                         self.log.info(
-                            "Skipping game day thread edit since thread text is blank...".format(
-                                pk
-                            )
+                            "Skipping game day thread edit since thread text is blank..."
                         )
                     else:
                         self.log.info("No changes to game day thread.")
@@ -3652,9 +3654,7 @@ class Bot(object):
                         gumbo = self.commonData[pk]["gumbo"]  # Carry forward
 
                 # Include gumbo data
-                pkData.update(
-                    {"timestamps": timestamps, "gumbo": gumbo}
-                )
+                pkData.update({"timestamps": timestamps, "gumbo": gumbo})
 
                 # Formatted Boxscore Info
                 pkData.update({"boxscore": self.format_boxscore_data(gumbo)})
@@ -4927,11 +4927,11 @@ class Bot(object):
                     )
                 )
 
-    def api_call(self, endpoint, params, retries=-1):
+    def api_call(self, endpoint, params, retries=-1, force=False):
         s = {}
         while retries != 0:
             try:
-                s = statsapi.get(endpoint, params)
+                s = statsapi.get(endpoint, params, force=force)
                 break
             except Exception as e:
                 if retries == 0:
