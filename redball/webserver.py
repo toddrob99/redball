@@ -57,11 +57,13 @@ def init_webserver(port=None):
     session_timeout = (
         next(int(x["val"]) for x in webSettings if x["key"] == "SESSION_TIMEOUT") * 60
     )
+    secure_cookies = (proxy_on or https_on or http_disallow)
     log.info(
-        "Starting web server on port {} with web root: {}{}...".format(
+        "Starting web server on port {} with web root: {}{}{}...".format(
             socket_port,
             redball.WEB_ROOT,
             " and proxy support enabled" if proxy_on else "",
+            " and secure cookies enabled" if secure_cookies else "",
         )
     )
     global_conf = {
@@ -82,7 +84,7 @@ def init_webserver(port=None):
         "/": {
             "tools.sessions.on": True,
             "tools.sessions.timeout": session_timeout,
-            "tools.sessions.secure": True,
+            "tools.sessions.secure": secure_cookies,
             "tools.encode.on": True,
             "tools.decode.on": True,
             "tools.encode.encoding": "utf-8",
