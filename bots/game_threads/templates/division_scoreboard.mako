@@ -9,7 +9,7 @@
         gamePks = [x for x in gamePk]
     else:
         gamePks = [0]
-    divGames = [x for x in data[0]['leagueSchedule'] if data[0]['myTeam']['division']['id'] in [x['teams']['away']['team']['division']['id'], x['teams']['home']['team']['division']['id']] and x['gamePk'] not in gamePks]
+    divGames = [x for x in data[0]['leagueSchedule'] if data[0]['myTeam']['division']['id'] in [x['teams']['away']['team'].get('division',{}).get('id'), x['teams']['home']['team'].get('division',{}).get('id')] and x['gamePk'] not in gamePks]
 %>\
 % for x in divGames:
 ${x['teams']['away']['team']['abbreviation']} ${x['teams']['away'].get('score',0) if x['status']['abstractGameCode'] in ['L','F'] else ''} @ \

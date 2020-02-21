@@ -1,5 +1,5 @@
 % if data[0]['myTeam']['seasonState'] in ['pre','regular']:
-${'**Around the Division**' if any(x for x in data[0]['leagueSchedule'] if data[0]['myTeam']['division']['id'] in [x['teams']['away']['team']['division']['id'], x['teams']['home']['team']['division']['id']]) else 'Around the Division: There are no other division teams playing!'}
+${'**Around the Division**' if any(x for x in data[0]['leagueSchedule'] if data[0]['myTeam']['division']['id'] in [x['teams']['away']['team'].get('division',{}).get('id'), x['teams']['home']['team'].get('division',{}).get('id')]) else 'Around the Division: There are no other division teams playing!'}
 <%include file="division_scoreboard.mako" />
 
 % if data[0]['myTeam']['seasonState'] == 'regular':

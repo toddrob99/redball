@@ -3708,7 +3708,9 @@ class Bot(object):
                 # Make the data available
                 self.commonData.update({pk: pkData})
 
-        # self.log.debug('Data available for threads: {}'.format(self.commonData))#debug
+        if redball.DEV:
+            self.log.debug('Data available for threads: {}'.format(self.commonData))  # debug
+
         return True
 
     def format_boxscore_data(self, gumbo):
