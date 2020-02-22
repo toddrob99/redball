@@ -662,7 +662,10 @@ class Bot(object):
                                     {
                                         "COMMENT_THREAD": threading.Thread(
                                             target=self.monitor_game_plays,
-                                            args=(pk, self.activeGames[pk]["gameThread"]),
+                                            args=(
+                                                pk,
+                                                self.activeGames[pk]["gameThread"],
+                                            ),
                                             name="bot-{}-{}-game-{}-comments".format(
                                                 self.bot.id, self.bot.name, pk
                                             ),
