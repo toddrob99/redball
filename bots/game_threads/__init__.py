@@ -1516,8 +1516,8 @@ class Bot(object):
                         True
                         for k, v in self.commonData.items()
                         if k != 0
-                        and v["status"]["abstractGameCode"] != "F"
-                        and v["status"]["codedGameState"] not in ["C", "D", "U", "T"]
+                        and v["schedule"]["status"]["abstractGameCode"] != "F"
+                        and v["schedule"]["status"]["codedGameState"] not in ["C", "D", "U", "T"]
                     ),
                     False,
                 ):
