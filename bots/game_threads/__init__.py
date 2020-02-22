@@ -1652,7 +1652,7 @@ class Bot(object):
                     "%Y-%m-%d %H:%M",
                 )
             )
-            minBefore = int(self.settings.get("Game Thread", {}).get("MIN_BEFORE", 180))
+            minBefore = int(self.settings.get("Game Thread", {}).get("MINUTES_BEFORE", 180))
             minBefore_time = gameStart - timedelta(minutes=minBefore)
             self.activeGames[pk].update(
                 {
