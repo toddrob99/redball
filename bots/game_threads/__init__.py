@@ -523,30 +523,33 @@ class Bot(object):
                                         pk
                                     )
                                 )
-                        except Exception:
-                            self.log.error(
-                                "Game {} thread update process is not running. Attempting to start.".format(
-                                    pk
-                                )
-                            )
-                            self.THREADS[pk].update(
-                                {
-                                    "GAME_THREAD": threading.Thread(
-                                        target=self.game_thread_update_loop,
-                                        args=(pk,),
-                                        name="bot-{}-{}-game-{}".format(
-                                            self.bot.id, self.bot.name, pk
-                                        ),
-                                        daemon=True,
+                        except Exception as e:
+                            if "is not running" in str(e):
+                                self.log.error(
+                                    "Game {} thread update process is not running. Attempting to start.".format(
+                                        pk
                                     )
-                                }
-                            )
-                            self.THREADS[pk]["GAME_THREAD"].start()
-                            self.log.debug(
-                                "Started game thread {}.".format(
-                                    self.THREADS[pk]["GAME_THREAD"]
                                 )
-                            )
+                                self.THREADS[pk].update(
+                                    {
+                                        "GAME_THREAD": threading.Thread(
+                                            target=self.game_thread_update_loop,
+                                            args=(pk,),
+                                            name="bot-{}-{}-game-{}".format(
+                                                self.bot.id, self.bot.name, pk
+                                            ),
+                                            daemon=True,
+                                        )
+                                    }
+                                )
+                                self.THREADS[pk]["GAME_THREAD"].start()
+                                self.log.debug(
+                                    "Started game thread {}.".format(
+                                        self.THREADS[pk]["GAME_THREAD"]
+                                    )
+                                )
+                            else:
+                                raise
 
                         # Check submit/update thread for post game thread
                         try:
@@ -580,30 +583,33 @@ class Bot(object):
                                         pk
                                     )
                                 )
-                        except Exception:
-                            self.log.error(
-                                "Post game {} thread update process is not running. Attempting to start.".format(
-                                    pk
-                                )
-                            )
-                            self.THREADS[pk].update(
-                                {
-                                    "POSTGAME_THREAD": threading.Thread(
-                                        target=self.postgame_thread_update_loop,
-                                        args=(pk,),
-                                        name="bot-{}-{}-postgame-{}".format(
-                                            self.bot.id, self.bot.name, pk
-                                        ),
-                                        daemon=True,
+                        except Exception as e:
+                            if "is not running" in str(e):
+                                self.log.error(
+                                    "Post game {} thread update process is not running. Attempting to start.".format(
+                                        pk
                                     )
-                                }
-                            )
-                            self.THREADS[pk]["POSTGAME_THREAD"].start()
-                            self.log.debug(
-                                "Started post game thread {}.".format(
-                                    self.THREADS[pk]["POSTGAME_THREAD"]
                                 )
-                            )
+                                self.THREADS[pk].update(
+                                    {
+                                        "POSTGAME_THREAD": threading.Thread(
+                                            target=self.postgame_thread_update_loop,
+                                            args=(pk,),
+                                            name="bot-{}-{}-postgame-{}".format(
+                                                self.bot.id, self.bot.name, pk
+                                            ),
+                                            daemon=True,
+                                        )
+                                    }
+                                )
+                                self.THREADS[pk]["POSTGAME_THREAD"].start()
+                                self.log.debug(
+                                    "Started post game thread {}.".format(
+                                        self.THREADS[pk]["POSTGAME_THREAD"]
+                                    )
+                                )
+                            else:
+                                raise
 
                         # Check comment thread
                         try:
@@ -645,30 +651,33 @@ class Bot(object):
                                 raise Exception(
                                     "Game {} comment process is not running!".format(pk)
                                 )
-                        except Exception:
-                            self.log.error(
-                                "Game {} comment process is not running. Attempting to start.".format(
-                                    pk
-                                )
-                            )
-                            self.THREADS[pk].update(
-                                {
-                                    "COMMENT_THREAD": threading.Thread(
-                                        target=self.monitor_game_plays,
-                                        args=(pk, self.activeGames[pk]["gameThread"]),
-                                        name="bot-{}-{}-game-{}-comments".format(
-                                            self.bot.id, self.bot.name, pk
-                                        ),
-                                        daemon=True,
+                        except Exception as e:
+                            if "is not running" in str(e):
+                                self.log.error(
+                                    "Game {} comment process is not running. Attempting to start.".format(
+                                        pk
                                     )
-                                }
-                            )
-                            self.THREADS[pk]["COMMENT_THREAD"].start()
-                            self.log.debug(
-                                "Started comment thread {}.".format(
-                                    self.THREADS[pk]["COMMENT_THREAD"]
                                 )
-                            )
+                                self.THREADS[pk].update(
+                                    {
+                                        "COMMENT_THREAD": threading.Thread(
+                                            target=self.monitor_game_plays,
+                                            args=(pk, self.activeGames[pk]["gameThread"]),
+                                            name="bot-{}-{}-game-{}-comments".format(
+                                                self.bot.id, self.bot.name, pk
+                                            ),
+                                            daemon=True,
+                                        )
+                                    }
+                                )
+                                self.THREADS[pk]["COMMENT_THREAD"].start()
+                                self.log.debug(
+                                    "Started comment thread {}.".format(
+                                        self.THREADS[pk]["COMMENT_THREAD"]
+                                    )
+                                )
+                            else:
+                                raise
 
                     # Make sure game day thread update process is running
                     try:
@@ -697,29 +706,32 @@ class Bot(object):
                                 "Game day thread update process is not running!"
                             )
                     except Exception as e:
-                        self.log.error(
-                            "Game day thread update process is not running. Attempting to start. Error: {}".format(
-                                e
-                            )
-                        )
-                        self.THREADS.update(
-                            {
-                                "GAMEDAY_THREAD": threading.Thread(
-                                    target=self.gameday_thread_update_loop,
-                                    args=(todayGamePks,),
-                                    name="bot-{}-{}-gameday".format(
-                                        self.bot.id, self.bot.name
-                                    ),
-                                    daemon=True,
+                        if "is not running" in str(e):
+                            self.log.error(
+                                "Game day thread update process is not running. Attempting to start. Error: {}".format(
+                                    e
                                 )
-                            }
-                        )
-                        self.THREADS["GAMEDAY_THREAD"].start()
-                        self.log.debug(
-                            "Started game day thread {}.".format(
-                                self.THREADS["GAMEDAY_THREAD"]
                             )
-                        )
+                            self.THREADS.update(
+                                {
+                                    "GAMEDAY_THREAD": threading.Thread(
+                                        target=self.gameday_thread_update_loop,
+                                        args=(todayGamePks,),
+                                        name="bot-{}-{}-gameday".format(
+                                            self.bot.id, self.bot.name
+                                        ),
+                                        daemon=True,
+                                    )
+                                }
+                            )
+                            self.THREADS["GAMEDAY_THREAD"].start()
+                            self.log.debug(
+                                "Started game day thread {}.".format(
+                                    self.THREADS["GAMEDAY_THREAD"]
+                                )
+                            )
+                        else:
+                            raise
 
                     if (
                         len(
@@ -1517,7 +1529,8 @@ class Bot(object):
                         for k, v in self.commonData.items()
                         if k != 0
                         and v["schedule"]["status"]["abstractGameCode"] != "F"
-                        and v["schedule"]["status"]["codedGameState"] not in ["C", "D", "U", "T"]
+                        and v["schedule"]["status"]["codedGameState"]
+                        not in ["C", "D", "U", "T"]
                     ),
                     False,
                 ):
@@ -1652,7 +1665,9 @@ class Bot(object):
                     "%Y-%m-%d %H:%M",
                 )
             )
-            minBefore = int(self.settings.get("Game Thread", {}).get("MINUTES_BEFORE", 180))
+            minBefore = int(
+                self.settings.get("Game Thread", {}).get("MINUTES_BEFORE", 180)
+            )
             minBefore_time = gameStart - timedelta(minutes=minBefore)
             self.activeGames[pk].update(
                 {
@@ -1907,23 +1922,31 @@ class Bot(object):
         if self.settings.get("Comments", {}).get("ENABLED", True) and self.activeGames[
             pk
         ].get("gameThread"):
-            # Spawn separate thread to submit notable play comments in game thread
-            self.THREADS[pk].update(
-                {
-                    "COMMENT_THREAD": threading.Thread(
-                        target=self.monitor_game_plays,
-                        args=(pk, self.activeGames[pk]["gameThread"]),
-                        name="bot-{}-{}-game-{}-comments".format(
-                            self.bot.id, self.bot.name, pk
-                        ),
-                        daemon=True,
+            if self.THREADS[pk].get("COMMENT_THREAD") and isinstance(
+                self.THREADS[pk]["COMMENT_THREAD"], threading.Thread
+            ):
+                # Thread is already running...
+                pass
+            else:
+                # Spawn separate thread to submit notable play comments in game thread
+                self.THREADS[pk].update(
+                    {
+                        "COMMENT_THREAD": threading.Thread(
+                            target=self.monitor_game_plays,
+                            args=(pk, self.activeGames[pk]["gameThread"]),
+                            name="bot-{}-{}-game-{}-comments".format(
+                                self.bot.id, self.bot.name, pk
+                            ),
+                            daemon=True,
+                        )
+                    }
+                )
+                self.THREADS[pk]["COMMENT_THREAD"].start()
+                self.log.debug(
+                    "Started comment thread {}.".format(
+                        self.THREADS[pk]["COMMENT_THREAD"]
                     )
-                }
-            )
-            self.THREADS[pk]["COMMENT_THREAD"].start()
-            self.log.debug(
-                "Started comment thread {}.".format(self.THREADS[pk]["COMMENT_THREAD"])
-            )
+                )
         else:
             if not self.activeGames[pk].get("gameThread"):
                 self.log.info(
@@ -3709,7 +3732,9 @@ class Bot(object):
                 self.commonData.update({pk: pkData})
 
         if redball.DEV:
-            self.log.debug('Data available for threads: {}'.format(self.commonData))  # debug
+            self.log.debug(
+                "Data available for threads: {}".format(self.commonData)
+            )  # debug
 
         return True
 
