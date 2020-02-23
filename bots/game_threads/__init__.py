@@ -647,6 +647,27 @@ class Bot(object):
                                     "Not starting comment process because game thread is already done updating."
                                 )
                                 pass
+                            elif self.commonData.get(pk, {}).get("schedule", {}).get(
+                                "status", {}
+                            ).get("abstractGameCode") == "F" or self.commonData.get(
+                                pk, {}
+                            ).get(
+                                "schedule", {}
+                            ).get(
+                                "status", {}
+                            ).get(
+                                "codedGameState"
+                            ) in [
+                                "C",
+                                "D",
+                                "U",
+                                "T",
+                            ]:
+                                # Game is over, so don't add any comments
+                                self.log.debug(
+                                    "Not starting comment process because game is over."
+                                )
+                                pass
                             else:
                                 raise Exception(
                                     "Game {} comment process is not running!".format(pk)
@@ -1236,10 +1257,12 @@ class Bot(object):
                     )
                     self.activeGames["off"].update({"STOP_FLAG": True})
                     break
-            else:
-                self.log.debug(
-                    "Off day thread stop criteria not met."
-                )  # debug - need this to tell if logic is working
+
+            self.log.debug(
+                "Off day thread stop criteria not met ({}).".format(
+                    update_off_thread_until
+                )
+            )  # debug - need this to tell if logic is working
 
             # Update interval is in minutes (seconds for game thread only)
             odtWait = self.settings.get("Off Day Thread", {}).get("UPDATE_INTERVAL", 5)
@@ -1580,10 +1603,12 @@ class Bot(object):
                     )
                     self.activeGames[pk].update({"STOP_FLAG": True})
                     break
-            else:
-                self.log.debug(
-                    "Game day thread stop criteria not met."
-                )  # debug - need this to tell if logic is working
+
+            self.log.debug(
+                "Game day thread stop criteria not met ({}).".format(
+                    update_gameday_thread_until
+                )
+            )  # debug - need this to tell if logic is working
 
             # Update interval is in minutes (seconds for game thread only)
             gdtWait = self.settings.get("Game Day Thread", {}).get("UPDATE_INTERVAL", 5)
@@ -1922,9 +1947,15 @@ class Bot(object):
 
             skipFlag = True  # Skip first edit since the thread was just posted
 
-        if self.settings.get("Comments", {}).get("ENABLED", True) and self.activeGames[
-            pk
-        ].get("gameThread"):
+        if (
+            self.settings.get("Comments", {}).get("ENABLED", True)
+            and self.activeGames[pk].get("gameThread")
+            and not (
+                self.commonData[pk]["schedule"]["status"]["abstractGameCode"] == "F"
+                or self.commonData[pk]["schedule"]["status"]["codedGameState"]
+                in ["C", "D", "U", "T",]
+            )
+        ):
             if self.THREADS[pk].get("COMMENT_THREAD") and isinstance(
                 self.THREADS[pk]["COMMENT_THREAD"], threading.Thread
             ):
@@ -1956,6 +1987,17 @@ class Bot(object):
                     "Game thread is not posted (even though it should be), so not starting comment process! [pk: {}]".format(
                         pk
                     )
+                )
+            elif self.commonData[pk]["schedule"]["status"][
+                "abstractGameCode"
+            ] == "F" or self.commonData[pk]["schedule"]["status"]["codedGameState"] in [
+                "C",
+                "D",
+                "U",
+                "T",
+            ]:
+                self.log.info(
+                    "Game is over, so not starting comment process! [pk: {}]".format(pk)
                 )
             else:
                 self.log.info(
@@ -2101,10 +2143,12 @@ class Bot(object):
                     )
                     self.activeGames[pk].update({"STOP_FLAG": True})
                     break
-            else:
-                self.log.debug(
-                    "Game thread stop criteria not met."
-                )  # debug - need this to tell if logic is working
+
+            self.log.debug(
+                "Game thread stop criteria not met ({}).".format(
+                    update_game_thread_until
+                )
+            )  # debug - need this to tell if logic is working
 
             if self.commonData[pk]["schedule"]["status"]["detailedState"].startswith(
                 "Delayed"
@@ -2437,10 +2481,6 @@ class Bot(object):
                     )
                     self.activeGames[pk].update({"POST_STOP_FLAG": True})
                     break
-            else:
-                self.log.debug(
-                    "Post game thread stop criteria not met."
-                )  # debug - need this to tell if logic is working
 
             # Update interval is in minutes (seconds for game thread only)
             pgtWait = self.settings.get("Post Game Thread", {}).get(
@@ -3562,12 +3602,15 @@ class Bot(object):
                     )
 
             if len(gamePks) == 0:
+                self.log.warning("No gamePks to collect data for.")
                 return False
 
+            self.log.debug("Getting schedule data for gamePks: {}".format(gamePks))
             s = self.get_schedule_data(
                 ",".join(str(i) for i in gamePks), self.today["Y-m-d"]
             )
             for pk in gamePks:
+                self.log.debug("Collecting data for pk: {}".format(pk))
                 pkData = {}  # temp dict to hold the data until it's complete
 
                 # Schedule data includes status, highlights, weather, broadcasts, probable pitchers, officials, and team info (incl. score)
@@ -3585,6 +3628,7 @@ class Bot(object):
                     next((i for i, x in enumerate(games) if x["gamePk"] == pk), 0)
                 ]
                 pkData.update({"schedule": game})
+                self.log.debug("Appended schedule for pk {}".format(pk))
 
                 # Store game time in myTeam's timezone as well as local (homeTeam's) timezone
                 pkData.update(
@@ -3614,6 +3658,7 @@ class Bot(object):
                         }
                     }
                 )
+                self.log.debug("Added gameTime for pk {}".format(pk))
 
                 # Store a key to indicate if myTeam is home or away
                 pkData.update(
@@ -3623,6 +3668,7 @@ class Bot(object):
                         else "away"
                     }
                 )
+                self.log.debug("Added homeAway for pk {}".format(pk))
 
                 # Team info for opponent - same info as myTeam, but stored in pk dict because it's game-specific
                 pkData.update(
@@ -3634,6 +3680,7 @@ class Bot(object):
                         )
                     }
                 )
+                self.log.debug("Added oppTeam for pk {}".format(pk))
 
                 # Update gumbo data
                 gumboParams = {
@@ -3641,6 +3688,7 @@ class Bot(object):
                     "hydrate": "credits,alignment,flags",
                 }
                 # Get updated list of timestamps
+                self.log.debug("Getting timestamps for pk {}".format(pk))
                 timestamps = self.api_call("game_timestamps", {"gamePk": pk})
                 if not self.commonData.get(pk, {}).get("gumbo") or (
                     self.commonData[pk]["gumbo"]
@@ -3656,15 +3704,18 @@ class Bot(object):
                     > 3
                 ):
                     # Get full gumbo
+                    self.log.debug("Getting full gumbo data for pk {}".format(pk))
                     gumbo = self.api_call("game", gumboParams)
                 else:
                     if len(timestamps) == 0 or timestamps[-1] == self.commonData[pk][
                         "gumbo"
                     ].get("metaData", {}).get("timeStamp"):
                         # We're up to date
+                        self.log.debug("Gumbo data is up to date for pk {}".format(pk))
                         gumbo = self.commonData[pk]["gumbo"]  # Carry forward
                     else:
                         # Get diff patch to bring us up to date
+                        self.log.debug("Getting gumbo diff patch for pk {}".format(pk))
                         diffPatch = self.api_call(
                             "game_diff",
                             {
@@ -3674,6 +3725,7 @@ class Bot(object):
                             },
                             force=True,
                         )  # use force=True due to MLB-StatsAPI bug #31
+                        self.log.debug("Patching gumbo data for pk {}".format(pk))
                         self.patch_dict(
                             self.commonData[pk]["gumbo"], diffPatch
                         )  # Patch in place
@@ -3681,9 +3733,11 @@ class Bot(object):
 
                 # Include gumbo data
                 pkData.update({"timestamps": timestamps, "gumbo": gumbo})
+                self.log.debug("Added gumbo data for pk {}".format(pk))
 
                 # Formatted Boxscore Info
                 pkData.update({"boxscore": self.format_boxscore_data(gumbo)})
+                self.log.debug("Added boxscore for pk {}".format(pk))
 
                 # Update hitter stats vs. probable pitchers - only prior to game start if data already exists
                 if (
@@ -3696,6 +3750,9 @@ class Bot(object):
                     )
                     and pkData["schedule"]["status"]["abstractGameCode"] != "F"
                 ):
+                    self.log.debug(
+                        "Adding batter vs probable pitchers for pk {}".format(pk)
+                    )
                     pkData.update(
                         {
                             "awayBattersVsProb": self.get_batter_stats_vs_pitcher(
@@ -3730,9 +3787,11 @@ class Bot(object):
                 # pkData.update({'homeProbVsTeamStats':self.get_pitching_stats_vs_team()})
 
                 pkData.update({"lastUpdate": datetime.today()})
+                self.log.debug("Added lastUpdate for pk {}".format(pk))
 
                 # Make the data available
                 self.commonData.update({pk: pkData})
+                self.log.debug("Updated commonData with data for pk {}".format(pk))
 
         if redball.DEV:
             self.log.debug(
