@@ -3150,27 +3150,35 @@ class Bot(object):
         # return patched dict
         for x in patch:
             for d in x.get("diff", []):
-                self.log.debug(f"d:{d}")  # debug
+                if redball.DEV:
+                    self.log.debug(f"d:{d}")  # debug
+
                 if d.get("op") is not None:
                     value = d.get("value")
                     if value is not None:
                         path = d.get("path", "").split("/")
                         target = theDict
                         for i, p in enumerate(path[1:]):
-                            self.log.debug(
-                                f"i:{i}, p:{p}, type(target):{type(target)}"
-                            )  # debug
+                            if redball.DEV:
+                                self.log.debug(
+                                    f"i:{i}, p:{p}, type(target):{type(target)}"
+                                )  # debug
+
                             if i == len(path) - 2:
                                 # end of the path--set the value
                                 if d.get("op") == "add" and isinstance(target, list):
-                                    self.log.debug(
-                                        f"appending [{value}] to target; target type:{type(target)}"
-                                    )  # debug
+                                    if redball.DEV:
+                                        self.log.debug(
+                                            f"appending [{value}] to target; target type:{type(target)}"
+                                        )  # debug
+
                                     target.append(value)
                                 else:
-                                    self.log.debug(
-                                        f"updating target[{p}] to [{value}]; target type:{type(target)}"
-                                    )  # debug
+                                    if redball.DEV:
+                                        self.log.debug(
+                                            f"updating target[{p}] to [{value}]; target type:{type(target)}"
+                                        )  # debug
+
                                     target[
                                         int(p) if isinstance(target, list) else p
                                     ] = value
@@ -3184,33 +3192,38 @@ class Bot(object):
                                 # key does not exist
                                 if isinstance(path[i + 1], int):
                                     # next hop is a list
-                                    self.log.debug(
-                                        f"missing key, adding list for target[{p}]"
-                                    )  # debug
+                                    if redball.DEV:
+                                        self.log.debug(
+                                            f"missing key, adding list for target[{p}]"
+                                        )  # debug
+
                                     target[
                                         int(p) if isinstance(target, list) else p
                                     ] = []
                                 else:
                                     # next hop is a dict
-                                    self.log.debug(
-                                        f"missing key, adding dict for target[{p}]"
-                                    )  # debug
+                                    if redball.DEV:
+                                        self.log.debug(
+                                            f"missing key, adding dict for target[{p}]"
+                                        )  # debug
+
                                     target[
                                         int(p) if isinstance(target, list) else p
                                     ] = {}
                             # point to next key in the path
                             target = target[int(p) if isinstance(target, list) else p]
-                            self.log.debug(
-                                f"type(target) after next hop: {type(target)}"
-                            )  # debug
+                            if redball.DEV:
+                                self.log.debug(
+                                    f"type(target) after next hop: {type(target)}"
+                                )  # debug
                     else:
                         # No value to add
-                        self.log.debug("no value")  # debug
-                        pass
+                        if redball.DEV:
+                            self.log.debug("no value")  # debug
                 else:
                     # No op
-                    self.log.debug("no op")  # debug
-                    pass
+                    if redball.DEV:
+                        self.log.debug("no op")  # debug
 
     def get_gameStatus(self, pk, d=None):
         # pk = gamePk, d = date ('%Y-%m-%d')
@@ -3707,12 +3720,13 @@ class Bot(object):
                     self.log.debug("Getting full gumbo data for pk {}".format(pk))
                     gumbo = self.api_call("game", gumboParams)
                 else:
-                    if len(timestamps) == 0 or timestamps[-1] == self.commonData[pk][
-                        "gumbo"
-                    ].get("metaData", {}).get("timeStamp"):
+                    if redball.DEV:
+                        self.log.debug(f"Timestamps[-1]: {timestamps[-1]}; cached gumbo metadata timestamp: {self.commonData[pk]['gumbo'].get('metaData', {}).get('timeStamp')} for pk {pk}")
+
+                    gumbo = self.commonData[pk].get("gumbo", {})
+                    if len(timestamps) == 0 or timestamps[-1] == gumbo.get("metaData", {}).get("timeStamp"):
                         # We're up to date
                         self.log.debug("Gumbo data is up to date for pk {}".format(pk))
-                        gumbo = self.commonData[pk]["gumbo"]  # Carry forward
                     else:
                         # Get diff patch to bring us up to date
                         self.log.debug("Getting gumbo diff patch for pk {}".format(pk))
