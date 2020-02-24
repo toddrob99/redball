@@ -2896,9 +2896,6 @@ class Bot(object):
                     # Mark atBatIndex as processed
                     processedAtBats[str(atBat["atBatIndex"])].update({"c": True})
 
-                self.log.debug("Sleeping 5 seconds between at bats")
-                self.sleep(5)  # TESTING
-
                 # Update DB with current processedAtBats
                 self.update_processedAtBats_in_db(pk, gameThreadId, processedAtBats)
 
