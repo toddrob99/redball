@@ -41,9 +41,9 @@ ${settings['Comments'][("MYTEAM_BATTING_HEADER_" if myTeamBatting else "MYTEAM_P
     ## End if eventType == 'home_run'
     % elif eventType == 'strikeout':
         % if atBat['playEvents'][atBat['pitchIndex'][-1]]['details']['code'] == 'C':
-${'#'} &#xA4D8; (${data[gamePk]["gumbo"]["liveData"]["boxscore"]["teams"]["home" if atBat['about']['halfInning'] == 'top' else "away"]["players"]["ID" + str(atBat['matchup']['pitcher']['id'])]["stats"]["pitching"]["strikeOuts"]})
+${'#'} &#xA4D8;
         % else:
-${'###'} K (${data[gamePk]["gumbo"]["liveData"]["boxscore"]["teams"]["home" if atBat['about']['halfInning'] == 'top' else "away"]["players"]["ID" + str(atBat['matchup']['pitcher']['id'])]["stats"]["pitching"]["strikeOuts"]})
+${'###'} K
         % endif
     ## End if custom event header
     % else:
