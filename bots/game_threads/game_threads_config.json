@@ -372,7 +372,7 @@
             "key": "MYTEAM_PITCHING_EVENTS",
             "description": "Events that will trigger comments while configured team is pitching. Separate multiple events with commas. Event codes can be found at https://statsapi.mlb.com/api/v1/eventTypes. Also available: 'scoring_play'.",
             "type": "list",
-            "val": "scoring_play, pitching_substitution, strikeout, strikeout_double_play, strikeout_triple_play, triple_play",
+            "val": "pitching_substitution, strikeout_triple_play, triple_play",
             "options": [],
             "subkeys": [],
             "parent_key": ""
@@ -381,7 +381,7 @@
             "key": "MYTEAM_BATTING_EVENTS",
             "description": "Events that will trigger comments while configured team is batting. Separate multiple events with commas. Event codes can be found at https://statsapi.mlb.com/api/v1/eventTypes. Also available: 'scoring_play'.",
             "type": "list",
-            "val": "scoring_play, triple, home_run, pitching_substitution",
+            "val": "scoring_play, pitching_substitution",
             "options": [],
             "subkeys": [],
             "parent_key": ""
