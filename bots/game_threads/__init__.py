@@ -26,7 +26,7 @@ import statsapi
 
 import praw
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 
 def run(bot, settings):
@@ -59,7 +59,11 @@ class Bot(object):
             clear_first=True,
             propagate=False,
         )
-        self.log.debug("Game Thread Bot v{} received settings: {}".format(__version__, self.settings))
+        self.log.debug(
+            "Game Thread Bot v{} received settings: {}. Template path: {}".format(
+                __version__, self.settings, self.BOT_TEMPLATE_PATH
+            )
+        )
 
         # Check db for tables and create if necessary
         self.dbTablePrefix = self.settings.get("Database").get(
@@ -519,30 +523,33 @@ class Bot(object):
                                         pk
                                     )
                                 )
-                        except Exception:
-                            self.log.error(
-                                "Game {} thread update process is not running. Attempting to start.".format(
-                                    pk
-                                )
-                            )
-                            self.THREADS[pk].update(
-                                {
-                                    "GAME_THREAD": threading.Thread(
-                                        target=self.game_thread_update_loop,
-                                        args=(pk,),
-                                        name="bot-{}-{}-game-{}".format(
-                                            self.bot.id, self.bot.name, pk
-                                        ),
-                                        daemon=True,
+                        except Exception as e:
+                            if "is not running" in str(e):
+                                self.log.error(
+                                    "Game {} thread update process is not running. Attempting to start.".format(
+                                        pk
                                     )
-                                }
-                            )
-                            self.THREADS[pk]["GAME_THREAD"].start()
-                            self.log.debug(
-                                "Started game thread {}.".format(
-                                    self.THREADS[pk]["GAME_THREAD"]
                                 )
-                            )
+                                self.THREADS[pk].update(
+                                    {
+                                        "GAME_THREAD": threading.Thread(
+                                            target=self.game_thread_update_loop,
+                                            args=(pk,),
+                                            name="bot-{}-{}-game-{}".format(
+                                                self.bot.id, self.bot.name, pk
+                                            ),
+                                            daemon=True,
+                                        )
+                                    }
+                                )
+                                self.THREADS[pk]["GAME_THREAD"].start()
+                                self.log.debug(
+                                    "Started game thread {}.".format(
+                                        self.THREADS[pk]["GAME_THREAD"]
+                                    )
+                                )
+                            else:
+                                raise
 
                         # Check submit/update thread for post game thread
                         try:
@@ -576,30 +583,33 @@ class Bot(object):
                                         pk
                                     )
                                 )
-                        except Exception:
-                            self.log.error(
-                                "Post game {} thread update process is not running. Attempting to start.".format(
-                                    pk
-                                )
-                            )
-                            self.THREADS[pk].update(
-                                {
-                                    "POSTGAME_THREAD": threading.Thread(
-                                        target=self.postgame_thread_update_loop,
-                                        args=(pk,),
-                                        name="bot-{}-{}-postgame-{}".format(
-                                            self.bot.id, self.bot.name, pk
-                                        ),
-                                        daemon=True,
+                        except Exception as e:
+                            if "is not running" in str(e):
+                                self.log.error(
+                                    "Post game {} thread update process is not running. Attempting to start.".format(
+                                        pk
                                     )
-                                }
-                            )
-                            self.THREADS[pk]["POSTGAME_THREAD"].start()
-                            self.log.debug(
-                                "Started post game thread {}.".format(
-                                    self.THREADS[pk]["POSTGAME_THREAD"]
                                 )
-                            )
+                                self.THREADS[pk].update(
+                                    {
+                                        "POSTGAME_THREAD": threading.Thread(
+                                            target=self.postgame_thread_update_loop,
+                                            args=(pk,),
+                                            name="bot-{}-{}-postgame-{}".format(
+                                                self.bot.id, self.bot.name, pk
+                                            ),
+                                            daemon=True,
+                                        )
+                                    }
+                                )
+                                self.THREADS[pk]["POSTGAME_THREAD"].start()
+                                self.log.debug(
+                                    "Started post game thread {}.".format(
+                                        self.THREADS[pk]["POSTGAME_THREAD"]
+                                    )
+                                )
+                            else:
+                                raise
 
                         # Check comment thread
                         try:
@@ -637,34 +647,61 @@ class Bot(object):
                                     "Not starting comment process because game thread is already done updating."
                                 )
                                 pass
+                            elif self.commonData.get(pk, {}).get("schedule", {}).get(
+                                "status", {}
+                            ).get("abstractGameCode") == "F" or self.commonData.get(
+                                pk, {}
+                            ).get(
+                                "schedule", {}
+                            ).get(
+                                "status", {}
+                            ).get(
+                                "codedGameState"
+                            ) in [
+                                "C",
+                                "D",
+                                "U",
+                                "T",
+                            ]:
+                                # Game is over, so don't add any comments
+                                self.log.debug(
+                                    "Not starting comment process because game is over."
+                                )
+                                pass
                             else:
                                 raise Exception(
                                     "Game {} comment process is not running!".format(pk)
                                 )
-                        except Exception:
-                            self.log.error(
-                                "Game {} comment process is not running. Attempting to start.".format(
-                                    pk
-                                )
-                            )
-                            self.THREADS[pk].update(
-                                {
-                                    "COMMENT_THREAD": threading.Thread(
-                                        target=self.monitor_game_plays,
-                                        args=(pk, self.activeGames[pk]["gameThread"]),
-                                        name="bot-{}-{}-game-{}-comments".format(
-                                            self.bot.id, self.bot.name, pk
-                                        ),
-                                        daemon=True,
+                        except Exception as e:
+                            if "is not running" in str(e):
+                                self.log.error(
+                                    "Game {} comment process is not running. Attempting to start.".format(
+                                        pk
                                     )
-                                }
-                            )
-                            self.THREADS[pk]["COMMENT_THREAD"].start()
-                            self.log.debug(
-                                "Started comment thread {}.".format(
-                                    self.THREADS[pk]["COMMENT_THREAD"]
                                 )
-                            )
+                                self.THREADS[pk].update(
+                                    {
+                                        "COMMENT_THREAD": threading.Thread(
+                                            target=self.monitor_game_plays,
+                                            args=(
+                                                pk,
+                                                self.activeGames[pk]["gameThread"],
+                                            ),
+                                            name="bot-{}-{}-game-{}-comments".format(
+                                                self.bot.id, self.bot.name, pk
+                                            ),
+                                            daemon=True,
+                                        )
+                                    }
+                                )
+                                self.THREADS[pk]["COMMENT_THREAD"].start()
+                                self.log.debug(
+                                    "Started comment thread {}.".format(
+                                        self.THREADS[pk]["COMMENT_THREAD"]
+                                    )
+                                )
+                            else:
+                                raise
 
                     # Make sure game day thread update process is running
                     try:
@@ -693,29 +730,32 @@ class Bot(object):
                                 "Game day thread update process is not running!"
                             )
                     except Exception as e:
-                        self.log.error(
-                            "Game day thread update process is not running. Attempting to start. Error: {}".format(
-                                e
-                            )
-                        )
-                        self.THREADS.update(
-                            {
-                                "GAMEDAY_THREAD": threading.Thread(
-                                    target=self.gameday_thread_update_loop,
-                                    args=(todayGamePks,),
-                                    name="bot-{}-{}-gameday".format(
-                                        self.bot.id, self.bot.name
-                                    ),
-                                    daemon=True,
+                        if "is not running" in str(e):
+                            self.log.error(
+                                "Game day thread update process is not running. Attempting to start. Error: {}".format(
+                                    e
                                 )
-                            }
-                        )
-                        self.THREADS["GAMEDAY_THREAD"].start()
-                        self.log.debug(
-                            "Started game day thread {}.".format(
-                                self.THREADS["GAMEDAY_THREAD"]
                             )
-                        )
+                            self.THREADS.update(
+                                {
+                                    "GAMEDAY_THREAD": threading.Thread(
+                                        target=self.gameday_thread_update_loop,
+                                        args=(todayGamePks,),
+                                        name="bot-{}-{}-gameday".format(
+                                            self.bot.id, self.bot.name
+                                        ),
+                                        daemon=True,
+                                    )
+                                }
+                            )
+                            self.THREADS["GAMEDAY_THREAD"].start()
+                            self.log.debug(
+                                "Started game day thread {}.".format(
+                                    self.THREADS["GAMEDAY_THREAD"]
+                                )
+                            )
+                        else:
+                            raise
 
                     if (
                         len(
@@ -1217,10 +1257,12 @@ class Bot(object):
                     )
                     self.activeGames["off"].update({"STOP_FLAG": True})
                     break
-            else:
-                self.log.debug(
-                    "Off day thread stop criteria not met."
-                )  # debug - need this to tell if logic is working
+
+            self.log.debug(
+                "Off day thread stop criteria not met ({}).".format(
+                    update_off_thread_until
+                )
+            )  # debug - need this to tell if logic is working
 
             # Update interval is in minutes (seconds for game thread only)
             odtWait = self.settings.get("Off Day Thread", {}).get("UPDATE_INTERVAL", 5)
@@ -1458,9 +1500,7 @@ class Bot(object):
                         )
                     elif text == "":
                         self.log.info(
-                            "Skipping game day thread edit since thread text is blank...".format(
-                                pk
-                            )
+                            "Skipping game day thread edit since thread text is blank..."
                         )
                     else:
                         self.log.info("No changes to game day thread.")
@@ -1514,8 +1554,9 @@ class Bot(object):
                         True
                         for k, v in self.commonData.items()
                         if k != 0
-                        and v["status"]["abstractGameCode"] != "F"
-                        and v["status"]["codedGameState"] not in ["C", "D", "U", "T"]
+                        and v["schedule"]["status"]["abstractGameCode"] != "F"
+                        and v["schedule"]["status"]["codedGameState"]
+                        not in ["C", "D", "U", "T"]
                     ),
                     False,
                 ):
@@ -1562,10 +1603,12 @@ class Bot(object):
                     )
                     self.activeGames[pk].update({"STOP_FLAG": True})
                     break
-            else:
-                self.log.debug(
-                    "Game day thread stop criteria not met."
-                )  # debug - need this to tell if logic is working
+
+            self.log.debug(
+                "Game day thread stop criteria not met ({}).".format(
+                    update_gameday_thread_until
+                )
+            )  # debug - need this to tell if logic is working
 
             # Update interval is in minutes (seconds for game thread only)
             gdtWait = self.settings.get("Game Day Thread", {}).get("UPDATE_INTERVAL", 5)
@@ -1650,7 +1693,9 @@ class Bot(object):
                     "%Y-%m-%d %H:%M",
                 )
             )
-            minBefore = int(self.settings.get("Game Thread", {}).get("MIN_BEFORE", 180))
+            minBefore = int(
+                self.settings.get("Game Thread", {}).get("MINUTES_BEFORE", 180)
+            )
             minBefore_time = gameStart - timedelta(minutes=minBefore)
             self.activeGames[pk].update(
                 {
@@ -1902,32 +1947,57 @@ class Bot(object):
 
             skipFlag = True  # Skip first edit since the thread was just posted
 
-        if self.settings.get("Comments", {}).get("ENABLED", True) and self.activeGames[
-            pk
-        ].get("gameThread"):
-            # Spawn separate thread to submit notable play comments in game thread
-            self.THREADS[pk].update(
-                {
-                    "COMMENT_THREAD": threading.Thread(
-                        target=self.monitor_game_plays,
-                        args=(pk, self.activeGames[pk]["gameThread"]),
-                        name="bot-{}-{}-game-{}-comments".format(
-                            self.bot.id, self.bot.name, pk
-                        ),
-                        daemon=True,
+        if (
+            self.settings.get("Comments", {}).get("ENABLED", True)
+            and self.activeGames[pk].get("gameThread")
+            and not (
+                self.commonData[pk]["schedule"]["status"]["abstractGameCode"] == "F"
+                or self.commonData[pk]["schedule"]["status"]["codedGameState"]
+                in ["C", "D", "U", "T",]
+            )
+        ):
+            if self.THREADS[pk].get("COMMENT_THREAD") and isinstance(
+                self.THREADS[pk]["COMMENT_THREAD"], threading.Thread
+            ):
+                # Thread is already running...
+                pass
+            else:
+                # Spawn separate thread to submit notable play comments in game thread
+                self.THREADS[pk].update(
+                    {
+                        "COMMENT_THREAD": threading.Thread(
+                            target=self.monitor_game_plays,
+                            args=(pk, self.activeGames[pk]["gameThread"]),
+                            name="bot-{}-{}-game-{}-comments".format(
+                                self.bot.id, self.bot.name, pk
+                            ),
+                            daemon=True,
+                        )
+                    }
+                )
+                self.THREADS[pk]["COMMENT_THREAD"].start()
+                self.log.debug(
+                    "Started comment thread {}.".format(
+                        self.THREADS[pk]["COMMENT_THREAD"]
                     )
-                }
-            )
-            self.THREADS[pk]["COMMENT_THREAD"].start()
-            self.log.debug(
-                "Started comment thread {}.".format(self.THREADS[pk]["COMMENT_THREAD"])
-            )
+                )
         else:
             if not self.activeGames[pk].get("gameThread"):
                 self.log.info(
                     "Game thread is not posted (even though it should be), so not starting comment process! [pk: {}]".format(
                         pk
                     )
+                )
+            elif self.commonData[pk]["schedule"]["status"][
+                "abstractGameCode"
+            ] == "F" or self.commonData[pk]["schedule"]["status"]["codedGameState"] in [
+                "C",
+                "D",
+                "U",
+                "T",
+            ]:
+                self.log.info(
+                    "Game is over, so not starting comment process! [pk: {}]".format(pk)
                 )
             else:
                 self.log.info(
@@ -2073,10 +2143,12 @@ class Bot(object):
                     )
                     self.activeGames[pk].update({"STOP_FLAG": True})
                     break
-            else:
-                self.log.debug(
-                    "Game thread stop criteria not met."
-                )  # debug - need this to tell if logic is working
+
+            self.log.debug(
+                "Game thread stop criteria not met ({}).".format(
+                    update_game_thread_until
+                )
+            )  # debug - need this to tell if logic is working
 
             if self.commonData[pk]["schedule"]["status"]["detailedState"].startswith(
                 "Delayed"
@@ -2409,10 +2481,6 @@ class Bot(object):
                     )
                     self.activeGames[pk].update({"POST_STOP_FLAG": True})
                     break
-            else:
-                self.log.debug(
-                    "Post game thread stop criteria not met."
-                )  # debug - need this to tell if logic is working
 
             # Update interval is in minutes (seconds for game thread only)
             pgtWait = self.settings.get("Post Game Thread", {}).get(
@@ -2828,9 +2896,6 @@ class Bot(object):
                     # Mark atBatIndex as processed
                     processedAtBats[str(atBat["atBatIndex"])].update({"c": True})
 
-                self.log.debug("Sleeping 5 seconds between at bats")
-                self.sleep(5)  # TESTING
-
                 # Update DB with current processedAtBats
                 self.update_processedAtBats_in_db(pk, gameThreadId, processedAtBats)
 
@@ -3082,27 +3147,35 @@ class Bot(object):
         # return patched dict
         for x in patch:
             for d in x.get("diff", []):
-                self.log.debug(f"d:{d}")  # debug
+                if redball.DEV:
+                    self.log.debug(f"d:{d}")  # debug
+
                 if d.get("op") is not None:
                     value = d.get("value")
                     if value is not None:
                         path = d.get("path", "").split("/")
                         target = theDict
                         for i, p in enumerate(path[1:]):
-                            self.log.debug(
-                                f"i:{i}, p:{p}, type(target):{type(target)}"
-                            )  # debug
+                            if redball.DEV:
+                                self.log.debug(
+                                    f"i:{i}, p:{p}, type(target):{type(target)}"
+                                )  # debug
+
                             if i == len(path) - 2:
                                 # end of the path--set the value
                                 if d.get("op") == "add" and isinstance(target, list):
-                                    self.log.debug(
-                                        f"appending [{value}] to target; target type:{type(target)}"
-                                    )  # debug
+                                    if redball.DEV:
+                                        self.log.debug(
+                                            f"appending [{value}] to target; target type:{type(target)}"
+                                        )  # debug
+
                                     target.append(value)
                                 else:
-                                    self.log.debug(
-                                        f"updating target[{p}] to [{value}]; target type:{type(target)}"
-                                    )  # debug
+                                    if redball.DEV:
+                                        self.log.debug(
+                                            f"updating target[{p}] to [{value}]; target type:{type(target)}"
+                                        )  # debug
+
                                     target[
                                         int(p) if isinstance(target, list) else p
                                     ] = value
@@ -3116,33 +3189,38 @@ class Bot(object):
                                 # key does not exist
                                 if isinstance(path[i + 1], int):
                                     # next hop is a list
-                                    self.log.debug(
-                                        f"missing key, adding list for target[{p}]"
-                                    )  # debug
+                                    if redball.DEV:
+                                        self.log.debug(
+                                            f"missing key, adding list for target[{p}]"
+                                        )  # debug
+
                                     target[
                                         int(p) if isinstance(target, list) else p
                                     ] = []
                                 else:
                                     # next hop is a dict
-                                    self.log.debug(
-                                        f"missing key, adding dict for target[{p}]"
-                                    )  # debug
+                                    if redball.DEV:
+                                        self.log.debug(
+                                            f"missing key, adding dict for target[{p}]"
+                                        )  # debug
+
                                     target[
                                         int(p) if isinstance(target, list) else p
                                     ] = {}
                             # point to next key in the path
                             target = target[int(p) if isinstance(target, list) else p]
-                            self.log.debug(
-                                f"type(target) after next hop: {type(target)}"
-                            )  # debug
+                            if redball.DEV:
+                                self.log.debug(
+                                    f"type(target) after next hop: {type(target)}"
+                                )  # debug
                     else:
                         # No value to add
-                        self.log.debug("no value")  # debug
-                        pass
+                        if redball.DEV:
+                            self.log.debug("no value")  # debug
                 else:
                     # No op
-                    self.log.debug("no op")  # debug
-                    pass
+                    if redball.DEV:
+                        self.log.debug("no op")  # debug
 
     def get_gameStatus(self, pk, d=None):
         # pk = gamePk, d = date ('%Y-%m-%d')
@@ -3534,12 +3612,15 @@ class Bot(object):
                     )
 
             if len(gamePks) == 0:
+                self.log.warning("No gamePks to collect data for.")
                 return False
 
+            self.log.debug("Getting schedule data for gamePks: {}".format(gamePks))
             s = self.get_schedule_data(
                 ",".join(str(i) for i in gamePks), self.today["Y-m-d"]
             )
             for pk in gamePks:
+                self.log.debug("Collecting data for pk: {}".format(pk))
                 pkData = {}  # temp dict to hold the data until it's complete
 
                 # Schedule data includes status, highlights, weather, broadcasts, probable pitchers, officials, and team info (incl. score)
@@ -3557,6 +3638,7 @@ class Bot(object):
                     next((i for i, x in enumerate(games) if x["gamePk"] == pk), 0)
                 ]
                 pkData.update({"schedule": game})
+                self.log.debug("Appended schedule for pk {}".format(pk))
 
                 # Store game time in myTeam's timezone as well as local (homeTeam's) timezone
                 pkData.update(
@@ -3586,6 +3668,7 @@ class Bot(object):
                         }
                     }
                 )
+                self.log.debug("Added gameTime for pk {}".format(pk))
 
                 # Store a key to indicate if myTeam is home or away
                 pkData.update(
@@ -3595,6 +3678,7 @@ class Bot(object):
                         else "away"
                     }
                 )
+                self.log.debug("Added homeAway for pk {}".format(pk))
 
                 # Team info for opponent - same info as myTeam, but stored in pk dict because it's game-specific
                 pkData.update(
@@ -3606,6 +3690,7 @@ class Bot(object):
                         )
                     }
                 )
+                self.log.debug("Added oppTeam for pk {}".format(pk))
 
                 # Update gumbo data
                 gumboParams = {
@@ -3613,6 +3698,7 @@ class Bot(object):
                     "hydrate": "credits,alignment,flags",
                 }
                 # Get updated list of timestamps
+                self.log.debug("Getting timestamps for pk {}".format(pk))
                 timestamps = self.api_call("game_timestamps", {"gamePk": pk})
                 if not self.commonData.get(pk, {}).get("gumbo") or (
                     self.commonData[pk]["gumbo"]
@@ -3628,15 +3714,23 @@ class Bot(object):
                     > 3
                 ):
                     # Get full gumbo
+                    self.log.debug("Getting full gumbo data for pk {}".format(pk))
                     gumbo = self.api_call("game", gumboParams)
                 else:
-                    if len(timestamps) == 0 or timestamps[-1] == self.commonData[pk][
-                        "gumbo"
-                    ].get("metaData", {}).get("timeStamp"):
+                    if redball.DEV:
+                        self.log.debug(
+                            f"Timestamps[-1]: {timestamps[-1]}; cached gumbo metadata timestamp: {self.commonData[pk]['gumbo'].get('metaData', {}).get('timeStamp')} for pk {pk}"
+                        )
+
+                    gumbo = self.commonData[pk].get("gumbo", {})
+                    if len(timestamps) == 0 or timestamps[-1] == gumbo.get(
+                        "metaData", {}
+                    ).get("timeStamp"):
                         # We're up to date
-                        gumbo = self.commonData[pk]["gumbo"]  # Carry forward
+                        self.log.debug("Gumbo data is up to date for pk {}".format(pk))
                     else:
                         # Get diff patch to bring us up to date
+                        self.log.debug("Getting gumbo diff patch for pk {}".format(pk))
                         diffPatch = self.api_call(
                             "game_diff",
                             {
@@ -3646,18 +3740,19 @@ class Bot(object):
                             },
                             force=True,
                         )  # use force=True due to MLB-StatsAPI bug #31
+                        self.log.debug("Patching gumbo data for pk {}".format(pk))
                         self.patch_dict(
                             self.commonData[pk]["gumbo"], diffPatch
                         )  # Patch in place
                         gumbo = self.commonData[pk]["gumbo"]  # Carry forward
 
                 # Include gumbo data
-                pkData.update(
-                    {"timestamps": timestamps, "gumbo": gumbo}
-                )
+                pkData.update({"timestamps": timestamps, "gumbo": gumbo})
+                self.log.debug("Added gumbo data for pk {}".format(pk))
 
                 # Formatted Boxscore Info
                 pkData.update({"boxscore": self.format_boxscore_data(gumbo)})
+                self.log.debug("Added boxscore for pk {}".format(pk))
 
                 # Update hitter stats vs. probable pitchers - only prior to game start if data already exists
                 if (
@@ -3670,6 +3765,9 @@ class Bot(object):
                     )
                     and pkData["schedule"]["status"]["abstractGameCode"] != "F"
                 ):
+                    self.log.debug(
+                        "Adding batter vs probable pitchers for pk {}".format(pk)
+                    )
                     pkData.update(
                         {
                             "awayBattersVsProb": self.get_batter_stats_vs_pitcher(
@@ -3704,11 +3802,17 @@ class Bot(object):
                 # pkData.update({'homeProbVsTeamStats':self.get_pitching_stats_vs_team()})
 
                 pkData.update({"lastUpdate": datetime.today()})
+                self.log.debug("Added lastUpdate for pk {}".format(pk))
 
                 # Make the data available
                 self.commonData.update({pk: pkData})
+                self.log.debug("Updated commonData with data for pk {}".format(pk))
 
-        # self.log.debug('Data available for threads: {}'.format(self.commonData))#debug
+        if redball.DEV:
+            self.log.debug(
+                "Data available for threads: {}".format(self.commonData)
+            )  # debug
+
         return True
 
     def format_boxscore_data(self, gumbo):
@@ -4927,11 +5031,11 @@ class Bot(object):
                     )
                 )
 
-    def api_call(self, endpoint, params, retries=-1):
+    def api_call(self, endpoint, params, retries=-1, force=False):
         s = {}
         while retries != 0:
             try:
-                s = statsapi.get(endpoint, params)
+                s = statsapi.get(endpoint, params, force=force)
                 break
             except Exception as e:
                 if retries == 0:
