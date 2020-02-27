@@ -4922,7 +4922,7 @@ class Bot(object):
 
         if flairMode == "submitter":
             if flair in [None, ""]:
-                self.log.warn("FLAIR_MODE = submitter, but no flair provided...")
+                self.log.warning("FLAIR_MODE = submitter, but no flair provided...")
             else:
                 self.log.info("Adding flair to submission as submitter...")
                 choices = post.flair.choices()
@@ -4939,7 +4939,7 @@ class Bot(object):
                     )
         elif flairMode == "mod":
             if flair in [None, ""]:
-                self.log.warn("FLAIR_MODE = mod, but no flair provided...")
+                self.log.warning("FLAIR_MODE = mod, but no flair provided...")
             else:
                 self.log.info("Adding flair to submission as mod...")
                 try:
@@ -5013,7 +5013,7 @@ class Bot(object):
             thread.mod.sticky()
             self.log.info("Thread [{}] stickied...".format(thread.id))
         except Exception:
-            self.log.warn(
+            self.log.warning(
                 "Sticky of thread [{}] failed. Check mod privileges or the thread may have already been sticky.".format(
                     thread.id
                 )
@@ -5181,14 +5181,19 @@ class Bot(object):
 
     def init_reddit(self):
         self.log.debug("Initiating Reddit API...")
-        self.reddit = praw.Reddit(
-            client_id=self.settings["Reddit Auth"]["reddit_clientId"],
-            client_secret=self.settings["Reddit Auth"]["reddit_clientSecret"],
-            refresh_token=self.settings["Reddit Auth"]["reddit_refreshToken"],
-            user_agent="redball Baseball Game Thread Bot - https://github.com/toddrob99/redball/ - r/{}".format(
-                self.settings["Reddit"].get("SUBREDDIT", "")
-            ),
-        )
+        try:
+            self.reddit = praw.Reddit(
+                client_id=self.settings["Reddit Auth"]["reddit_clientId"],
+                client_secret=self.settings["Reddit Auth"]["reddit_clientSecret"],
+                refresh_token=self.settings["Reddit Auth"]["reddit_refreshToken"],
+                user_agent="redball Baseball Game Thread Bot - https://github.com/toddrob99/redball/ - r/{}".format(
+                    self.settings["Reddit"].get("SUBREDDIT", "")
+                ),
+            )
+        except Exception as e:
+            self.log.error("Error encountered attempting to initialize Reddit: {}".format(e))
+            raise
+
         scopes = [
             "identity",
             "submit",
@@ -5199,18 +5204,25 @@ class Bot(object):
             "flair",
             "modflair",
         ]
-        praw_scopes = self.reddit.auth.scopes()
+        try:
+            praw_scopes = self.reddit.auth.scopes()
+        except Exception as e:
+            self.log.error("Error encountered attempting to look up authorized Reddit scopes: {}".format(e))
+            raise
+
         missing_scopes = []
         self.log.debug("Reddit authorized scopes: {}".format(praw_scopes))
-        if "identity" in praw_scopes:
+        try:
             self.log.info("Reddit authorized user: {}".format(self.reddit.user.me()))
+        except Exception as e:
+            self.log.warning("Error encountered attempting to identify authorized Reddit user (identity scope may not be authorized): {}".format(e))
 
         for scope in scopes:
             if scope not in praw_scopes:
                 missing_scopes.append(scope)
 
         if len(missing_scopes):
-            self.log.warn(
+            self.log.warning(
                 "Scope(s) not authorized: {}. Please check/update/re-authorize Reddit Authorization in redball System Config.".format(
                     missing_scopes
                 )

@@ -795,7 +795,7 @@ class StatBot:
 
             limits = self.r.auth.limits
             if limits.get("remaining") < 60:
-                log.warn(
+                log.warning(
                     "Approaching Reddit API rate limit, sleeping for a minute... {}".format(
                         limits
                     )

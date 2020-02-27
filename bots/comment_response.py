@@ -336,7 +336,7 @@ def run(bot, settings):
 
             limits = r.auth.limits
             if limits.get("remaining") < 60:
-                log.warn(
+                log.warning(
                     "Approaching Reddit API rate limit, sleeping for a minute... {}".format(
                         limits
                     )
