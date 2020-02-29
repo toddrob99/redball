@@ -187,7 +187,7 @@ class Bot(object):
                             "WEEKLY_THREAD": threading.Thread(
                                 target=self.weekly_thread_wait_and_post,
                                 name="bot-{}-{}-weekly".format(
-                                    self.bot.id, self.bot.name
+                                    self.bot.id, self.bot.name.replace(" ", "-")
                                 ),
                                 daemon=True,
                             )
@@ -223,7 +223,7 @@ class Bot(object):
                             "OFFDAY_THREAD": threading.Thread(
                                 target=self.off_thread_update_loop,
                                 name="bot-{}-{}-offday".format(
-                                    self.bot.id, self.bot.name
+                                    self.bot.id, self.bot.name.replace(" ", "-")
                                 ),
                                 daemon=True,
                             )
@@ -283,7 +283,7 @@ class Bot(object):
                                 "OFFDAY_THREAD": threading.Thread(
                                     target=self.off_thread_update_loop,
                                     name="bot-{}-{}-offday".format(
-                                        self.bot.id, self.bot.name
+                                        self.bot.id, self.bot.name.replace(" ", "-")
                                     ),
                                     daemon=True,
                                 )
@@ -324,7 +324,7 @@ class Bot(object):
                                     t
                                     for t in threading.enumerate()
                                     if t.name.startswith(
-                                        "bot-{}-{}".format(self.bot.id, self.bot.name)
+                                        "bot-{}-{}".format(self.bot.id, self.bot.name.replace(" ", "-"))
                                     )
                                 ]
                             )
@@ -404,7 +404,7 @@ class Bot(object):
                                 target=self.gameday_thread_update_loop,
                                 args=(todayGamePks,),
                                 name="bot-{}-{}-gameday".format(
-                                    self.bot.id, self.bot.name
+                                    self.bot.id, self.bot.name.replace(" ", "-")
                                 ),
                                 daemon=True,
                             )
@@ -431,7 +431,7 @@ class Bot(object):
                                     target=self.game_thread_update_loop,
                                     args=(pk,),
                                     name="bot-{}-{}-game-{}".format(
-                                        self.bot.id, self.bot.name, pk
+                                        self.bot.id, self.bot.name.replace(" ", "-"), pk
                                     ),
                                     daemon=True,
                                 )
@@ -455,7 +455,7 @@ class Bot(object):
                                     target=self.postgame_thread_update_loop,
                                     args=(pk,),
                                     name="bot-{}-{}-postgame-{}".format(
-                                        self.bot.id, self.bot.name, pk
+                                        self.bot.id, self.bot.name.replace(" ", "-"), pk
                                     ),
                                     daemon=True,
                                 )
@@ -536,7 +536,7 @@ class Bot(object):
                                             target=self.game_thread_update_loop,
                                             args=(pk,),
                                             name="bot-{}-{}-game-{}".format(
-                                                self.bot.id, self.bot.name, pk
+                                                self.bot.id, self.bot.name.replace(" ", "-"), pk
                                             ),
                                             daemon=True,
                                         )
@@ -596,7 +596,7 @@ class Bot(object):
                                             target=self.postgame_thread_update_loop,
                                             args=(pk,),
                                             name="bot-{}-{}-postgame-{}".format(
-                                                self.bot.id, self.bot.name, pk
+                                                self.bot.id, self.bot.name.replace(" ", "-"), pk
                                             ),
                                             daemon=True,
                                         )
@@ -688,7 +688,7 @@ class Bot(object):
                                                 self.activeGames[pk]["gameThread"],
                                             ),
                                             name="bot-{}-{}-game-{}-comments".format(
-                                                self.bot.id, self.bot.name, pk
+                                                self.bot.id, self.bot.name.replace(" ", "-"), pk
                                             ),
                                             daemon=True,
                                         )
@@ -742,7 +742,7 @@ class Bot(object):
                                         target=self.gameday_thread_update_loop,
                                         args=(todayGamePks,),
                                         name="bot-{}-{}-gameday".format(
-                                            self.bot.id, self.bot.name
+                                            self.bot.id, self.bot.name.replace(" ", "-")
                                         ),
                                         daemon=True,
                                     )
@@ -785,7 +785,7 @@ class Bot(object):
                                     t
                                     for t in threading.enumerate()
                                     if t.name.startswith(
-                                        "bot-{}-{}".format(self.bot.id, self.bot.name)
+                                        "bot-{}-{}".format(self.bot.id, self.bot.name.replace(" ", "-"))
                                     )
                                 ]
                             )
@@ -1969,7 +1969,7 @@ class Bot(object):
                             target=self.monitor_game_plays,
                             args=(pk, self.activeGames[pk]["gameThread"]),
                             name="bot-{}-{}-game-{}-comments".format(
-                                self.bot.id, self.bot.name, pk
+                                self.bot.id, self.bot.name.replace(" ", "-"), pk
                             ),
                             daemon=True,
                         )
