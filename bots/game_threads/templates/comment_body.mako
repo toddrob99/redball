@@ -55,7 +55,7 @@ ${atBat['result']['description']}
     % if atBat['playEvents'][atBat['pitchIndex'][-1]].get('pitchData'):
     ## Event has pitch data
 
-Pitch from ${atBat['matchup']['pitcher']['fullName']}: ${atBat['playEvents'][atBat['pitchIndex'][-2]].get('count',{}).get('balls','0')}-${atBat['playEvents'][atBat['pitchIndex'][-2]].get('count',{}).get('strikes','0')} ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('details',{}).get('type',{}).get('description','Unknown pitch type')} @ ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('pitchData',{}).get('startSpeed','-')} mph
+Pitch from ${atBat['matchup']['pitcher']['fullName']}: ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('preCount',{}).get('balls','0')}-${atBat['playEvents'][atBat['pitchIndex'][-1]].get('preCount',{}).get('strikes','0')} ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('details',{}).get('type',{}).get('description','Unknown pitch type')} @ ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('pitchData',{}).get('startSpeed','-')} mph
     % endif
     % if atBat['playEvents'][atBat['pitchIndex'][-1]].get('hitData'):
     ## Event has hit data

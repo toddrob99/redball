@@ -846,7 +846,7 @@ class WebInterface(object):
                             "key": x["key"],
                             "description": x["description"],
                             "type": x["type"],
-                            "val": x["val"],
+                            "val": x["val"] if x["type"] != "list" else ", ".join(x["val"]),
                             "options": x["options"],
                             "subkeys": x["subkeys"],
                             "parent_key": x["parent_key"],
