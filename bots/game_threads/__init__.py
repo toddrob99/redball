@@ -324,7 +324,9 @@ class Bot(object):
                                     t
                                     for t in threading.enumerate()
                                     if t.name.startswith(
-                                        "bot-{}-{}".format(self.bot.id, self.bot.name.replace(" ", "-"))
+                                        "bot-{}-{}".format(
+                                            self.bot.id, self.bot.name.replace(" ", "-")
+                                        )
                                     )
                                 ]
                             )
@@ -536,7 +538,9 @@ class Bot(object):
                                             target=self.game_thread_update_loop,
                                             args=(pk,),
                                             name="bot-{}-{}-game-{}".format(
-                                                self.bot.id, self.bot.name.replace(" ", "-"), pk
+                                                self.bot.id,
+                                                self.bot.name.replace(" ", "-"),
+                                                pk,
                                             ),
                                             daemon=True,
                                         )
@@ -596,7 +600,9 @@ class Bot(object):
                                             target=self.postgame_thread_update_loop,
                                             args=(pk,),
                                             name="bot-{}-{}-postgame-{}".format(
-                                                self.bot.id, self.bot.name.replace(" ", "-"), pk
+                                                self.bot.id,
+                                                self.bot.name.replace(" ", "-"),
+                                                pk,
                                             ),
                                             daemon=True,
                                         )
@@ -688,7 +694,9 @@ class Bot(object):
                                                 self.activeGames[pk]["gameThread"],
                                             ),
                                             name="bot-{}-{}-game-{}-comments".format(
-                                                self.bot.id, self.bot.name.replace(" ", "-"), pk
+                                                self.bot.id,
+                                                self.bot.name.replace(" ", "-"),
+                                                pk,
                                             ),
                                             daemon=True,
                                         )
@@ -785,7 +793,9 @@ class Bot(object):
                                     t
                                     for t in threading.enumerate()
                                     if t.name.startswith(
-                                        "bot-{}-{}".format(self.bot.id, self.bot.name.replace(" ", "-"))
+                                        "bot-{}-{}".format(
+                                            self.bot.id, self.bot.name.replace(" ", "-")
+                                        )
                                     )
                                 ]
                             )
@@ -1953,7 +1963,7 @@ class Bot(object):
             and not (
                 self.commonData[pk]["schedule"]["status"]["abstractGameCode"] == "F"
                 or self.commonData[pk]["schedule"]["status"]["codedGameState"]
-                in ["C", "D", "U", "T",]
+                in ["C", "D", "U", "T"]
             )
         ):
             if self.THREADS[pk].get("COMMENT_THREAD") and isinstance(
@@ -2107,7 +2117,16 @@ class Bot(object):
                     self.activeGames[pk].update({"STOP_FLAG": True})
                     break
             elif update_game_thread_until == "All division games are final":
-                if not next(
+                if (  # This game is final
+                    self.commonData[pk]["schedule"]["status"]["abstractGameCode"] == "F"
+                    or self.commonData[pk]["schedule"]["status"]["codedGameState"]
+                    in [
+                        "C",
+                        "D",
+                        "U",
+                        "T",
+                    ]  # Suspended: U, T; Cancelled: C, Postponed: D
+                ) and not next(  # And all division games are final
                     (
                         True
                         for x in self.commonData[0]["leagueSchedule"]
@@ -2128,7 +2147,16 @@ class Bot(object):
                     self.activeGames[pk].update({"STOP_FLAG": True})
                     break
             elif update_game_thread_until == "All MLB games are final":
-                if not next(
+                if (  # This game is final
+                    self.commonData[pk]["schedule"]["status"]["abstractGameCode"] == "F"
+                    or self.commonData[pk]["schedule"]["status"]["codedGameState"]
+                    in [
+                        "C",
+                        "D",
+                        "U",
+                        "T",
+                    ]  # Suspended: U, T; Cancelled: C, Postponed: D
+                ) and not next(  # And all MLB games are final
                     (
                         True
                         for x in self.commonData[0]["leagueSchedule"]
@@ -2242,6 +2270,15 @@ class Bot(object):
                     )
                 )
                 break
+            elif self.activeGames[pk]["STOP_FLAG"]:
+                # Game thread process has stopped, but game status isn't final yet... get fresh data!
+                self.log.info(
+                    f"Game {pk} thread process has ended, but cached game status is still (abstractGameCode: {self.commonData[pk]['schedule']['status']['abstractGameCode']}, codedGameState: {self.commonData[pk]['schedule']['status']['codedGameState']}). Refreshing data..."
+                )
+                # Update generic data
+                self.collect_data(0)
+                # Update data for this game
+                self.collect_data(pk)
             else:
                 self.log.debug(
                     "Game {} is not yet final (abstractGameCode: {}, codedGameState: {}). Sleeping for 1 minute...".format(
@@ -2519,9 +2556,11 @@ class Bot(object):
         myTeamBattingEvents = self.settings.get("Comments", {}).get(
             "MYTEAM_BATTING_EVENTS", []
         )
+        self.log.debug(f"Monitored myTeamBattingEvents: [{myTeamBattingEvents}]")
         myTeamPitchingEvents = self.settings.get("Comments", {}).get(
             "MYTEAM_PITCHING_EVENTS", []
         )
+        self.log.debug(f"Monitored myTeamPitchingEvents: [{myTeamPitchingEvents}]")
         processedAtBatRecord = self.get_processedAtBats_from_db(pk, gameThreadId)
         if not processedAtBatRecord:
             self.log.error(
@@ -2581,10 +2620,11 @@ class Bot(object):
                         break
                     # Process action
                     self.log.debug(
-                        "Processing actionIndex {} for atBatIndex {}: [{}].".format(
+                        "Processing actionIndex {} for atBatIndex {}: [{}] (myTeamBatting: {}).".format(
                             actionIndex,
                             atBat["atBatIndex"],
                             atBat["playEvents"][actionIndex],
+                            myTeamBatting,
                         )
                     )
                     if (
@@ -2750,8 +2790,8 @@ class Bot(object):
                 if atBat["about"]["isComplete"]:
                     # At bat is complete, so process the result
                     self.log.debug(
-                        "Processing result for atBatIndex {}: [{}].".format(
-                            atBat["atBatIndex"], atBat
+                        "Processing result for atBatIndex {}: [{}] (myTeamBatting: {}).".format(
+                            atBat["atBatIndex"], atBat, myTeamBatting
                         )
                     )
                     if (
@@ -3152,7 +3192,7 @@ class Bot(object):
 
                 if d.get("op") is not None:
                     value = d.get("value")
-                    if value is not None:
+                    if value is not None or d.get("op") == "remove":
                         path = d.get("path", "").split("/")
                         target = theDict
                         for i, p in enumerate(path[1:]):
@@ -3170,6 +3210,16 @@ class Bot(object):
                                         )  # debug
 
                                     target.append(value)
+                                elif d.get("op") == "remove":
+                                    if redball.DEV:
+                                        self.log.debug(
+                                            f"removing target[{p}]; target type:{type(target)}"
+                                        )  # debug
+
+                                    try:
+                                        target.pop(p)
+                                    except Exception as e:
+                                        self.log.error(f"Error removing {path}: {e}")
                                 else:
                                     if redball.DEV:
                                         self.log.debug(
@@ -5191,7 +5241,9 @@ class Bot(object):
                 ),
             )
         except Exception as e:
-            self.log.error("Error encountered attempting to initialize Reddit: {}".format(e))
+            self.log.error(
+                "Error encountered attempting to initialize Reddit: {}".format(e)
+            )
             raise
 
         scopes = [
@@ -5207,7 +5259,11 @@ class Bot(object):
         try:
             praw_scopes = self.reddit.auth.scopes()
         except Exception as e:
-            self.log.error("Error encountered attempting to look up authorized Reddit scopes: {}".format(e))
+            self.log.error(
+                "Error encountered attempting to look up authorized Reddit scopes: {}".format(
+                    e
+                )
+            )
             raise
 
         missing_scopes = []
@@ -5215,7 +5271,11 @@ class Bot(object):
         try:
             self.log.info("Reddit authorized user: {}".format(self.reddit.user.me()))
         except Exception as e:
-            self.log.warning("Error encountered attempting to identify authorized Reddit user (identity scope may not be authorized): {}".format(e))
+            self.log.warning(
+                "Error encountered attempting to identify authorized Reddit user (identity scope may not be authorized): {}".format(
+                    e
+                )
+            )
 
         for scope in scopes:
             if scope not in praw_scopes:
