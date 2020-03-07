@@ -85,6 +85,7 @@ ${tv}
         if flag: radio += ', '
         flag = None
         radio += '**{}**:'.format(data[gamePk]['schedule']['teams']['home']['team']['teamName'])
+        used = []
         while len(homeRadio):
             r = homeRadio.pop()
             radio += ' {}{}'.format(r['name'],' (' + r['language'] + ')' if r['language']!='en' else '')
