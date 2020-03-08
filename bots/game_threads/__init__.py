@@ -3767,10 +3767,9 @@ class Bot(object):
                     self.log.debug("Getting full gumbo data for pk {}".format(pk))
                     gumbo = self.api_call("game", gumboParams)
                 else:
-                    if redball.DEV:
-                        self.log.debug(
-                            f"Timestamps[-1]: {timestamps[-1]}; cached gumbo metadata timestamp: {self.commonData[pk]['gumbo'].get('metaData', {}).get('timeStamp')} for pk {pk}"
-                        )
+                    self.log.debug(
+                        f"Latest timestamp from StatsAPI: {timestamps[-1]}; latest timestamp in gumbo cache: {self.commonData[pk]['gumbo'].get('metaData', {}).get('timeStamp')} for pk {pk}"
+                    )
 
                     gumbo = self.commonData[pk].get("gumbo", {})
                     if len(timestamps) == 0 or timestamps[-1] == gumbo.get(
@@ -3790,11 +3789,18 @@ class Bot(object):
                             },
                             force=True,
                         )  # use force=True due to MLB-StatsAPI bug #31
-                        self.log.debug("Patching gumbo data for pk {}".format(pk))
-                        self.patch_dict(
-                            self.commonData[pk]["gumbo"], diffPatch
-                        )  # Patch in place
-                        gumbo = self.commonData[pk]["gumbo"]  # Carry forward
+                        # Check if patch is actually the full gumbo data
+                        if isinstance(diffPatch, dict) and diffPatch.get('gamePk'):
+                            # Full gumbo data was returned
+                            self.log.debug(f"Full gumbo data was returned instead of a patch for pk {pk}. No need to patch!")
+                            gumbo = diffPatch
+                        else:
+                            # Patch the dict
+                            self.log.debug("Patching gumbo data for pk {}".format(pk))
+                            self.patch_dict(
+                                self.commonData[pk]["gumbo"], diffPatch
+                            )  # Patch in place
+                            gumbo = self.commonData[pk]["gumbo"]  # Carry forward
 
                 # Include gumbo data
                 pkData.update({"timestamps": timestamps, "gumbo": gumbo})
