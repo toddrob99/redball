@@ -3453,9 +3453,40 @@ class Bot(object):
                 self.commonData[max(self.commonData.keys())]["gameTime"]["utc"]
                 if len(self.commonData) > 1
                 else datetime.strptime(
+                    (
+                        datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d")
+                        + timedelta(days=1)
+                    ).strftime("%Y-%m-%d")
+                    + "T"
+                    + datetime.utcnow().strftime("%H:%M:%SZ"),
+                    "%Y-%m-%dT%H:%M:%SZ",
+                ).replace(
+                    tzinfo=pytz.utc
+                )  # UTC time is in the next day
+                if (
+                    datetime.strptime(
+                        self.today["Y-m-d"]
+                        + "T"
+                        + datetime.now().strftime("%H:%M:%SZ"),
+                        "%Y-%m-%dT%H:%M:%SZ",
+                    ).replace(tzinfo=tzlocal.get_localzone())
+                    - datetime.strptime(
+                        self.today["Y-m-d"]
+                        + "T"
+                        + datetime.utcnow().strftime("%H:%M:%SZ"),
+                        "%Y-%m-%dT%H:%M:%SZ",
+                    ).replace(tzinfo=pytz.utc)
+                ).total_seconds()
+                / 60
+                / 60
+                / 24
+                > 0.5  # With "today" date, difference between time in UTC and local is more than 12hr
+                else datetime.strptime(
                     self.today["Y-m-d"] + "T" + datetime.utcnow().strftime("%H:%M:%SZ"),
                     "%Y-%m-%dT%H:%M:%SZ",
-                ).replace(tzinfo=pytz.utc)
+                ).replace(
+                    tzinfo=pytz.utc
+                )  # Date is still the same when time is converted to UTC
             )
             self.log.debug(
                 "Looking for next game starting after {} ({})...".format(
@@ -3790,9 +3821,11 @@ class Bot(object):
                             force=True,
                         )  # use force=True due to MLB-StatsAPI bug #31
                         # Check if patch is actually the full gumbo data
-                        if isinstance(diffPatch, dict) and diffPatch.get('gamePk'):
+                        if isinstance(diffPatch, dict) and diffPatch.get("gamePk"):
                             # Full gumbo data was returned
-                            self.log.debug(f"Full gumbo data was returned instead of a patch for pk {pk}. No need to patch!")
+                            self.log.debug(
+                                f"Full gumbo data was returned instead of a patch for pk {pk}. No need to patch!"
+                            )
                             gumbo = diffPatch
                         else:
                             # Patch the dict
