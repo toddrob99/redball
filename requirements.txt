@@ -7,3 +7,4 @@ praw
 mlb-statsapi
 pyOpenSSL
 mako
+pyprowl

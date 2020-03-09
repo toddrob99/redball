@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import importlib
+import json
+import os
 import threading
 
 import redball
@@ -224,20 +226,33 @@ class Bot(object):
             config.add_default_bot_config(insert_id, con, cur)
 
             botTypeInfo = config.get_botTypes(botType)
-            if (
-                botTypeInfo["defaultSettings"]
-                and len(botTypeInfo["defaultSettings"]) > 2
-            ):
-                defaultSettings = botTypeInfo["defaultSettings"]
-                result = config.add_bot_config(
-                    botId=insert_id,
-                    multi=defaultSettings,
-                    replace=True,
-                    con=con,
-                    cur=cur,
-                    commit=False,
-                    closeAfter=False,
-                )
+            defaultSettingsFile = os.path.join(redball.BOT_PATH, f"{botTypeInfo['moduleName']}_config.json")
+            log.debug(f"Default settings file for botType {botTypeInfo['name']}: {defaultSettingsFile}")
+            if os.path.isfile(defaultSettingsFile):
+                try:
+                    with open(defaultSettingsFile) as f:
+                        defaultSettings = json.load(f)
+                except Exception as e:
+                    log.error(
+                        f"Error occurred while loading default config for [{botTypeInfo['description']}] bot type from json file [{defaultSettingsFile}]: {e}."
+                    )
+                    defaultSettings = {}
+
+                if len(defaultSettings):
+                    log.debug(f"Loaded default settings for botType {botTypeInfo['name']}: {defaultSettings}. Adding to bot {insert_id}...")
+                    result = config.add_bot_config(
+                        botId=insert_id,
+                        multi=defaultSettings,
+                        replace=True,
+                        con=con,
+                        cur=cur,
+                        commit=False,
+                        closeAfter=False,
+                    )
+                else:
+                    log.debug(f"No default settings found in the json file for botType {botTypeInfo['name']}.")
+            else:
+                log.warning(f"No default settings json file found for [{botTypeInfo['description']}] bot type.")
 
             # Create privileges and grant to creator
             q = """INSERT INTO rb_privileges ('privilege', 'description')
