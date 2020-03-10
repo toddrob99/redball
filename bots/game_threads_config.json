@@ -467,9 +467,19 @@
                 false
             ],
             "subkeys": [
-                "FILE_LOG_LEVEL"
+                "FILE_LOG_LEVEL",
+                "LOG_RETENTION"
             ],
             "parent_key": ""
+        },
+        {
+            "key": "LOG_RETENTION",
+            "description": "Log File Retention (Days)",
+            "type": "int",
+            "val": 7,
+            "options": [],
+            "subkeys": [],
+            "parent_key": "LOG_TO_FILE"
         },
         {
             "key": "PROPAGATE",

@@ -88,6 +88,7 @@ logSettings = {
     "LOG_TO_CONSOLE": not args.quiet,
     "LOG_TO_FILE": True,
     "CONSOLE_LOG_LEVEL": "DEBUG" if args.verbose else "INFO",
+    "LOG_RETENTION": 7,
     "FILE_LOG_LEVEL": "DEBUG",
 }
 log = logger.init_logger(
@@ -97,6 +98,7 @@ log = logger.init_logger(
     log_path=LOG_PATH,
     log_file="redball.log",
     file_log_level=logSettings["FILE_LOG_LEVEL"],
+    log_retention=logSettings["LOG_RETENTION"],
     console_log_level=logSettings["CONSOLE_LOG_LEVEL"],
     clear_first=True,
 )
@@ -153,6 +155,7 @@ def startup(suppress_bots=False, dev=False, data_path=None, log_path=None):
             log_path=LOG_PATH,
             log_file="redball.log",
             file_log_level=logSettings["FILE_LOG_LEVEL"],
+            log_retention=logSettings["LOG_RETENTION"],
             console_log_level=logSettings["CONSOLE_LOG_LEVEL"],
             clear_first=True,
         )
@@ -169,6 +172,7 @@ def startup(suppress_bots=False, dev=False, data_path=None, log_path=None):
         log_path=LOG_PATH,
         log_file="cherrypy.access.log",
         file_log_level=logSettings["FILE_LOG_LEVEL"],
+        log_retention=logSettings["LOG_RETENTION"],
         console_log_level=logSettings["CONSOLE_LOG_LEVEL"],
         clear_first=True,
     )
@@ -179,6 +183,7 @@ def startup(suppress_bots=False, dev=False, data_path=None, log_path=None):
         log_path=LOG_PATH,
         log_file="cherrypy.error.log",
         file_log_level=logSettings["FILE_LOG_LEVEL"],
+        log_retention=logSettings["LOG_RETENTION"],
         console_log_level=logSettings["CONSOLE_LOG_LEVEL"],
         clear_first=True,
     )
@@ -189,6 +194,7 @@ def startup(suppress_bots=False, dev=False, data_path=None, log_path=None):
         log_path=LOG_PATH,
         log_file="statsapi.log",
         file_log_level=logSettings["FILE_LOG_LEVEL"],
+        log_retention=logSettings["LOG_RETENTION"],
         console_log_level=logSettings["CONSOLE_LOG_LEVEL"],
         clear_first=True,
     )

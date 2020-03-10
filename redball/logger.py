@@ -34,6 +34,7 @@ def add_handlers(
     log_path=LOG_PATH,
     log_file=None,
     file_log_level="INFO",
+    log_retention=7,
     console_log_level="INFO",
     clear_first=True,
 ):
@@ -56,7 +57,7 @@ def add_handlers(
                     os.path.join(log_path, log_file),
                     when="midnight",
                     interval=1,
-                    backupCount=7,
+                    backupCount=log_retention,
                 )
                 file_handler.setLevel(
                     getattr(logging, file_log_level.upper(), 30)
@@ -105,6 +106,7 @@ def init_logger(
     log_path=LOG_PATH,
     log_file=None,
     file_log_level="INFO",
+    log_retention=7,
     console_log_level="INFO",
     clear_first=True,
     propagate=False,
@@ -138,6 +140,7 @@ def init_logger(
         log_path=log_path,
         log_file=log_file,
         file_log_level=file_log_level,
+        log_retention=log_retention,
         console_log_level=console_log_level,
         clear_first=clear_first,
     )

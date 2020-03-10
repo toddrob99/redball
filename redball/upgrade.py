@@ -138,6 +138,21 @@ upgradeScripts = {
             SELECT * FROM rb_botTypes_temp
         ;""",
         "DROP TABLE rb_botTypes_temp;",
+        # Add system config setting: category: Logging, key: LOG_RETENTION
+        """INSERT OR IGNORE INTO rb_config (category, key, description, type, val, options, subkeys, parent_key, read_only)
+            VALUES ('Logging', 'LOG_RETENTION', 'Log File Retention (Days)', 'int', 7, '[]', '[]', 'LOG_TO_FILE', 'False');""",
+        """UPDATE rb_config set subkeys='["FILE_LOG_LEVEL","LOG_RETENTION"]' WHERE category='Logging' AND key='LOG_TO_FILE';""",
+        # Add setting to all bots: category: Logging, key: LOG_RETENTION
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Logging','LOG_RETENTION','Log File Retention (Days).','int',7,'[]','[]','LOG_TO_FILE','','False'
+                FROM rb_bots b, bots
+            )
+        SELECT * FROM bots;""",
+        """UPDATE rb_botConfig SET subkeys='["FILE_LOG_LEVEL","LOG_RETENTION"]' WHERE category='Logging' and key='LOG_TO_FILE';""",
         # Update DB version to 2
         "UPDATE rb_meta SET val='2', lastUpdate='{}' WHERE key='dbVersion';".format(
             time.time()

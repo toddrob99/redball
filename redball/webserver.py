@@ -1011,6 +1011,7 @@ class WebInterface(object):
                         log_path=redball.LOG_PATH,
                         log_file="redball.log",
                         file_log_level=logSettings["FILE_LOG_LEVEL"],
+                        log_retention=logSettings["LOG_RETENTION"],
                         console_log_level=logSettings["CONSOLE_LOG_LEVEL"],
                         clear_first=True,
                     )
@@ -1021,6 +1022,7 @@ class WebInterface(object):
                         log_path=redball.LOG_PATH,
                         log_file="cherrypy.access.log",
                         file_log_level=logSettings["FILE_LOG_LEVEL"],
+                        log_retention=logSettings["LOG_RETENTION"],
                         console_log_level=logSettings["CONSOLE_LOG_LEVEL"],
                         clear_first=True,
                     )
@@ -1031,6 +1033,7 @@ class WebInterface(object):
                         log_path=redball.LOG_PATH,
                         log_file="cherrypy.error.log",
                         file_log_level=logSettings["FILE_LOG_LEVEL"],
+                        log_retention=logSettings["LOG_RETENTION"],
                         console_log_level=logSettings["CONSOLE_LOG_LEVEL"],
                         clear_first=True,
                     )
@@ -1041,6 +1044,7 @@ class WebInterface(object):
                         log_path=redball.LOG_PATH,
                         log_file="statsapi.log",
                         file_log_level=logSettings["FILE_LOG_LEVEL"],
+                        log_retention=logSettings["LOG_RETENTION"],
                         console_log_level=logSettings["CONSOLE_LOG_LEVEL"],
                         clear_first=True,
                     )

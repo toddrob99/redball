@@ -846,6 +846,7 @@ def run(bot=None, settings=None):
         log_path=redball.LOG_PATH,
         log_file="{}.log".format(threading.current_thread().name),
         file_log_level=settings.get("Logging", {}).get("FILE_LOG_LEVEL", "DEBUG"),
+        log_retention=settings.get("Logging", {}).get("LOG_RETENTION", 7),
         console_log_level=settings.get("Logging", {}).get("CONSOLE_LOG_LEVEL", "INFO"),
         clear_first=True,
         propagate=settings.get("Logging", {}).get("PROPAGATE", False),
