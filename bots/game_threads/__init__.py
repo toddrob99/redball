@@ -3249,6 +3249,7 @@ class Bot(object):
                                         )
 
                                     target.append(value)
+                                    continue
                                 elif d.get("op") == "remove":
                                     if redball.DEV:
                                         self.log.debug(
@@ -3283,6 +3284,7 @@ class Bot(object):
                                         self.error_notification(
                                             f"Error patching dict--cannot remove {path} from target [{target}]"
                                         )
+
                                     continue
                                 else:
                                     if redball.DEV:
@@ -3293,6 +3295,7 @@ class Bot(object):
                                     target[
                                         int(p) if isinstance(target, list) else p
                                     ] = value
+                                    continue
                             elif (
                                 isinstance(target, dict)
                                 and target.get(
