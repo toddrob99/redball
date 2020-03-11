@@ -3270,8 +3270,6 @@ class Bot(object):
                                         elif isinstance(target, dict):
                                             if p in target.keys():
                                                 target.pop(p)
-                                            elif int(p) in target.keys():
-                                                target.pop(int(p))
                                             else:
                                                 self.log.warning(
                                                     f"Key {p} does not exist in target dict: {target}"
