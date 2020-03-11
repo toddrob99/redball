@@ -3283,6 +3283,7 @@ class Bot(object):
                                         self.error_notification(
                                             f"Error patching dict--cannot remove {path} from target [{target}]"
                                         )
+                                    continue
                                 else:
                                     if redball.DEV:
                                         self.log.debug(
@@ -4397,6 +4398,10 @@ class Bot(object):
             }
         ]
         for pitcherId_int in gumbo["liveData"]["boxscore"]["teams"]["away"]["pitchers"]:
+            if pitcherId_int == 0:
+                self.log.warning("Invalid pitcher id found: 0")
+                continue
+
             pitcherId = str(pitcherId_int)
             namefield = gumbo["gameData"]["players"]["ID" + pitcherId]["boxscoreName"]
             namefield += (
@@ -4492,6 +4497,10 @@ class Bot(object):
             }
         ]
         for pitcherId_int in gumbo["liveData"]["boxscore"]["teams"]["home"]["pitchers"]:
+            if pitcherId_int == 0:
+                self.log.warning("Invalid pitcher id found: 0")
+                continue
+
             pitcherId = str(pitcherId_int)
             namefield = gumbo["gameData"]["players"]["ID" + pitcherId]["boxscoreName"]
             namefield += (
