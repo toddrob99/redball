@@ -8,3 +8,4 @@ mlb-statsapi
 pyOpenSSL
 mako
 pyprowl
+python-twitter

@@ -153,6 +153,52 @@ upgradeScripts = {
             )
         SELECT * FROM bots;""",
         """UPDATE rb_botConfig SET subkeys='["FILE_LOG_LEVEL","LOG_RETENTION"]' WHERE category='Logging' and key='LOG_TO_FILE';""",
+        # Add settings to game thread bots: category: Twitter, keys: TWEET_THREAD_POSTED, CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_SECRET
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Twitter','TWEET_THREAD_POSTED','Tweet when threads are posted (see wiki for info)','bool','false','[true, false]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Twitter','CONSUMER_KEY','Twitter Consumer Key (see wiki)','str','""','[]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Twitter','CONSUMER_SECRET','Twitter Consumer Secret (see wiki)','str','""','[]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Twitter','ACCESS_TOKEN','Twitter Access Token (see wiki)','str','""','[]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Twitter','ACCESS_SECRET','Twitter Access Secret (see wiki)','str','""','[]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
         # Update DB version to 2
         "UPDATE rb_meta SET val='2', lastUpdate='{}' WHERE key='dbVersion';".format(
             time.time()
