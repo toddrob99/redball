@@ -1040,5 +1040,52 @@
             "subkeys": [],
             "parent_key": "THREAD_POSTED_API_KEY"
         }
+    ],
+    "Twitter" : [
+        {
+            "key": "TWEET_THREAD_POSTED",
+            "description": "Tweet when threads are posted (see wiki for info).",
+            "type": "bool",
+            "val": "false",
+            "options": [true, false],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "CONSUMER_KEY",
+            "description": "Twitter Consumer Key (see wiki)",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "CONSUMER_SECRET",
+            "description": "Twitter Consumer Secret (see wiki)",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "ACCESS_TOKEN",
+            "description": "Twitter Access Token (see wiki)",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "ACCESS_SECRET",
+            "description": "Twitter Access Secret (see wiki)",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        }
     ]
 }
