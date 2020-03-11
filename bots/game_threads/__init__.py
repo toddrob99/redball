@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 import json
 import pytz
 import requests
+import sys
+import traceback
 import tzlocal
 import time
 
@@ -22,7 +24,9 @@ import os
 from mako.lookup import TemplateLookup
 import mako.exceptions
 
+import pyprowl
 import statsapi
+import twitter
 
 import praw
 
@@ -55,6 +59,7 @@ class Bot(object):
             log_path=redball.LOG_PATH,
             log_file="{}.log".format(threading.current_thread().name),
             file_log_level=self.settings.get("Logging", {}).get("FILE_LOG_LEVEL"),
+            log_retention=self.settings.get("Logging", {}).get("LOG_RETENTION", 7),
             console_log_level=self.settings.get("Logging", {}).get("CONSOLE_LOG_LEVEL"),
             clear_first=True,
             propagate=False,
@@ -143,6 +148,9 @@ class Bot(object):
                         "Error overriding game date. Falling back to today's date. Error: {}".format(
                             e
                         )
+                    )
+                    self.error_notification(
+                        f"Error overriding game date. Falling back to today's date"
                     )
                     todayObj = datetime.today()
             else:
@@ -277,6 +285,9 @@ class Bot(object):
                             "Off day thread update process is not running. Attempting to start. (Error: {})".format(
                                 e
                             )
+                        )
+                        self.error_notification(
+                            f"Off day thread update process is not running"
                         )
                         self.THREADS.update(
                             {
@@ -532,6 +543,9 @@ class Bot(object):
                                         pk
                                     )
                                 )
+                                self.error_notification(
+                                    f"Game {pk} thread update process is not running"
+                                )
                                 self.THREADS[pk].update(
                                     {
                                         "GAME_THREAD": threading.Thread(
@@ -593,6 +607,9 @@ class Bot(object):
                                     "Post game {} thread update process is not running. Attempting to start.".format(
                                         pk
                                     )
+                                )
+                                self.error_notification(
+                                    f"Game {pk} post game thread update process is not running"
                                 )
                                 self.THREADS[pk].update(
                                     {
@@ -685,6 +702,9 @@ class Bot(object):
                                         pk
                                     )
                                 )
+                                self.error_notification(
+                                    f"Game {pk} comment process is not running"
+                                )
                                 self.THREADS[pk].update(
                                     {
                                         "COMMENT_THREAD": threading.Thread(
@@ -743,6 +763,9 @@ class Bot(object):
                                 "Game day thread update process is not running. Attempting to start. Error: {}".format(
                                     e
                                 )
+                            )
+                            self.error_notification(
+                                f"Game day thread update process is not running"
                             )
                             self.THREADS.update(
                                 {
@@ -1211,6 +1234,7 @@ class Bot(object):
                         self.count_check_edit(offDayThread.id, "NA", edit=False)
                 except Exception as e:
                     self.log.error("Error editing off day thread: {}".format(e))
+                    self.error_notification(f"Error editing off day thread")
 
             update_off_thread_until = self.settings.get("Off Day Thread", {}).get(
                 "UPDATE_UNTIL", "All MLB games are final"
@@ -1519,6 +1543,7 @@ class Bot(object):
                         )
                 except Exception as e:
                     self.log.error("Error editing game day thread: {}".format(e))
+                    self.error_notification(f"Error editing game day thread")
 
             update_gameday_thread_until = self.settings.get("Game Day Thread", {}).get(
                 "UPDATE_UNTIL", "Game thread is posted"
@@ -2450,6 +2475,7 @@ class Bot(object):
                     self.log.error(
                         "Error editing post game {} thread: {}".format(pk, e)
                     )
+                    self.error_notification(f"Error editing {pk} post game thread")
 
             update_postgame_thread_until = self.settings.get(
                 "Post Game Thread", {}
@@ -2764,11 +2790,17 @@ class Bot(object):
                                         e,
                                     )
                                 )
+                                self.error_notification(
+                                    f"Error submitting comment to game {pk} thread {gameThreadId} for actionIndex {actionIndex} of atBatIndex {atBat['atBatIndex']}"
+                                )
                         else:
                             self.log.warning(
                                 "Not submitting comment to game thread {} for actionIndex {} for atBatIndex {} because text is blank... ".format(
                                     gameThreadId, actionIndex, atBat["atBatIndex"]
                                 )
+                            )
+                            self.error_notification(
+                                f"Comment body is blank for game {pk} thread {gameThreadId} for actionIndex {actionIndex} of atBatIndex {atBat['atBatIndex']}"
                             )
                     else:
                         # Event not wanted
@@ -2913,11 +2945,17 @@ class Bot(object):
                                         gameThreadId, atBat["atBatIndex"], e
                                     )
                                 )
+                                self.error_notification(
+                                    f"Error submitting comment to game {pk} thread {gameThreadId} for result of atBatIndex {atBat['atBatIndex']}"
+                                )
                         else:
                             self.log.warning(
                                 "Not submitting comment to game thread {} for result of atBatIndex {} because text is blank... ".format(
                                     gameThreadId, atBat["atBatIndex"]
                                 )
+                            )
+                            self.error_notification(
+                                f"Comment body is blank for game {pk} thread {gameThreadId} for result of atBatIndex {atBat['atBatIndex']}"
                             )
                     else:
                         # Event not wanted
@@ -3186,9 +3224,10 @@ class Bot(object):
         # patch = patch to apply to theDict
         # return patched dict
         for x in patch:
+            self.log.debug(f"x:{patch.index(x)}, len(patch): {len(patch)}")
             for d in x.get("diff", []):
                 if redball.DEV:
-                    self.log.debug(f"d:{d}")  # debug
+                    self.log.debug(f"d:{d}")
 
                 if d.get("op") is not None:
                     value = d.get("value")
@@ -3199,7 +3238,7 @@ class Bot(object):
                             if redball.DEV:
                                 self.log.debug(
                                     f"i:{i}, p:{p}, type(target):{type(target)}"
-                                )  # debug
+                                )
 
                             if i == len(path) - 2:
                                 # end of the path--set the value
@@ -3207,24 +3246,50 @@ class Bot(object):
                                     if redball.DEV:
                                         self.log.debug(
                                             f"appending [{value}] to target; target type:{type(target)}"
-                                        )  # debug
+                                        )
 
                                     target.append(value)
                                 elif d.get("op") == "remove":
                                     if redball.DEV:
                                         self.log.debug(
-                                            f"removing target[{p}]; target type:{type(target)}"
-                                        )  # debug
+                                            f"removing target[{p}]; target type:{type(target)}, target len:{len(target if not isinstance(target, int) and not isinstance(target, bool) else '')}"
+                                        )
 
                                     try:
-                                        target.pop(p)
+                                        if isinstance(target, list):
+                                            if int(p) < len(target):
+                                                target.pop(
+                                                    int(p)
+                                                    if isinstance(target, list)
+                                                    else p
+                                                )
+                                            else:
+                                                self.log.warning(
+                                                    f"Index {p} does not exist in target list: {target}"
+                                                )
+                                        elif isinstance(target, dict):
+                                            if p in target.keys():
+                                                target.pop(p)
+                                            elif int(p) in target.keys():
+                                                target.pop(int(p))
+                                            else:
+                                                self.log.warning(
+                                                    f"Key {p} does not exist in target dict: {target}"
+                                                )
+                                        else:
+                                            self.log.warning(
+                                                f"Not sure how to remove {p} from target: {target}"
+                                            )
                                     except Exception as e:
                                         self.log.error(f"Error removing {path}: {e}")
+                                        self.error_notification(
+                                            f"Error patching dict--cannot remove {path} from target [{target}]"
+                                        )
                                 else:
                                     if redball.DEV:
                                         self.log.debug(
                                             f"updating target[{p}] to [{value}]; target type:{type(target)}"
-                                        )  # debug
+                                        )
 
                                     target[
                                         int(p) if isinstance(target, list) else p
@@ -3242,7 +3307,7 @@ class Bot(object):
                                     if redball.DEV:
                                         self.log.debug(
                                             f"missing key, adding list for target[{p}]"
-                                        )  # debug
+                                        )
 
                                     target[
                                         int(p) if isinstance(target, list) else p
@@ -3252,7 +3317,7 @@ class Bot(object):
                                     if redball.DEV:
                                         self.log.debug(
                                             f"missing key, adding dict for target[{p}]"
-                                        )  # debug
+                                        )
 
                                     target[
                                         int(p) if isinstance(target, list) else p
@@ -3262,15 +3327,15 @@ class Bot(object):
                             if redball.DEV:
                                 self.log.debug(
                                     f"type(target) after next hop: {type(target)}"
-                                )  # debug
+                                )
                     else:
                         # No value to add
                         if redball.DEV:
-                            self.log.debug("no value")  # debug
+                            self.log.debug("no value")
                 else:
                     # No op
                     if redball.DEV:
-                        self.log.debug("no op")  # debug
+                        self.log.debug("no op")
 
     def get_gameStatus(self, pk, d=None):
         # pk = gamePk, d = date ('%Y-%m-%d')
@@ -4773,6 +4838,7 @@ class Bot(object):
         except Exception as e:
             self.log.error("Error rendering {} title: {}".format(thread, e))
             title = None
+            self.error_notification(f"Error rendering title for {thread} thread")
 
         sticky = self.settings.get("Reddit", {}).get("STICKY", False) is True
         inboxReplies = (
@@ -4832,6 +4898,7 @@ class Bot(object):
                     break
         except Exception as e:
             self.log.error("Error checking subreddit for existing posts: {}".format(e))
+            self.error_notification(f"Error checking subreddit for existing posts")
 
         if not theThread:
             try:
@@ -4846,6 +4913,9 @@ class Bot(object):
             except Exception as e:
                 self.log.error("Error rendering {} text: {}".format(thread, e))
                 text = None
+                self.error_notification(
+                    f"{thread.title()} thread not posted due to failure rendering title or text."
+                )
 
             if not (title and text):
                 self.log.error(
@@ -4870,6 +4940,7 @@ class Bot(object):
             except Exception as e:
                 self.log.error("Error submitting {} thread: {}".format(thread, e))
                 theThread = None
+                self.error_notification(f"Error submitting {thread} thread")
 
         if theThread:
             if isinstance(pk, list):
@@ -4952,10 +5023,128 @@ class Bot(object):
                 else:
                     # Break the loop if no more webhook urls configured
                     break
+
+            # Check for Prowl notification
+            prowlKey = self.settings.get("Prowl", {}).get("THREAD_POSTED_API_KEY", "")
+            prowlPriority = self.settings.get("Prowl", {}).get(
+                "THREAD_POSTED_PRIORITY", ""
+            )
+            if prowlKey == "" or prowlPriority == "":
+                self.log.debug("Prowl notifications are disabled or not configured.")
+            else:
+                self.notify_prowl(
+                    apiKey=prowlKey,
+                    event=f"{self.myTeam['teamName']} {thread.title()} Thread Posted",
+                    description=f"""{self.myTeam['teamName']} {thread} thread was posted to r/{self.settings["Reddit"]["SUBREDDIT"]} at {self.convert_timezone(datetime.utcfromtimestamp(theThread.created_utc),'local').strftime('%I:%M %p %Z')}\nThread title: {theThread.title}\nURL: {theThread.shortlink}""",
+                    priority=prowlPriority,
+                    url=theThread.shortlink,
+                    appName=f"redball - {self.bot.name}",
+                )
+
+            # Check for Twitter
+            tConsumerKey = self.settings.get("Twitter", {}).get("CONSUMER_KEY", "")
+            tConsumerSecret = self.settings.get("Twitter", {}).get(
+                "CONSUMER_SECRET", ""
+            )
+            tAccessToken = self.settings.get("Twitter", {}).get("ACCESS_TOKEN", "")
+            tAccessSecret = self.settings.get("Twitter", {}).get("ACCESS_SECRET", "")
+            tweetThreadPosted = self.settings.get("Twitter", {}).get(
+                "TWEET_THREAD_POSTED", False
+            )
+            if (
+                "" in [tConsumerKey, tConsumerSecret, tAccessToken, tAccessSecret]
+                or not tweetThreadPosted
+            ):
+                self.log.debug("Twitter disabled or not configured")
+            else:
+                if thread == "game":
+                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')} {'#doubleheader' if self.commonData[pk]["schedule"]["doubleHeader"] != 'N' else ''}"""
+                elif thread == "gameday":
+                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')}"""
+                elif thread == "post":
+                    message = f"""{theThread.title} - The discussion continues: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')} {'#doubleheader' if self.commonData[pk]["schedule"]["doubleHeader"] != 'N' else ''}"""
+                elif thread == "off":
+                    message = f"""{theThread.title} - Keep the #{self.myTeam['teamName'].replace(' ','')} discussion going: {theThread.shortlink}"""
+                elif thread == "weekly":
+                    message = f"""{theThread.title} - Keep the #{self.myTeam['teamName'].replace(' ','')} discussion going: {theThread.shortlink}"""
+                else:
+                    self.log.error(f"Can't tweet about unknown thread type [{thread}]!")
+                    return False
+
+                tweetResult = self.tweet_thread(
+                    message=message,
+                    consumerKey=tConsumerKey,
+                    consumerSecret=tConsumerSecret,
+                    accessToken=tAccessToken,
+                    accessSecret=tAccessSecret,
+                )
+                if tweetResult:
+                    self.log.info(f"Tweet submitted successfully!")
         else:
             self.log.warning("No thread object present. Something went wrong!")
 
         return (theThread, text)
+
+    def tweet_thread(
+        self,
+        message,
+        consumerKey=None,
+        consumerSecret=None,
+        accessToken=None,
+        accessSecret=None,
+    ):
+        if not consumerKey or not consumerSecret or not accessToken or not accessSecret:
+            self.log.warning(
+                "Can't submit tweet because Twitter settings are missing or incomplete. Check bot config."
+            )
+            return False
+
+        self.log.debug("Initiating Twitter...")
+        try:
+            t = twitter.Api(consumerKey, consumerSecret, accessToken, accessSecret)
+            self.log.debug(
+                f"Authenticated Twitter user: {t.VerifyCredentials().screen_name}"
+            )
+            self.log.debug(f"Tweeting: {message}")
+            t.PostUpdate(message)
+            return True
+        except Exception as e:
+            self.log.error(f"Error submitting Tweet: {e}")
+            self.error_notification(f"Error submitting Tweet: {e}")
+            return False
+
+    def notify_prowl(
+        self, apiKey, event, description, priority=0, url=None, appName="redball"
+    ):
+        # Send a notification to Prowl
+        p = pyprowl.Prowl(apiKey=apiKey, appName=appName)
+
+        self.log.debug(
+            f"Sending notification to Prowl with API Key: {apiKey}. Event: {event}, Description: {description}, Priority: {priority}, URL: {url}..."
+        )
+        try:
+            p.notify(
+                event=event, description=description, priority=priority, url=url,
+            )
+            self.log.info("Notification successfully sent to Prowl!")
+            return True
+        except Exception as e:
+            self.log.error("Error sending notification to Prowl: {}".format(e))
+            return False
+
+    def error_notification(self, action):
+        # Generate and send notification to Prowl for errors
+        prowlKey = self.settings.get("Prowl", {}).get("ERROR_API_KEY", "")
+        prowlPriority = self.settings.get("Prowl", {}).get("ERROR_PRIORITY", "")
+        newline = "\n"
+        if prowlKey != "" and prowlPriority != "":
+            self.notify_prowl(
+                apiKey=prowlKey,
+                event=f"{self.bot.name} - Error {action}!",
+                description=f"{action} for bot: [{self.bot.name}]!\n\n{newline.join(traceback.format_exception(*sys.exc_info()))}",
+                priority=prowlPriority,
+                appName=f"redball - {self.bot.name}",
+            )
 
     def post_webhook(self, url, body):
         # url = url to which the data should be posted
@@ -4972,6 +5161,9 @@ class Bot(object):
                         e
                     )
                 )
+                self.error_notification(
+                    f"Failed to convert webhook template from json format. Ensure there are no line breaks or other special characters in the rendered template"
+                )
                 return "Failed to convert webhook template from json format. Ensure there are no line breaks or other special characters in the rendered template. Error: {}".format(
                     e
                 )
@@ -4983,6 +5175,7 @@ class Bot(object):
             else:
                 return "Request status code: {}".format(r.status_code)
         except requests.exceptions.RequestException as e:
+            self.error_notification(f"Error posting to webhook [{url}]")
             return str(e)
 
         return False
@@ -5036,7 +5229,10 @@ class Bot(object):
                     self.log.info("Submission flaired...")
                 except Exception:
                     self.log.error(
-                        "Failed to set flair (check mod privileges or change FLAIR_MODE to submitter), continuing..."
+                        "Failed to set flair on thread {post.id} (check mod privileges or change FLAIR_MODE to submitter), continuing..."
+                    )
+                    self.error_notification(
+                        f"Failed to set flair (check mod privileges or change FLAIR_MODE to submitter)"
                     )
 
         if sort not in [None, ""]:
@@ -5047,6 +5243,9 @@ class Bot(object):
             except Exception:
                 self.log.error(
                     "Setting suggested sort failed (check mod privileges), continuing..."
+                )
+                self.error_notification(
+                    f"Failed to set suggested sort on thread {post.id} (check mod privileges)"
                 )
 
         return post
@@ -5074,11 +5273,14 @@ class Bot(object):
         except Exception:
             self.log.error(
                 "Error rendering template [{}] for {} {}. Falling back to default template. Error: {}".format(
-                    template,
+                    template.filename,
                     thread,
                     templateType,
                     mako.exceptions.text_error_template().render(),
                 )
+            )
+            self.error_notification(
+                f"Error rendering {thread} {templateType} template [{template.filename}]"
             )
             try:
                 template = self.LOOKUP.get_template(
@@ -5092,6 +5294,9 @@ class Bot(object):
                         templateType,
                         mako.exceptions.text_error_template().render(),
                     )
+                )
+                self.error_notification(
+                    f"Error rendering default {thread} {templateType} template [{template.filename}]"
                 )
 
         return ""
@@ -5283,6 +5488,7 @@ class Bot(object):
             self.log.error(
                 "Error encountered attempting to initialize Reddit: {}".format(e)
             )
+            self.error_notification(f"Error initializing Reddit")
             raise
 
         scopes = [
@@ -5303,6 +5509,9 @@ class Bot(object):
                     e
                 )
             )
+            self.error_notification(
+                f"Error encountered attempting to look up authorized Reddit scopes"
+            )
             raise
 
         missing_scopes = []
@@ -5314,6 +5523,9 @@ class Bot(object):
                 "Error encountered attempting to identify authorized Reddit user (identity scope may not be authorized): {}".format(
                     e
                 )
+            )
+            self.error_notification(
+                f"Error encountered attempting to identify authorized Reddit user (identity scope may not be authorized)"
             )
 
         for scope in scopes:
@@ -5954,6 +6166,7 @@ class Bot(object):
                     "markdown": "Error retrieving bot state: {}".format(e),
                 },
             }
+            self.error_notification(f"Error retrieving bot state")
 
         self.log.debug("Bot Status: {}".format(botStatus))  # debug
         self.bot.detailedState = botStatus

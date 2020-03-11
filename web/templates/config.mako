@@ -143,7 +143,6 @@
 							<form id="addBotType" method="post" action="/config">
 								<label for="botType_description">Description:</label> <input id="botType_description" name="botType_description" value="" class="text ui-widget-content ui-corner-all" />
 								<label for="botType_moduleName">Module Name:</label> <input id="botType_moduleName" name="botType_moduleName" value="" class="text ui-widget-content ui-corner-all" />
-								<label for="botType_defaultSettings">Default Settings (json):</label><textarea id="botType_defaultSettings" name="botType_defaultSettings" class="text ui-widget-content ui-corner-all"></textarea>
 								<button type="submit" name="action" value="create_botType" class="ui-button ui-widget ui-corner-all button-disk">Create</button>
 							</form>
 						</div>
@@ -261,7 +260,6 @@
 				<form id="editbotType" method="post" action="/config?botType_id=${str(x['id'])}">
 					<label for="botType_description">Description:</label> <input id="botType_description" name="botType_description" value="${x['description']}" class="text ui-widget-content ui-corner-all" />
 					<label for="botType_moduleName">Module Name:</label> <input id="botType_moduleName" name="botType_moduleName" value="${x['moduleName']}" class="text ui-widget-content ui-corner-all" />
-					<label for="botType_defaultSettings">Default Settings (json):</label><textarea id="botType_defaultSettings" name="botType_defaultSettings" class="text ui-widget-content ui-corner-all">${x['defaultSettings'] if x.get('defaultSettings') else ''}</textarea>
 					% if priv > 1:
 					<button type="Submit" name="action" value="save_botType" class="ui-button ui-widget ui-corner-all button-disk">Save</button> <button type="submit" name="action" value="cancel" class="ui-button ui-widget ui-corner-all button-close">Cancel</button>
 					% endif

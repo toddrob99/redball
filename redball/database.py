@@ -298,82 +298,20 @@ def build_tables(tables, logg=log):
                 id integer primary key autoincrement,
                 name text unique,
                 description text not null,
-                moduleName text not null,
-                defaultSettings text default '{}'
+                moduleName text not null
             );"""
         )
 
-        q = "INSERT OR IGNORE INTO rb_botTypes (name, description, moduleName, defaultSettings) VALUES "
-        local_args = tuple()
-        # Load default settings from json files
-        # Game Thread Bot Type
-        if os.path.isfile(
-            os.path.join(redball.BOT_PATH, "game_threads", "game_threads_config.json")
-        ):
-            try:
-                with open(
-                    os.path.join(
-                        redball.BOT_PATH, "game_threads", "game_threads_config.json"
-                    )
-                ) as f:
-                    defaultSettings = json.dumps(f.read())
-
-                q += "('game-threads', 'Game Threads', 'game_threads', ?), "
-                local_args += (defaultSettings,)
-            except Exception as e:
-                logg.error(
-                    "Error occurred while loading default config for Game Thread bot type from json file: {}.".format(
-                        e
-                    )
-                )
-                q += "('game-threads', 'Game Threads', 'game_threads', '{}'), "
-        else:
-            q += "('game-threads', 'Game Threads', 'game_threads', '{}'), "
-
-        # MLB Data Bot Type
-        if os.path.isfile(os.path.join(redball.BOT_PATH, "mlb_data_config.json")):
-            try:
-                with open(os.path.join(redball.BOT_PATH, "mlb_data_config.json")) as f:
-                    defaultSettings = json.dumps(f.read())
-
-                q += "('mlb-data', 'MLB Data', 'mlb_data', ?), "
-                local_args += (defaultSettings,)
-            except Exception as e:
-                logg.error(
-                    "Error occurred while loading default config for MLB Data bot type from json file: {}.".format(
-                        e
-                    )
-                )
-                q += "('mlb-data', 'MLB Data', 'mlb_data', '{}'), "
-        else:
-            q += "('mlb-data', 'MLB Data', 'mlb_data', '{}'), "
-
-        # Comment Response Bot Type
-        if os.path.isfile(
-            os.path.join(redball.BOT_PATH, "comment_response_config.json")
-        ):
-            try:
-                with open(
-                    os.path.join(redball.BOT_PATH, "comment_response_config.json")
-                ) as f:
-                    defaultSettings = json.dumps(f.read())
-
-                q += "('comment-response', 'Comment Response', 'comment_response', ?), "
-                local_args += (defaultSettings,)
-            except Exception as e:
-                logg.error(
-                    "Error occurred while loading default config for MLB Data bot type from json file: {}.".format(
-                        e
-                    )
-                )
-                q += "('comment-response', 'Comment Response', 'comment_response', '{}'), "
-        else:
-            q += "('comment-response', 'Comment Response', 'comment_response', '{}'), "
-
-        # Add new packaged bot types here, before placeholder which has the query-ending semicolon
-        q += "('placeholder', 'Placeholder', '_template', '{}');"
-
-        queries.append((q, local_args) if len(local_args) else q)
+        # Insert packaged bot types
+        queries.append(
+            """INSERT OR IGNORE INTO rb_botTypes (name, description, moduleName)
+                VALUES
+                ('game-threads', 'Game Threads', 'game_threads'),
+                ('mlb-data', 'MLB Data', 'mlb_data'),
+                ('comment-response', 'Comment Response', 'comment_response'),
+                ('placeholder', 'Placeholder', '_template')
+            ;"""
+        )
 
     if "rb_botConfig" in tables:
         # Create rb_botConfig table to hold bot settings
