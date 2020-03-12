@@ -7,6 +7,9 @@ ${'#'}<%include file="matchup.mako" args="dateFormat='%a, %b %d'" />
 
 ## Game status: show detailed state and then list first pitch time if game hasn't started yet and isn't final
 ${'###'}Game Status: ${data[gamePk]['schedule']['status']['detailedState']} \
+% if data[gamePk]['schedule']['status'].get('reason') and len(data[gamePk]['schedule']['status']['reason']) > 0 and data[gamePk]['schedule']['status']['reason'] not in data[gamePk]['schedule']['status']['detailedState']:
+due to ${data[gamePk]['schedule']['status']['reason']} \
+% endif
 % if data[gamePk]['gameTime']['utc'] > datetime.utcnow().replace(tzinfo=pytz.utc) and data[gamePk]['schedule']['status']['abstractGameCode'] != 'F':
 - First Pitch is scheduled for ${data[gamePk]['gameTime']['myTeam'].strftime('%I:%M %p %Z')}
 
