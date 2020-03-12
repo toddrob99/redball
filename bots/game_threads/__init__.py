@@ -1878,7 +1878,7 @@ class Bot(object):
                             " (will hold past post time until doubleheader game 1 ({}) is final)".format(
                                 otherGame["gamePk"]
                             )
-                            if self.commonData[pk]["schedule"]["gameNumber"] != 1
+                            if self.commonData[pk]["schedule"]["doubleHeader"] != "N" and self.commonData[pk]["schedule"]["gameNumber"] != 1
                             else "",
                         )
                     )
@@ -1888,7 +1888,7 @@ class Bot(object):
                         self.activeGames[pk]["postTime_local"] - datetime.today()
                     ).total_seconds()
                     < 0
-                    and self.commonData[pk]["schedule"]["gameNumber"] != 1
+                    and self.commonData[pk]["schedule"]["doubleHeader"] != "N" and self.commonData[pk]["schedule"]["gameNumber"] != 1
                 ):
                     self.log.info(
                         "Game {} thread post time has passed, but holding until doubleheader game 1 ({}) is final. Sleeping for 5 minutes....".format(
