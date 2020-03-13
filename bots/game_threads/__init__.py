@@ -1878,7 +1878,8 @@ class Bot(object):
                             " (will hold past post time until doubleheader game 1 ({}) is final)".format(
                                 otherGame["gamePk"]
                             )
-                            if self.commonData[pk]["schedule"]["doubleHeader"] != "N" and self.commonData[pk]["schedule"]["gameNumber"] != 1
+                            if self.commonData[pk]["schedule"]["doubleHeader"] != "N"
+                            and self.commonData[pk]["schedule"]["gameNumber"] != 1
                             else "",
                         )
                     )
@@ -1888,7 +1889,8 @@ class Bot(object):
                         self.activeGames[pk]["postTime_local"] - datetime.today()
                     ).total_seconds()
                     < 0
-                    and self.commonData[pk]["schedule"]["doubleHeader"] != "N" and self.commonData[pk]["schedule"]["gameNumber"] != 1
+                    and self.commonData[pk]["schedule"]["doubleHeader"] != "N"
+                    and self.commonData[pk]["schedule"]["gameNumber"] != 1
                 ):
                     self.log.info(
                         "Game {} thread post time has passed, but holding until doubleheader game 1 ({}) is final. Sleeping for 5 minutes....".format(
@@ -2623,18 +2625,21 @@ class Bot(object):
                     and self.commonData.get(pk, {}).get("homeAway", "") == "home"
                     else False
                 )
-                self.log.debug("Processing atBatIndex [{}]".format(atBat["atBatIndex"]))
                 if not processedAtBats.get(str(atBat["atBatIndex"])):
                     # Add at bat to the tracking dict - c: isComplete, a: actionIndex (abbreviated to save DB space)
                     processedAtBats.update(
                         {str(atBat["atBatIndex"]): {"c": False, "a": []}}
                     )
+                    self.log.debug(f"Processing atBatIndex [{atBat['atBatIndex']}] - first time seeing this atBatIndex - actionIndex: {atBat['actionIndex']}")
                 elif processedAtBats[str(atBat["atBatIndex"])]["c"]:
                     # Already finished processing this at bat
                     self.log.debug(
                         "Already processed atBatIndex {}.".format(atBat["atBatIndex"])
                     )
                     continue
+                else:
+                    # Processed this at bat but it wasn't complete yet
+                    self.log.debug(f"Processing atBatIndex [{atBat['atBatIndex']}] - prior processing state: {processedAtBats.get(str(atBat['atBatIndex']),'not found')} - actionIndex: {atBat['actionIndex']}")
 
                 for actionIndex in (
                     x
@@ -3229,115 +3234,138 @@ class Bot(object):
                 if redball.DEV:
                     self.log.debug(f"d:{d}")
 
-                if d.get("op") is not None:
-                    value = d.get("value")
-                    if value is not None or d.get("op") == "remove":
-                        path = d.get("path", "").split("/")
-                        target = theDict
-                        for i, p in enumerate(path[1:]):
-                            if redball.DEV:
-                                self.log.debug(
-                                    f"i:{i}, p:{p}, type(target):{type(target)}"
-                                )
+                try:
+                    if d.get("op") is not None:
+                        value = d.get("value")
+                        if value is not None or d.get("op") == "remove":
+                            path = d.get("path", "").split("/")
+                            target = theDict
+                            for i, p in enumerate(path[1:]):
+                                if redball.DEV:
+                                    self.log.debug(
+                                        f"i:{i}, p:{p}, type(target):{type(target)}"
+                                    )
 
-                            if i == len(path) - 2:
-                                # end of the path--set the value
-                                if d.get("op") == "add" and isinstance(target, list):
-                                    if redball.DEV:
-                                        self.log.debug(
-                                            f"appending [{value}] to target; target type:{type(target)}"
-                                        )
-
-                                    target.append(value)
-                                    continue
-                                elif d.get("op") == "remove":
-                                    if redball.DEV:
-                                        self.log.debug(
-                                            f"removing target[{p}]; target type:{type(target)}, target len:{len(target if not isinstance(target, int) and not isinstance(target, bool) else '')}"
-                                        )
-
-                                    try:
-                                        if isinstance(target, list):
-                                            if int(p) < len(target):
-                                                target.pop(
-                                                    int(p)
-                                                    if isinstance(target, list)
-                                                    else p
-                                                )
-                                            else:
-                                                self.log.warning(
-                                                    f"Index {p} does not exist in target list: {target}"
-                                                )
-                                        elif isinstance(target, dict):
-                                            if p in target.keys():
-                                                target.pop(p)
-                                            else:
-                                                self.log.warning(
-                                                    f"Key {p} does not exist in target dict: {target}"
-                                                )
-                                        else:
-                                            self.log.warning(
-                                                f"Not sure how to remove {p} from target: {target}"
+                                if i == len(path) - 2:
+                                    # end of the path--set the value
+                                    if d.get("op") == "add" and isinstance(
+                                        target, list
+                                    ):
+                                        if redball.DEV:
+                                            self.log.debug(
+                                                f"appending [{value}] to target; target type:{type(target)}"
                                             )
-                                    except Exception as e:
-                                        self.log.error(f"Error removing {path}: {e}")
-                                        self.error_notification(
-                                            f"Error patching dict--cannot remove {path} from target [{target}]"
-                                        )
 
-                                    continue
-                                else:
-                                    if redball.DEV:
-                                        self.log.debug(
-                                            f"updating target[{p}] to [{value}]; target type:{type(target)}"
-                                        )
+                                        target.append(value)
+                                        continue
+                                    elif d.get("op") == "remove":
+                                        if redball.DEV:
+                                            self.log.debug(
+                                                f"removing target[{p}]; target type:{type(target)}, target len:{len(target if not isinstance(target, int) and not isinstance(target, bool) else '')}"
+                                            )
 
-                                    target[
+                                        try:
+                                            if isinstance(target, list):
+                                                if int(p) < len(target):
+                                                    target.pop(
+                                                        int(p)
+                                                        if isinstance(target, list)
+                                                        else p
+                                                    )
+                                                else:
+                                                    self.log.warning(
+                                                        f"Index {p} does not exist in target list: {target}"
+                                                    )
+                                            elif isinstance(target, dict):
+                                                if p in target.keys():
+                                                    target.pop(p)
+                                                else:
+                                                    self.log.warning(
+                                                        f"Key {p} does not exist in target dict: {target}"
+                                                    )
+                                            else:
+                                                self.log.warning(
+                                                    f"Not sure how to remove {p} from target: {target}"
+                                                )
+                                        except Exception as e:
+                                            self.log.error(
+                                                f"Error removing {path}: {e}"
+                                            )
+                                            self.error_notification(
+                                                f"Error patching dict--cannot remove {path} from target [{target}]"
+                                            )
+
+                                        continue
+                                    else:
+                                        if redball.DEV:
+                                            self.log.debug(
+                                                f"updating target[{p}] to [{value}]; target type:{type(target)}"
+                                            )
+
+                                        target[
+                                            int(p) if isinstance(target, list) else p
+                                        ] = value
+                                        continue
+                                elif (
+                                    isinstance(target, dict)
+                                    and target.get(
                                         int(p) if isinstance(target, list) else p
-                                    ] = value
-                                    continue
-                            elif (
-                                isinstance(target, dict)
-                                and target.get(
+                                    )
+                                    is None
+                                ) or (
+                                    isinstance(target, list) and len(target) <= int(p)
+                                ):
+                                    # key does not exist
+                                    if isinstance(path[i + 1], int):
+                                        # next hop is a list
+                                        if redball.DEV:
+                                            self.log.debug(
+                                                f"missing key, adding list for target[{p}]"
+                                            )
+
+                                        target[
+                                            int(p) if isinstance(target, list) else p
+                                        ] = []
+                                    elif i == len(path) - 3 and d.get("op") == "add":
+                                        # next hop is the target key to add
+                                        # do nothing, because it will be handled on the next loop
+                                        if redball.DEV:
+                                            self.log.debug(
+                                                f"missing key, but not a problem because op=add; continuing..."
+                                            )
+                                        continue
+                                    else:
+                                        # next hop is a dict
+                                        if redball.DEV:
+                                            self.log.debug(
+                                                f"missing key, adding dict for target[{p}]"
+                                            )
+
+                                        target[
+                                            int(p) if isinstance(target, list) else p
+                                        ] = {}
+                                # point to next key in the path
+                                target = target[
                                     int(p) if isinstance(target, list) else p
-                                )
-                                is None
-                            ) or (isinstance(target, list) and len(target) <= int(p)):
-                                # key does not exist
-                                if isinstance(path[i + 1], int):
-                                    # next hop is a list
-                                    if redball.DEV:
-                                        self.log.debug(
-                                            f"missing key, adding list for target[{p}]"
-                                        )
-
-                                    target[
-                                        int(p) if isinstance(target, list) else p
-                                    ] = []
-                                else:
-                                    # next hop is a dict
-                                    if redball.DEV:
-                                        self.log.debug(
-                                            f"missing key, adding dict for target[{p}]"
-                                        )
-
-                                    target[
-                                        int(p) if isinstance(target, list) else p
-                                    ] = {}
-                            # point to next key in the path
-                            target = target[int(p) if isinstance(target, list) else p]
+                                ]
+                                if redball.DEV:
+                                    self.log.debug(
+                                        f"type(target) after next hop: {type(target)}"
+                                    )
+                        else:
+                            # No value to add
                             if redball.DEV:
-                                self.log.debug(
-                                    f"type(target) after next hop: {type(target)}"
-                                )
+                                self.log.debug("no value")
                     else:
-                        # No value to add
+                        # No op
                         if redball.DEV:
-                            self.log.debug("no value")
-                else:
-                    # No op
-                    if redball.DEV:
-                        self.log.debug("no op")
+                            self.log.debug("no op")
+                except Exception as e:
+                    self.log.error(f"Error patching gumbo data: {e}")
+                    self.error_notification(f"Error patching gumbo data: {e}")
+                    return False
+
+        return True
 
     def get_gameStatus(self, pk, d=None):
         # pk = gamePk, d = date ('%Y-%m-%d')
@@ -3897,10 +3925,19 @@ class Bot(object):
                         else:
                             # Patch the dict
                             self.log.debug("Patching gumbo data for pk {}".format(pk))
-                            self.patch_dict(
+                            if self.patch_dict(
                                 self.commonData[pk]["gumbo"], diffPatch
-                            )  # Patch in place
-                            gumbo = self.commonData[pk]["gumbo"]  # Carry forward
+                            ):  # Patch in place
+                                # True result —- patching was successful
+                                gumbo = self.commonData[pk]["gumbo"]  # Carry forward
+                            else:
+                                # Get full gumbo
+                                self.log.debug(
+                                    "Since patching encountered an error, getting full gumbo data for pk {}".format(
+                                        pk
+                                    )
+                                )
+                                gumbo = self.api_call("game", gumboParams)
 
                 # Include gumbo data
                 pkData.update({"timestamps": timestamps, "gumbo": gumbo})

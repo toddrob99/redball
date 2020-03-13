@@ -6,7 +6,8 @@
 	else:
 		unorderedPlays = {}
 		for s in data[gamePk]['schedule']['scoringPlays']:
-			unorderedPlays.update({s['about']['endTime'] : s})
+			if s['result'].get('description'):
+				unorderedPlays.update({s['about']['endTime'] : s})
 
 		for x in sorted(unorderedPlays):
 			sortedPlays.append(unorderedPlays[x])
