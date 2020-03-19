@@ -1,5 +1,6 @@
 <%page args="boxStyle='wide'" />
 <%
+    import copy
     def playerLink(name, personId):
         return '[{}](http://mlb.mlb.com/team/player.jsp?player_id={})'.format(name,str(personId))
 %>
@@ -8,8 +9,8 @@
     ## Displaying ops instead of avg and slg, to save a little space
     <%
         wideBattingBox = ''
-        awayBatters = data[gamePk]['boxscore']['awayBatters']
-        homeBatters = data[gamePk]['boxscore']['homeBatters']
+        awayBatters = copy.deepcopy(data[gamePk]['boxscore']['awayBatters'])
+        homeBatters = copy.deepcopy(data[gamePk]['boxscore']['homeBatters'])
 
         ##Make sure the home and away batter lists are the same length
         while len(awayBatters) > len(homeBatters):
@@ -45,8 +46,8 @@
                     wideBattingBox += '|:--'*(11*2+1) + '|\n' # Left-align cols for away, home, plus separator
 
         ##Get batting notes
-        awayBattingNotes = data[gamePk]['boxscore']['awayBattingNotes']
-        homeBattingNotes = data[gamePk]['boxscore']['homeBattingNotes']
+        awayBattingNotes = copy.deepcopy(data[gamePk]['boxscore']['awayBattingNotes'])
+        homeBattingNotes = copy.deepcopy(data[gamePk]['boxscore']['homeBattingNotes'])
 
         ##Make sure notes are the same size
         while len(awayBattingNotes) > len(homeBattingNotes):
@@ -87,8 +88,8 @@ ${wideBattingBox}
     ## Wide Pitching Boxes
     <%
         widePitchingBox = ''
-        awayPitchers = data[gamePk]['boxscore']['awayPitchers']
-        homePitchers = data[gamePk]['boxscore']['homePitchers']
+        awayPitchers = copy.deepcopy(data[gamePk]['boxscore']['awayPitchers'])
+        homePitchers = copy.deepcopy(data[gamePk]['boxscore']['homePitchers'])
 
         ## Make sure the home and away pitcher lists are the same length
         while len(awayPitchers) > len(homePitchers):
@@ -137,7 +138,7 @@ ${widePitchingBox}
     <%
         if 1==1:
             awayBattingBox = ''
-            awayBatters = data[gamePk]['boxscore']['awayBatters']
+            awayBatters = copy.deepcopy(data[gamePk]['boxscore']['awayBatters'])
 
             ## Get team totals
             awayBatters.append(data[gamePk]['boxscore']['awayBattingTotals'])
@@ -181,7 +182,7 @@ ${awayBattingBox}
     ## Home Batting
     <%
         homeBattingBox = ''
-        homeBatters = data[gamePk]['boxscore']['homeBatters']
+        homeBatters = copy.deepcopy(data[gamePk]['boxscore']['homeBatters'])
 
         ## Get team totals
         homeBatters.append(data[gamePk]['boxscore']['homeBattingTotals'])
@@ -226,7 +227,7 @@ ${homeBattingBox}
     ## Away Pitching
     <%
         awayPitchingBox = ''
-        awayPitchers = data[gamePk]['boxscore']['awayPitchers']
+        awayPitchers = copy.deepcopy(data[gamePk]['boxscore']['awayPitchers'])
 
         ## Get team totals
         awayPitchers.append(data[gamePk]['boxscore']['awayPitchingTotals'])
@@ -255,7 +256,7 @@ ${awayPitchingBox}
     ## Home Pitching
     <%
         homePitchingBox = ''
-        homePitchers = data[gamePk]['boxscore']['homePitchers']
+        homePitchers = copy.deepcopy(data[gamePk]['boxscore']['homePitchers'])
 
         ## Get team totals
         homePitchers.append(data[gamePk]['boxscore']['homePitchingTotals'])

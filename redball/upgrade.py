@@ -72,5 +72,136 @@ upgradeScripts = {
         "UPDATE rb_meta SET val='1', lastUpdate='{}' WHERE key='dbVersion';".format(
             time.time()
         ),
+    ],
+    2: [
+        # Add system config settings: category: Prowl, keys: ERROR_API_KEY, ERROR_PRIORITY
+        """INSERT OR IGNORE INTO rb_config (category,key,description,type,val,options,subkeys,parent_key,read_only)
+        VALUES
+            ('Prowl','ERROR_API_KEY','API Key for platform error notifications','str','""','[]','["ERROR_PRIORITY"]','','False'),
+            ('Prowl','ERROR_PRIORITY','Error notification priority (leave blank to disable)','str','""','["","-2","-1","0","1","2"]','[]','ERROR_API_KEY','False');""",
+        # Add settings to game_thread bots: category: Prowl, keys: ERROR_API_KEY, ERROR_PRIORITY, THREAD_POSTED_API_KEY, THREAD_POSTED_PRIORITY
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Prowl','ERROR_API_KEY','API Key for sending error notifications to Prowl.','str','""','[]','["ERROR_PRIORITY"]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Prowl','ERROR_PRIORITY','Priority when sending error notifications to Prowl (leave blank to disable).','str','""','["","-2","-1","0","1","2"]','[]','ERROR_API_KEY','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Prowl','THREAD_POSTED_API_KEY','API Key for sending thread posted notifications to Prowl.','str','""','[]','["THREAD_POSTED_PRIORITY","THREAD_POSTED_TEMPLATE"]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Prowl','THREAD_POSTED_PRIORITY','Priority when sending thread posted notifications to Prowl (leave blank to disable).','str','""','["","-2","-1","0","1","2"]','[]','THREAD_POSTED_API_KEY','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        # Remove defaultSettings from rb_botTypes (copy data to temp table and rebuild)
+        """CREATE TABLE IF NOT EXISTS rb_botTypes_temp (
+            id integer primary key autoincrement,
+            name text unique,
+            description text not null,
+            moduleName text not null
+        );""",
+        """INSERT INTO rb_botTypes_temp
+            SELECT id, name, description, moduleName
+                FROM rb_botTypes
+        ;""",
+        "DROP TABLE rb_botTypes;",
+        """CREATE TABLE IF NOT EXISTS rb_botTypes (
+            id integer primary key autoincrement,
+            name text unique,
+            description text not null,
+            moduleName text not null
+        );""",
+        """INSERT INTO rb_botTypes
+            SELECT * FROM rb_botTypes_temp
+        ;""",
+        "DROP TABLE rb_botTypes_temp;",
+        # Add system config setting: category: Logging, key: LOG_RETENTION
+        """INSERT OR IGNORE INTO rb_config (category, key, description, type, val, options, subkeys, parent_key, read_only)
+            VALUES ('Logging', 'LOG_RETENTION', 'Log File Retention (Days)', 'int', 7, '[]', '[]', 'LOG_TO_FILE', 'False');""",
+        """UPDATE rb_config set subkeys='["FILE_LOG_LEVEL","LOG_RETENTION"]' WHERE category='Logging' AND key='LOG_TO_FILE';""",
+        # Add setting to all bots: category: Logging, key: LOG_RETENTION
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Logging','LOG_RETENTION','Log File Retention (Days).','int',7,'[]','[]','LOG_TO_FILE','','False'
+                FROM rb_bots b, bots
+            )
+        SELECT * FROM bots;""",
+        """UPDATE rb_botConfig SET subkeys='["FILE_LOG_LEVEL","LOG_RETENTION"]' WHERE category='Logging' and key='LOG_TO_FILE';""",
+        # Add settings to game thread bots: category: Twitter, keys: TWEET_THREAD_POSTED, CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_SECRET
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Twitter','TWEET_THREAD_POSTED','Tweet when threads are posted (see wiki for info)','bool','false','[true, false]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Twitter','CONSUMER_KEY','Twitter Consumer Key (see wiki)','str','""','[]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Twitter','CONSUMER_SECRET','Twitter Consumer Secret (see wiki)','str','""','[]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Twitter','ACCESS_TOKEN','Twitter Access Token (see wiki)','str','""','[]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Twitter','ACCESS_SECRET','Twitter Access Secret (see wiki)','str','""','[]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        # Update DB version to 2
+        "UPDATE rb_meta SET val='2', lastUpdate='{}' WHERE key='dbVersion';".format(
+            time.time()
+        ),
     ]
 }

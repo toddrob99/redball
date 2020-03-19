@@ -21,7 +21,7 @@
     hdLink = next((v.get('url') for v in p.get('playbacks',{}) if v.get('name')=='mp4Avc'),'')
 %>\
 |[${team_abbrev}](${data[0]['teamSubs'][team_id]})\
-|[${p['headline']} (${p['duration']})](${hdLink})|
+|[${p['headline']} (${p.get('duration', '?:??')})](${hdLink})|
 ##|[${p['description']} (${p['duration']})](${hdLink})|
 % endfor
 % endif

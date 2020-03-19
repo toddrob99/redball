@@ -52,12 +52,12 @@ ${'###'} ${atBat['result']['event']}
     % endif
 ## The event description:
 ${atBat['result']['description']}
-    % if atBat['playEvents'][atBat['pitchIndex'][-1]].get('pitchData'):
+    % if len(atBat['pitchIndex']) > 0 and atBat['playEvents'][atBat['pitchIndex'][-1]].get('pitchData'):
     ## Event has pitch data
 
 Pitch from ${atBat['matchup']['pitcher']['fullName']}: ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('preCount',{}).get('balls','0')}-${atBat['playEvents'][atBat['pitchIndex'][-1]].get('preCount',{}).get('strikes','0')} ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('details',{}).get('type',{}).get('description','Unknown pitch type')} @ ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('pitchData',{}).get('startSpeed','-')} mph
     % endif
-    % if atBat['playEvents'][atBat['pitchIndex'][-1]].get('hitData'):
+    % if len(atBat['pitchIndex']) > 0 and atBat['playEvents'][atBat['pitchIndex'][-1]].get('hitData'):
     ## Event has hit data
 
 Hit by ${atBat['matchup']['batter']['fullName']}: Launched ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('hitData',{}).get('launchSpeed','-')} mph at ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('hitData',{}).get('launchAngle','-')}&#176; for a total distance of ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('hitData',{}).get('totalDistance','-')} ft

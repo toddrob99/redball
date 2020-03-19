@@ -7,7 +7,12 @@ ${'#'}<%include file="matchup.mako" args="dateFormat='%a, %b %d'" />
 
 ## Game status: show detailed state and final score
 ${'###'}Game Status: ${data[gamePk]['schedule']['status']['detailedState']} \
+% if data[gamePk]['schedule']['status'].get('reason') and len(data[gamePk]['schedule']['status']['reason']) > 0 and data[gamePk]['schedule']['status']['reason'] not in data[gamePk]['schedule']['status']['detailedState']:
+due to ${data[gamePk]['schedule']['status']['reason']} \
+% endif
+% if data[gamePk]['schedule']['status']['abstractGameCode'] == 'F' and data[gamePk]['schedule']['status']['codedGameState'] not in ['C','D']:
 - <%include file="score.mako" />
+% endif
 
 ## Weather, gameday link, (strikezone map commented out since it doesn't seem to have data), (game notes commented out due to new press pass requirement)
 <%include file="post_game_info.mako" />

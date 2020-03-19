@@ -420,13 +420,6 @@ def get_botTypes(id=None):
     if isinstance(types, dict):
         types = [types]
 
-    for t in types:
-        log.debug(t)
-        try:
-            t.update({"defaultSettings": json.loads(t["defaultSettings"])})
-        except Exception as e:
-            log.error("Error decoding json: {}".format(e))
-
     if len(types) == 1:
         types = types[0]
 
@@ -439,7 +432,7 @@ def create_botType(**kwargs):
 
     query = (
         """INSERT INTO rb_botTypes
-                (name, description, moduleName, defaultSettings)
+                (name, description, moduleName)
                 VALUES
                 (?,?,?,?)
             ;""",
@@ -447,7 +440,6 @@ def create_botType(**kwargs):
             kwargs["description"].lower().strip().replace(" ", "-"),
             kwargs["description"],
             kwargs["moduleName"],
-            json.dumps(kwargs.get("defaultSettings", "{}"), indent=2),
         ),
     )
     result = database.db_qry(query, con=con, cur=cur)
@@ -488,10 +480,6 @@ def update_botType(id, **kwargs):
     if kwargs.get("moduleName"):
         fields.append(" moduleName=?")
         local_args += (kwargs["moduleName"],)
-
-    if kwargs.get("defaultSettings"):
-        fields.append(" defaultSettings=?")
-        local_args += (json.dumps(kwargs.get("defaultSettings", "{}"), indent=2),)
 
     q += ",".join(fields)
     q += " WHERE id=?"

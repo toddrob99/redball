@@ -1011,6 +1011,7 @@ class WebInterface(object):
                         log_path=redball.LOG_PATH,
                         log_file="redball.log",
                         file_log_level=logSettings["FILE_LOG_LEVEL"],
+                        log_retention=logSettings["LOG_RETENTION"],
                         console_log_level=logSettings["CONSOLE_LOG_LEVEL"],
                         clear_first=True,
                     )
@@ -1021,6 +1022,7 @@ class WebInterface(object):
                         log_path=redball.LOG_PATH,
                         log_file="cherrypy.access.log",
                         file_log_level=logSettings["FILE_LOG_LEVEL"],
+                        log_retention=logSettings["LOG_RETENTION"],
                         console_log_level=logSettings["CONSOLE_LOG_LEVEL"],
                         clear_first=True,
                     )
@@ -1031,6 +1033,7 @@ class WebInterface(object):
                         log_path=redball.LOG_PATH,
                         log_file="cherrypy.error.log",
                         file_log_level=logSettings["FILE_LOG_LEVEL"],
+                        log_retention=logSettings["LOG_RETENTION"],
                         console_log_level=logSettings["CONSOLE_LOG_LEVEL"],
                         clear_first=True,
                     )
@@ -1041,6 +1044,7 @@ class WebInterface(object):
                         log_path=redball.LOG_PATH,
                         log_file="statsapi.log",
                         file_log_level=logSettings["FILE_LOG_LEVEL"],
+                        log_retention=logSettings["LOG_RETENTION"],
                         console_log_level=logSettings["CONSOLE_LOG_LEVEL"],
                         clear_first=True,
                     )
@@ -1069,9 +1073,6 @@ class WebInterface(object):
                 result = rbConfig.create_botType(
                     description=kwargs["botType_description"],
                     moduleName=kwargs["botType_moduleName"],
-                    defaultSettings=json.loads(kwargs["botType_defaultSettings"])
-                    if kwargs["botType_defaultSettings"] != ""
-                    else None,
                 )
                 if isinstance(result, str):
                     local_args.update({"errors": result, "errorcontainer_hide": ""})
@@ -1153,7 +1154,6 @@ class WebInterface(object):
                     id=botType_id,
                     description=kwargs["botType_description"],
                     moduleName=kwargs["botType_moduleName"],
-                    defaultSettings=json.loads(kwargs["botType_defaultSettings"]),
                 )
                 raise cherrypy.HTTPRedirect("/config")
         elif kwargs.get("action") == "create_redditAuth":
@@ -2122,7 +2122,6 @@ class APIv1(object):
                                 result = rbConfig.create_botType(
                                     description=kwargs["description"],
                                     moduleName=kwargs["moduleName"],
-                                    defaultSettings=kwargs.get("defaultSettings"),
                                 )
                                 if isinstance(result, str) or result == 0:
                                     # Exception encountered while processing request
@@ -2326,7 +2325,6 @@ class APIv1(object):
                                     id=args[1],
                                     description=kwargs.get("description"),
                                     moduleName=kwargs.get("moduleName"),
-                                    defaultSettings=kwargs.get("defaultSettings"),
                                 )
                                 if result == "ERROR: Nothing provided to update.":
                                     errors.append(self._status(400))

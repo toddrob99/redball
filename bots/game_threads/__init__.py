@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 import json
 import pytz
 import requests
+import sys
+import traceback
 import tzlocal
 import time
 
@@ -22,11 +24,13 @@ import os
 from mako.lookup import TemplateLookup
 import mako.exceptions
 
+import pyprowl
 import statsapi
+import twitter
 
 import praw
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 
 def run(bot, settings):
@@ -55,6 +59,7 @@ class Bot(object):
             log_path=redball.LOG_PATH,
             log_file="{}.log".format(threading.current_thread().name),
             file_log_level=self.settings.get("Logging", {}).get("FILE_LOG_LEVEL"),
+            log_retention=self.settings.get("Logging", {}).get("LOG_RETENTION", 7),
             console_log_level=self.settings.get("Logging", {}).get("CONSOLE_LOG_LEVEL"),
             clear_first=True,
             propagate=False,
@@ -143,6 +148,9 @@ class Bot(object):
                         "Error overriding game date. Falling back to today's date. Error: {}".format(
                             e
                         )
+                    )
+                    self.error_notification(
+                        f"Error overriding game date. Falling back to today's date"
                     )
                     todayObj = datetime.today()
             else:
@@ -277,6 +285,9 @@ class Bot(object):
                             "Off day thread update process is not running. Attempting to start. (Error: {})".format(
                                 e
                             )
+                        )
+                        self.error_notification(
+                            f"Off day thread update process is not running"
                         )
                         self.THREADS.update(
                             {
@@ -532,6 +543,9 @@ class Bot(object):
                                         pk
                                     )
                                 )
+                                self.error_notification(
+                                    f"Game {pk} thread update process is not running"
+                                )
                                 self.THREADS[pk].update(
                                     {
                                         "GAME_THREAD": threading.Thread(
@@ -593,6 +607,9 @@ class Bot(object):
                                     "Post game {} thread update process is not running. Attempting to start.".format(
                                         pk
                                     )
+                                )
+                                self.error_notification(
+                                    f"Game {pk} post game thread update process is not running"
                                 )
                                 self.THREADS[pk].update(
                                     {
@@ -685,6 +702,9 @@ class Bot(object):
                                         pk
                                     )
                                 )
+                                self.error_notification(
+                                    f"Game {pk} comment process is not running"
+                                )
                                 self.THREADS[pk].update(
                                     {
                                         "COMMENT_THREAD": threading.Thread(
@@ -743,6 +763,9 @@ class Bot(object):
                                 "Game day thread update process is not running. Attempting to start. Error: {}".format(
                                     e
                                 )
+                            )
+                            self.error_notification(
+                                f"Game day thread update process is not running"
                             )
                             self.THREADS.update(
                                 {
@@ -1211,6 +1234,7 @@ class Bot(object):
                         self.count_check_edit(offDayThread.id, "NA", edit=False)
                 except Exception as e:
                     self.log.error("Error editing off day thread: {}".format(e))
+                    self.error_notification(f"Error editing off day thread")
 
             update_off_thread_until = self.settings.get("Off Day Thread", {}).get(
                 "UPDATE_UNTIL", "All MLB games are final"
@@ -1519,6 +1543,7 @@ class Bot(object):
                         )
                 except Exception as e:
                     self.log.error("Error editing game day thread: {}".format(e))
+                    self.error_notification(f"Error editing game day thread")
 
             update_gameday_thread_until = self.settings.get("Game Day Thread", {}).get(
                 "UPDATE_UNTIL", "Game thread is posted"
@@ -1853,7 +1878,8 @@ class Bot(object):
                             " (will hold past post time until doubleheader game 1 ({}) is final)".format(
                                 otherGame["gamePk"]
                             )
-                            if self.commonData[pk]["schedule"]["gameNumber"] != 1
+                            if self.commonData[pk]["schedule"]["doubleHeader"] != "N"
+                            and self.commonData[pk]["schedule"]["gameNumber"] != 1
                             else "",
                         )
                     )
@@ -1863,6 +1889,7 @@ class Bot(object):
                         self.activeGames[pk]["postTime_local"] - datetime.today()
                     ).total_seconds()
                     < 0
+                    and self.commonData[pk]["schedule"]["doubleHeader"] != "N"
                     and self.commonData[pk]["schedule"]["gameNumber"] != 1
                 ):
                     self.log.info(
@@ -2450,6 +2477,7 @@ class Bot(object):
                     self.log.error(
                         "Error editing post game {} thread: {}".format(pk, e)
                     )
+                    self.error_notification(f"Error editing {pk} post game thread")
 
             update_postgame_thread_until = self.settings.get(
                 "Post Game Thread", {}
@@ -2597,11 +2625,13 @@ class Bot(object):
                     and self.commonData.get(pk, {}).get("homeAway", "") == "home"
                     else False
                 )
-                self.log.debug("Processing atBatIndex [{}]".format(atBat["atBatIndex"]))
                 if not processedAtBats.get(str(atBat["atBatIndex"])):
                     # Add at bat to the tracking dict - c: isComplete, a: actionIndex (abbreviated to save DB space)
                     processedAtBats.update(
                         {str(atBat["atBatIndex"]): {"c": False, "a": []}}
+                    )
+                    self.log.debug(
+                        f"Processing atBatIndex [{atBat['atBatIndex']}] - first time seeing this atBatIndex - actionIndex: {atBat['actionIndex']}"
                     )
                 elif processedAtBats[str(atBat["atBatIndex"])]["c"]:
                     # Already finished processing this at bat
@@ -2609,6 +2639,11 @@ class Bot(object):
                         "Already processed atBatIndex {}.".format(atBat["atBatIndex"])
                     )
                     continue
+                else:
+                    # Processed this at bat but it wasn't complete yet
+                    self.log.debug(
+                        f"Processing atBatIndex [{atBat['atBatIndex']}] - prior processing state: {processedAtBats.get(str(atBat['atBatIndex']),'not found')} - actionIndex: {atBat['actionIndex']}"
+                    )
 
                 for actionIndex in (
                     x
@@ -2764,11 +2799,17 @@ class Bot(object):
                                         e,
                                     )
                                 )
+                                self.error_notification(
+                                    f"Error submitting comment to game {pk} thread {gameThreadId} for actionIndex {actionIndex} of atBatIndex {atBat['atBatIndex']}"
+                                )
                         else:
                             self.log.warning(
                                 "Not submitting comment to game thread {} for actionIndex {} for atBatIndex {} because text is blank... ".format(
                                     gameThreadId, actionIndex, atBat["atBatIndex"]
                                 )
+                            )
+                            self.error_notification(
+                                f"Comment body is blank for game {pk} thread {gameThreadId} for actionIndex {actionIndex} of atBatIndex {atBat['atBatIndex']}"
                             )
                     else:
                         # Event not wanted
@@ -2913,11 +2954,17 @@ class Bot(object):
                                         gameThreadId, atBat["atBatIndex"], e
                                     )
                                 )
+                                self.error_notification(
+                                    f"Error submitting comment to game {pk} thread {gameThreadId} for result of atBatIndex {atBat['atBatIndex']}"
+                                )
                         else:
                             self.log.warning(
                                 "Not submitting comment to game thread {} for result of atBatIndex {} because text is blank... ".format(
                                     gameThreadId, atBat["atBatIndex"]
                                 )
+                            )
+                            self.error_notification(
+                                f"Comment body is blank for game {pk} thread {gameThreadId} for result of atBatIndex {atBat['atBatIndex']}"
                             )
                     else:
                         # Event not wanted
@@ -3186,91 +3233,143 @@ class Bot(object):
         # patch = patch to apply to theDict
         # return patched dict
         for x in patch:
+            self.log.debug(f"x:{patch.index(x)}, len(patch): {len(patch)}")
             for d in x.get("diff", []):
                 if redball.DEV:
-                    self.log.debug(f"d:{d}")  # debug
+                    self.log.debug(f"d:{d}")
 
-                if d.get("op") is not None:
-                    value = d.get("value")
-                    if value is not None or d.get("op") == "remove":
-                        path = d.get("path", "").split("/")
-                        target = theDict
-                        for i, p in enumerate(path[1:]):
-                            if redball.DEV:
-                                self.log.debug(
-                                    f"i:{i}, p:{p}, type(target):{type(target)}"
-                                )  # debug
+                try:
+                    if d.get("op") is not None:
+                        value = d.get("value")
+                        if value is not None or d.get("op") == "remove":
+                            path = d.get("path", "").split("/")
+                            target = theDict
+                            for i, p in enumerate(path[1:]):
+                                if redball.DEV:
+                                    self.log.debug(
+                                        f"i:{i}, p:{p}, type(target):{type(target)}"
+                                    )
 
-                            if i == len(path) - 2:
-                                # end of the path--set the value
-                                if d.get("op") == "add" and isinstance(target, list):
-                                    if redball.DEV:
-                                        self.log.debug(
-                                            f"appending [{value}] to target; target type:{type(target)}"
-                                        )  # debug
+                                if i == len(path) - 2:
+                                    # end of the path--set the value
+                                    if d.get("op") == "add" and isinstance(
+                                        target, list
+                                    ):
+                                        if redball.DEV:
+                                            self.log.debug(
+                                                f"appending [{value}] to target; target type:{type(target)}"
+                                            )
 
-                                    target.append(value)
-                                elif d.get("op") == "remove":
-                                    if redball.DEV:
-                                        self.log.debug(
-                                            f"removing target[{p}]; target type:{type(target)}"
-                                        )  # debug
+                                        target.append(value)
+                                        continue
+                                    elif d.get("op") == "remove":
+                                        if redball.DEV:
+                                            self.log.debug(
+                                                f"removing target[{p}]; target type:{type(target)}, target len:{len(target if not isinstance(target, int) and not isinstance(target, bool) else '')}"
+                                            )
 
-                                    try:
-                                        target.pop(p)
-                                    except Exception as e:
-                                        self.log.error(f"Error removing {path}: {e}")
-                                else:
-                                    if redball.DEV:
-                                        self.log.debug(
-                                            f"updating target[{p}] to [{value}]; target type:{type(target)}"
-                                        )  # debug
+                                        try:
+                                            if isinstance(target, list):
+                                                if int(p) < len(target):
+                                                    target.pop(
+                                                        int(p)
+                                                        if isinstance(target, list)
+                                                        else p
+                                                    )
+                                                else:
+                                                    self.log.warning(
+                                                        f"Index {p} does not exist in target list: {target}"
+                                                    )
+                                            elif isinstance(target, dict):
+                                                if p in target.keys():
+                                                    target.pop(p)
+                                                else:
+                                                    self.log.warning(
+                                                        f"Key {p} does not exist in target dict: {target}"
+                                                    )
+                                            else:
+                                                self.log.warning(
+                                                    f"Not sure how to remove {p} from target: {target}"
+                                                )
+                                        except Exception as e:
+                                            self.log.error(
+                                                f"Error removing {path}: {e}"
+                                            )
+                                            self.error_notification(
+                                                f"Error patching dict--cannot remove {path} from target [{target}]"
+                                            )
 
-                                    target[
+                                        continue
+                                    else:
+                                        if redball.DEV:
+                                            self.log.debug(
+                                                f"updating target[{p}] to [{value}]; target type:{type(target)}"
+                                            )
+
+                                        target[
+                                            int(p) if isinstance(target, list) else p
+                                        ] = value
+                                        continue
+                                elif (
+                                    isinstance(target, dict)
+                                    and target.get(
                                         int(p) if isinstance(target, list) else p
-                                    ] = value
-                            elif (
-                                isinstance(target, dict)
-                                and target.get(
+                                    )
+                                    is None
+                                ) or (
+                                    isinstance(target, list) and len(target) <= int(p)
+                                ):
+                                    # key does not exist
+                                    if isinstance(path[i + 1], int):
+                                        # next hop is a list
+                                        if redball.DEV:
+                                            self.log.debug(
+                                                f"missing key, adding list for target[{p}]"
+                                            )
+
+                                        target[
+                                            int(p) if isinstance(target, list) else p
+                                        ] = []
+                                    elif i == len(path) - 3 and d.get("op") == "add":
+                                        # next hop is the target key to add
+                                        # do nothing, because it will be handled on the next loop
+                                        if redball.DEV:
+                                            self.log.debug(
+                                                f"missing key, but not a problem because op=add; continuing..."
+                                            )
+                                        continue
+                                    else:
+                                        # next hop is a dict
+                                        if redball.DEV:
+                                            self.log.debug(
+                                                f"missing key, adding dict for target[{p}]"
+                                            )
+
+                                        target[
+                                            int(p) if isinstance(target, list) else p
+                                        ] = {}
+                                # point to next key in the path
+                                target = target[
                                     int(p) if isinstance(target, list) else p
-                                )
-                                is None
-                            ) or (isinstance(target, list) and len(target) <= int(p)):
-                                # key does not exist
-                                if isinstance(path[i + 1], int):
-                                    # next hop is a list
-                                    if redball.DEV:
-                                        self.log.debug(
-                                            f"missing key, adding list for target[{p}]"
-                                        )  # debug
-
-                                    target[
-                                        int(p) if isinstance(target, list) else p
-                                    ] = []
-                                else:
-                                    # next hop is a dict
-                                    if redball.DEV:
-                                        self.log.debug(
-                                            f"missing key, adding dict for target[{p}]"
-                                        )  # debug
-
-                                    target[
-                                        int(p) if isinstance(target, list) else p
-                                    ] = {}
-                            # point to next key in the path
-                            target = target[int(p) if isinstance(target, list) else p]
+                                ]
+                                if redball.DEV:
+                                    self.log.debug(
+                                        f"type(target) after next hop: {type(target)}"
+                                    )
+                        else:
+                            # No value to add
                             if redball.DEV:
-                                self.log.debug(
-                                    f"type(target) after next hop: {type(target)}"
-                                )  # debug
+                                self.log.debug("no value")
                     else:
-                        # No value to add
+                        # No op
                         if redball.DEV:
-                            self.log.debug("no value")  # debug
-                else:
-                    # No op
-                    if redball.DEV:
-                        self.log.debug("no op")  # debug
+                            self.log.debug("no op")
+                except Exception as e:
+                    self.log.error(f"Error patching gumbo data: {e}")
+                    self.error_notification(f"Error patching gumbo data: {e}")
+                    return False
+
+        return True
 
     def get_gameStatus(self, pk, d=None):
         # pk = gamePk, d = date ('%Y-%m-%d')
@@ -3453,9 +3552,40 @@ class Bot(object):
                 self.commonData[max(self.commonData.keys())]["gameTime"]["utc"]
                 if len(self.commonData) > 1
                 else datetime.strptime(
+                    (
+                        datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d")
+                        + timedelta(days=1)
+                    ).strftime("%Y-%m-%d")
+                    + "T"
+                    + datetime.utcnow().strftime("%H:%M:%SZ"),
+                    "%Y-%m-%dT%H:%M:%SZ",
+                ).replace(
+                    tzinfo=pytz.utc
+                )  # UTC time is in the next day
+                if (
+                    datetime.strptime(
+                        self.today["Y-m-d"]
+                        + "T"
+                        + datetime.now().strftime("%H:%M:%SZ"),
+                        "%Y-%m-%dT%H:%M:%SZ",
+                    ).replace(tzinfo=tzlocal.get_localzone())
+                    - datetime.strptime(
+                        self.today["Y-m-d"]
+                        + "T"
+                        + datetime.utcnow().strftime("%H:%M:%SZ"),
+                        "%Y-%m-%dT%H:%M:%SZ",
+                    ).replace(tzinfo=pytz.utc)
+                ).total_seconds()
+                / 60
+                / 60
+                / 24
+                > 0.5  # With "today" date, difference between time in UTC and local is more than 12hr
+                else datetime.strptime(
                     self.today["Y-m-d"] + "T" + datetime.utcnow().strftime("%H:%M:%SZ"),
                     "%Y-%m-%dT%H:%M:%SZ",
-                ).replace(tzinfo=pytz.utc)
+                ).replace(
+                    tzinfo=pytz.utc
+                )  # Date is still the same when time is converted to UTC
             )
             self.log.debug(
                 "Looking for next game starting after {} ({})...".format(
@@ -3767,10 +3897,9 @@ class Bot(object):
                     self.log.debug("Getting full gumbo data for pk {}".format(pk))
                     gumbo = self.api_call("game", gumboParams)
                 else:
-                    if redball.DEV:
-                        self.log.debug(
-                            f"Timestamps[-1]: {timestamps[-1]}; cached gumbo metadata timestamp: {self.commonData[pk]['gumbo'].get('metaData', {}).get('timeStamp')} for pk {pk}"
-                        )
+                    self.log.debug(
+                        f"Latest timestamp from StatsAPI: {timestamps[-1]}; latest timestamp in gumbo cache: {self.commonData[pk]['gumbo'].get('metaData', {}).get('timeStamp')} for pk {pk}"
+                    )
 
                     gumbo = self.commonData[pk].get("gumbo", {})
                     if len(timestamps) == 0 or timestamps[-1] == gumbo.get(
@@ -3790,11 +3919,29 @@ class Bot(object):
                             },
                             force=True,
                         )  # use force=True due to MLB-StatsAPI bug #31
-                        self.log.debug("Patching gumbo data for pk {}".format(pk))
-                        self.patch_dict(
-                            self.commonData[pk]["gumbo"], diffPatch
-                        )  # Patch in place
-                        gumbo = self.commonData[pk]["gumbo"]  # Carry forward
+                        # Check if patch is actually the full gumbo data
+                        if isinstance(diffPatch, dict) and diffPatch.get("gamePk"):
+                            # Full gumbo data was returned
+                            self.log.debug(
+                                f"Full gumbo data was returned instead of a patch for pk {pk}. No need to patch!"
+                            )
+                            gumbo = diffPatch
+                        else:
+                            # Patch the dict
+                            self.log.debug("Patching gumbo data for pk {}".format(pk))
+                            if self.patch_dict(
+                                self.commonData[pk]["gumbo"], diffPatch
+                            ):  # Patch in place
+                                # True result —- patching was successful
+                                gumbo = self.commonData[pk]["gumbo"]  # Carry forward
+                            else:
+                                # Get full gumbo
+                                self.log.debug(
+                                    "Since patching encountered an error, getting full gumbo data for pk {}".format(
+                                        pk
+                                    )
+                                )
+                                gumbo = self.api_call("game", gumboParams)
 
                 # Include gumbo data
                 pkData.update({"timestamps": timestamps, "gumbo": gumbo})
@@ -4295,6 +4442,10 @@ class Bot(object):
             }
         ]
         for pitcherId_int in gumbo["liveData"]["boxscore"]["teams"]["away"]["pitchers"]:
+            if pitcherId_int == 0:
+                self.log.warning("Invalid pitcher id found: 0")
+                continue
+
             pitcherId = str(pitcherId_int)
             namefield = gumbo["gameData"]["players"]["ID" + pitcherId]["boxscoreName"]
             namefield += (
@@ -4390,6 +4541,10 @@ class Bot(object):
             }
         ]
         for pitcherId_int in gumbo["liveData"]["boxscore"]["teams"]["home"]["pitchers"]:
+            if pitcherId_int == 0:
+                self.log.warning("Invalid pitcher id found: 0")
+                continue
+
             pitcherId = str(pitcherId_int)
             namefield = gumbo["gameData"]["players"]["ID" + pitcherId]["boxscoreName"]
             namefield += (
@@ -4734,6 +4889,7 @@ class Bot(object):
         except Exception as e:
             self.log.error("Error rendering {} title: {}".format(thread, e))
             title = None
+            self.error_notification(f"Error rendering title for {thread} thread")
 
         sticky = self.settings.get("Reddit", {}).get("STICKY", False) is True
         inboxReplies = (
@@ -4793,6 +4949,7 @@ class Bot(object):
                     break
         except Exception as e:
             self.log.error("Error checking subreddit for existing posts: {}".format(e))
+            self.error_notification(f"Error checking subreddit for existing posts")
 
         if not theThread:
             try:
@@ -4807,6 +4964,9 @@ class Bot(object):
             except Exception as e:
                 self.log.error("Error rendering {} text: {}".format(thread, e))
                 text = None
+                self.error_notification(
+                    f"{thread.title()} thread not posted due to failure rendering title or text."
+                )
 
             if not (title and text):
                 self.log.error(
@@ -4831,6 +4991,7 @@ class Bot(object):
             except Exception as e:
                 self.log.error("Error submitting {} thread: {}".format(thread, e))
                 theThread = None
+                self.error_notification(f"Error submitting {thread} thread")
 
         if theThread:
             if isinstance(pk, list):
@@ -4913,10 +5074,128 @@ class Bot(object):
                 else:
                     # Break the loop if no more webhook urls configured
                     break
+
+            # Check for Prowl notification
+            prowlKey = self.settings.get("Prowl", {}).get("THREAD_POSTED_API_KEY", "")
+            prowlPriority = self.settings.get("Prowl", {}).get(
+                "THREAD_POSTED_PRIORITY", ""
+            )
+            if prowlKey == "" or prowlPriority == "":
+                self.log.debug("Prowl notifications are disabled or not configured.")
+            else:
+                self.notify_prowl(
+                    apiKey=prowlKey,
+                    event=f"{self.myTeam['teamName']} {thread.title()} Thread Posted",
+                    description=f"""{self.myTeam['teamName']} {thread} thread was posted to r/{self.settings["Reddit"]["SUBREDDIT"]} at {self.convert_timezone(datetime.utcfromtimestamp(theThread.created_utc),'local').strftime('%I:%M %p %Z')}\nThread title: {theThread.title}\nURL: {theThread.shortlink}""",
+                    priority=prowlPriority,
+                    url=theThread.shortlink,
+                    appName=f"redball - {self.bot.name}",
+                )
+
+            # Check for Twitter
+            tConsumerKey = self.settings.get("Twitter", {}).get("CONSUMER_KEY", "")
+            tConsumerSecret = self.settings.get("Twitter", {}).get(
+                "CONSUMER_SECRET", ""
+            )
+            tAccessToken = self.settings.get("Twitter", {}).get("ACCESS_TOKEN", "")
+            tAccessSecret = self.settings.get("Twitter", {}).get("ACCESS_SECRET", "")
+            tweetThreadPosted = self.settings.get("Twitter", {}).get(
+                "TWEET_THREAD_POSTED", False
+            )
+            if (
+                "" in [tConsumerKey, tConsumerSecret, tAccessToken, tAccessSecret]
+                or not tweetThreadPosted
+            ):
+                self.log.debug("Twitter disabled or not configured")
+            else:
+                if thread == "game":
+                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')} {'#doubleheader' if self.commonData[pk]["schedule"]["doubleHeader"] != 'N' else ''}"""
+                elif thread == "gameday":
+                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')}"""
+                elif thread == "post":
+                    message = f"""{theThread.title} - The discussion continues: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')} {'#doubleheader' if self.commonData[pk]["schedule"]["doubleHeader"] != 'N' else ''}"""
+                elif thread == "off":
+                    message = f"""{theThread.title} - Keep the #{self.myTeam['teamName'].replace(' ','')} discussion going: {theThread.shortlink}"""
+                elif thread == "weekly":
+                    message = f"""{theThread.title} - Keep the #{self.myTeam['teamName'].replace(' ','')} discussion going: {theThread.shortlink}"""
+                else:
+                    self.log.error(f"Can't tweet about unknown thread type [{thread}]!")
+                    return False
+
+                tweetResult = self.tweet_thread(
+                    message=message,
+                    consumerKey=tConsumerKey,
+                    consumerSecret=tConsumerSecret,
+                    accessToken=tAccessToken,
+                    accessSecret=tAccessSecret,
+                )
+                if tweetResult:
+                    self.log.info(f"Tweet submitted successfully!")
         else:
             self.log.warning("No thread object present. Something went wrong!")
 
         return (theThread, text)
+
+    def tweet_thread(
+        self,
+        message,
+        consumerKey=None,
+        consumerSecret=None,
+        accessToken=None,
+        accessSecret=None,
+    ):
+        if not consumerKey or not consumerSecret or not accessToken or not accessSecret:
+            self.log.warning(
+                "Can't submit tweet because Twitter settings are missing or incomplete. Check bot config."
+            )
+            return False
+
+        self.log.debug("Initiating Twitter...")
+        try:
+            t = twitter.Api(consumerKey, consumerSecret, accessToken, accessSecret)
+            self.log.debug(
+                f"Authenticated Twitter user: {t.VerifyCredentials().screen_name}"
+            )
+            self.log.debug(f"Tweeting: {message}")
+            t.PostUpdate(message)
+            return True
+        except Exception as e:
+            self.log.error(f"Error submitting Tweet: {e}")
+            self.error_notification(f"Error submitting Tweet: {e}")
+            return False
+
+    def notify_prowl(
+        self, apiKey, event, description, priority=0, url=None, appName="redball"
+    ):
+        # Send a notification to Prowl
+        p = pyprowl.Prowl(apiKey=apiKey, appName=appName)
+
+        self.log.debug(
+            f"Sending notification to Prowl with API Key: {apiKey}. Event: {event}, Description: {description}, Priority: {priority}, URL: {url}..."
+        )
+        try:
+            p.notify(
+                event=event, description=description, priority=priority, url=url,
+            )
+            self.log.info("Notification successfully sent to Prowl!")
+            return True
+        except Exception as e:
+            self.log.error("Error sending notification to Prowl: {}".format(e))
+            return False
+
+    def error_notification(self, action):
+        # Generate and send notification to Prowl for errors
+        prowlKey = self.settings.get("Prowl", {}).get("ERROR_API_KEY", "")
+        prowlPriority = self.settings.get("Prowl", {}).get("ERROR_PRIORITY", "")
+        newline = "\n"
+        if prowlKey != "" and prowlPriority != "":
+            self.notify_prowl(
+                apiKey=prowlKey,
+                event=f"{self.bot.name} - Error {action}!",
+                description=f"{action} for bot: [{self.bot.name}]!\n\n{newline.join(traceback.format_exception(*sys.exc_info()))}",
+                priority=prowlPriority,
+                appName=f"redball - {self.bot.name}",
+            )
 
     def post_webhook(self, url, body):
         # url = url to which the data should be posted
@@ -4933,6 +5212,9 @@ class Bot(object):
                         e
                     )
                 )
+                self.error_notification(
+                    f"Failed to convert webhook template from json format. Ensure there are no line breaks or other special characters in the rendered template"
+                )
                 return "Failed to convert webhook template from json format. Ensure there are no line breaks or other special characters in the rendered template. Error: {}".format(
                     e
                 )
@@ -4944,6 +5226,7 @@ class Bot(object):
             else:
                 return "Request status code: {}".format(r.status_code)
         except requests.exceptions.RequestException as e:
+            self.error_notification(f"Error posting to webhook [{url}]")
             return str(e)
 
         return False
@@ -4997,7 +5280,10 @@ class Bot(object):
                     self.log.info("Submission flaired...")
                 except Exception:
                     self.log.error(
-                        "Failed to set flair (check mod privileges or change FLAIR_MODE to submitter), continuing..."
+                        "Failed to set flair on thread {post.id} (check mod privileges or change FLAIR_MODE to submitter), continuing..."
+                    )
+                    self.error_notification(
+                        f"Failed to set flair (check mod privileges or change FLAIR_MODE to submitter)"
                     )
 
         if sort not in [None, ""]:
@@ -5008,6 +5294,9 @@ class Bot(object):
             except Exception:
                 self.log.error(
                     "Setting suggested sort failed (check mod privileges), continuing..."
+                )
+                self.error_notification(
+                    f"Failed to set suggested sort on thread {post.id} (check mod privileges)"
                 )
 
         return post
@@ -5035,11 +5324,14 @@ class Bot(object):
         except Exception:
             self.log.error(
                 "Error rendering template [{}] for {} {}. Falling back to default template. Error: {}".format(
-                    template,
+                    template.filename,
                     thread,
                     templateType,
                     mako.exceptions.text_error_template().render(),
                 )
+            )
+            self.error_notification(
+                f"Error rendering {thread} {templateType} template [{template.filename}]"
             )
             try:
                 template = self.LOOKUP.get_template(
@@ -5053,6 +5345,9 @@ class Bot(object):
                         templateType,
                         mako.exceptions.text_error_template().render(),
                     )
+                )
+                self.error_notification(
+                    f"Error rendering default {thread} {templateType} template [{template.filename}]"
                 )
 
         return ""
@@ -5244,6 +5539,7 @@ class Bot(object):
             self.log.error(
                 "Error encountered attempting to initialize Reddit: {}".format(e)
             )
+            self.error_notification(f"Error initializing Reddit")
             raise
 
         scopes = [
@@ -5264,6 +5560,9 @@ class Bot(object):
                     e
                 )
             )
+            self.error_notification(
+                f"Error encountered attempting to look up authorized Reddit scopes"
+            )
             raise
 
         missing_scopes = []
@@ -5275,6 +5574,9 @@ class Bot(object):
                 "Error encountered attempting to identify authorized Reddit user (identity scope may not be authorized): {}".format(
                     e
                 )
+            )
+            self.error_notification(
+                f"Error encountered attempting to identify authorized Reddit user (identity scope may not be authorized)"
             )
 
         for scope in scopes:
@@ -5915,6 +6217,7 @@ class Bot(object):
                     "markdown": "Error retrieving bot state: {}".format(e),
                 },
             }
+            self.error_notification(f"Error retrieving bot state")
 
         self.log.debug("Bot Status: {}".format(botStatus))  # debug
         self.bot.detailedState = botStatus
