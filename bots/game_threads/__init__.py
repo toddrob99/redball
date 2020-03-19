@@ -2631,6 +2631,8 @@ class Bot(object):
                         {str(atBat["atBatIndex"]): {"c": False, "a": []}}
                     )
                     self.log.debug(f"Processing atBatIndex [{atBat['atBatIndex']}] - first time seeing this atBatIndex - actionIndex: {atBat['actionIndex']}")
+                        f"Processing atBatIndex [{atBat['atBatIndex']}] - first time seeing this atBatIndex - actionIndex: {atBat['actionIndex']}"
+                    )
                 elif processedAtBats[str(atBat["atBatIndex"])]["c"]:
                     # Already finished processing this at bat
                     self.log.debug(
@@ -2639,7 +2641,9 @@ class Bot(object):
                     continue
                 else:
                     # Processed this at bat but it wasn't complete yet
-                    self.log.debug(f"Processing atBatIndex [{atBat['atBatIndex']}] - prior processing state: {processedAtBats.get(str(atBat['atBatIndex']),'not found')} - actionIndex: {atBat['actionIndex']}")
+                    self.log.debug(
+                        f"Processing atBatIndex [{atBat['atBatIndex']}] - prior processing state: {processedAtBats.get(str(atBat['atBatIndex']),'not found')} - actionIndex: {atBat['actionIndex']}"
+                    )
 
                 for actionIndex in (
                     x
