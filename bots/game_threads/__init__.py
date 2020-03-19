@@ -2630,7 +2630,7 @@ class Bot(object):
                     processedAtBats.update(
                         {str(atBat["atBatIndex"]): {"c": False, "a": []}}
                     )
-                    self.log.debug(f"Processing atBatIndex [{atBat['atBatIndex']}] - first time seeing this atBatIndex - actionIndex: {atBat['actionIndex']}")
+                    self.log.debug(
                         f"Processing atBatIndex [{atBat['atBatIndex']}] - first time seeing this atBatIndex - actionIndex: {atBat['actionIndex']}"
                     )
                 elif processedAtBats[str(atBat["atBatIndex"])]["c"]:
