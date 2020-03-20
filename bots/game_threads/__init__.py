@@ -30,7 +30,7 @@ import twitter
 
 from . import praw
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 
 def run(bot, settings):
