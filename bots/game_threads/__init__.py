@@ -28,7 +28,7 @@ import pyprowl
 import statsapi
 import twitter
 
-import praw
+from . import praw
 
 __version__ = "0.0.5"
 
