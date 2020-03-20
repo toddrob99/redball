@@ -4922,6 +4922,19 @@ class Bot(object):
             if thread == "post"
             else "new"
         )
+        liveDiscussion = (
+            self.settings.get("Weekly Thread", {}).get("LIVE_DISCUSSION", False)
+            if thread == "weekly"
+            else self.settings.get("Off Day Thread", {}).get("LIVE_DISCUSSION", False)
+            if thread == "off"
+            else self.settings.get("Game Day Thread", {}).get("LIVE_DISCUSSION", False)
+            if thread == "gameday"
+            else self.settings.get("Game Thread", {}).get("LIVE_DISCUSSION", False)
+            if thread == "game"
+            else self.settings.get("Post Game Thread", {}).get("LIVE_DISCUSSION", False)
+            if thread == "post"
+            else False
+        )
 
         # Check if post already exists
         theThread = None
@@ -4986,6 +4999,7 @@ class Bot(object):
                     flairMode=flairMode,
                     flair=flair,
                     sort=sort,
+                    live_discussion=liveDiscussion,
                 )
                 self.log.info("Submitted {} thread: ({}).".format(thread, theThread))
             except Exception as e:
@@ -5241,13 +5255,19 @@ class Bot(object):
         flairMode=None,
         flair=None,
         sort=None,
+        live_discussion=False,
     ):
         if sub:
             subreddit = self.reddit.subreddit(sub)
         else:
             subreddit = self.subreddit
 
-        post = subreddit.submit(title=title, selftext=text, send_replies=inboxReplies)
+        post = subreddit.submit(
+            title=title,
+            selftext=text,
+            send_replies=inboxReplies,
+            discussion_type="CHAT" if live_discussion else None,
+        )
         self.log.info("Thread ({}) submitted: {}".format(title, post))
 
         if sticky:
@@ -5525,7 +5545,7 @@ class Bot(object):
         self.log.debug("Refreshed settings: {}".format(self.settings))
 
     def init_reddit(self):
-        self.log.debug("Initiating Reddit API...")
+        self.log.debug(f"Initiating Reddit API with praw v{praw.__version__}...")
         try:
             self.reddit = praw.Reddit(
                 client_id=self.settings["Reddit Auth"]["reddit_clientId"],

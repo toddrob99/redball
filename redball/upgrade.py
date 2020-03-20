@@ -203,5 +203,57 @@ upgradeScripts = {
         "UPDATE rb_meta SET val='2', lastUpdate='{}' WHERE key='dbVersion';".format(
             time.time()
         ),
-    ]
+    ],
+    3: [
+        # Add setting to game thread bots: categories: [Weekly Thread, Off Day Thread, Game Day Thread, Game Thread, Post Game Thread], key: LIVE_DISCUSSION
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Weekly Thread','LIVE_DISCUSSION','Submit post as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).','bool','false','[true, false]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Off Day Thread','LIVE_DISCUSSION','Submit post as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).','bool','false','[true, false]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Game Day Thread','LIVE_DISCUSSION','Submit post as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).','bool','false','[true, false]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Game Thread','LIVE_DISCUSSION','Submit post as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).','bool','false','[true, false]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Post Game Thread','LIVE_DISCUSSION','Submit post as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).','bool','false','[true, false]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        # Update DB version to 3
+        "UPDATE rb_meta SET val='3', lastUpdate='{}' WHERE key='dbVersion';".format(
+            time.time()
+        ),
+    ],
 }
