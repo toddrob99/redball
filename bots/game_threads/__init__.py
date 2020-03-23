@@ -4985,7 +4985,7 @@ class Bot(object):
                 self.log.error(
                     "Thread not posted due to failure rendering title or text."
                 )
-                return (False, text)
+                return (None, text)
 
             fullText = text + (postFooter if isinstance(postFooter, str) else "")
 
@@ -5134,7 +5134,7 @@ class Bot(object):
                     message = f"""{theThread.title} - Keep the #{self.myTeam['teamName'].replace(' ','')} discussion going: {theThread.shortlink}"""
                 else:
                     self.log.error(f"Can't tweet about unknown thread type [{thread}]!")
-                    return False
+                    return (None, text)
 
                 tweetResult = self.tweet_thread(
                     message=message,
