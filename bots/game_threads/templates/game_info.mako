@@ -5,12 +5,12 @@ ${'###'}Links & Info
 * Current conditions at ${data[gamePk]['schedule']['venue']['name']}: ${data[gamePk]['schedule']['weather']['temp']+'&#176;F' if data[gamePk]['schedule']['weather'].get('temp') else ''} ${'- ' + data[gamePk]['schedule']['weather']['condition'] if data[gamePk]['schedule']['weather'].get('condition') else ''} ${'- Wind ' + data[gamePk]['schedule']['weather']['wind'] if data[gamePk]['schedule']['weather'].get('wind') else ''}
 % endif
 <%
-    awayTv = [x for x in data[gamePk]['schedule']['broadcasts'] if x['type']=='TV' and x['homeAway']=='away' and not x.get('isNational',False)]
-    awayRadio = [x for x in data[gamePk]['schedule']['broadcasts'] if x['type'] in ['FM','AM'] and x['homeAway']=='away' and not x.get('isNational',False)]
-    homeTv = [x for x in data[gamePk]['schedule']['broadcasts'] if x['type']=='TV' and x['homeAway']=='home' and not x.get('isNational',False)]
-    homeRadio = [x for x in data[gamePk]['schedule']['broadcasts'] if x['type'] in ['FM','AM'] and x['homeAway']=='home' and not x.get('isNational',False)]
-    nationalTv = [x for x in data[gamePk]['schedule']['broadcasts'] if x['type']=='TV' and x.get('isNational')]
-    nationalRadio = [x for x in data[gamePk]['schedule']['broadcasts'] if x['type']=='Radio' and x.get('isNational')]
+    awayTv = [x for x in data[gamePk]['schedule'].get('broadcasts', []) if x.get('type')=='TV' and x.get('homeAway')=='away' and not x.get('isNational',False)]
+    awayRadio = [x for x in data[gamePk]['schedule'].get('broadcasts', []) if x.get('type') in ['FM','AM'] and x.get('homeAway')=='away' and not x.get('isNational',False)]
+    homeTv = [x for x in data[gamePk]['schedule'].get('broadcasts', []) if x.get('type')=='TV' and x.get('homeAway')=='home' and not x.get('isNational',False)]
+    homeRadio = [x for x in data[gamePk]['schedule'].get('broadcasts', []) if x.get('type') in ['FM','AM'] and x.get('homeAway')=='home' and not x.get('isNational',False)]
+    nationalTv = [x for x in data[gamePk]['schedule'].get('broadcasts', []) if x.get('type')=='TV' and x.get('isNational')]
+    nationalRadio = [x for x in data[gamePk]['schedule'].get('broadcasts', []) if x.get('type')=='Radio' and x.get('isNational')]
 %>\
 * TV: \
 <%

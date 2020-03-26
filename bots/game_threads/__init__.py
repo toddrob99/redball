@@ -6049,7 +6049,7 @@ class Bot(object):
                 )
 
                 botStatus["summary"]["text"] += "\n\nGame Day Thread{}.".format(
-                    " disabled."
+                    " disabled"
                     if not botStatus["gameDayThread"]["enabled"]
                     else " failed to post (check log for error)"
                     if not botStatus["gameDayThread"]["posted"]
@@ -6176,7 +6176,7 @@ class Bot(object):
                                     v["threads"]["post"]["id"],
                                 )
                                 if v["threads"]["post"]["posted"]
-                                else "<br /><br />Post game thread disabled."
+                                else "<br /><br /><strong>Post game thread</strong> disabled."
                                 if not v["threads"]["post"]["enabled"]
                                 else "",
                             )
@@ -6211,7 +6211,7 @@ class Bot(object):
                                     v["threads"]["post"]["url"],
                                 )
                                 if v["threads"]["post"]["posted"]
-                                else "\n\n>Post game thread disabled."
+                                else "\n\n>**Post game thread** disabled."
                                 if not v["threads"]["post"]["enabled"]
                                 else "",
                             )
