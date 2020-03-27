@@ -5205,7 +5205,7 @@ class Bot(object):
         if prowlKey != "" and prowlPriority != "":
             self.notify_prowl(
                 apiKey=prowlKey,
-                event=f"{self.bot.name} - Error {action}!",
+                event=f"{self.bot.name} - {action}!",
                 description=f"{action} for bot: [{self.bot.name}]!\n\n{newline.join(traceback.format_exception(*sys.exc_info()))}",
                 priority=prowlPriority,
                 appName=f"redball - {self.bot.name}",
