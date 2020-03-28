@@ -209,143 +209,9 @@ class Bot(object):
                     )
 
             if len(todayGamePks) == 0:
+                # Off day thread
                 self.log.info("No games today!")
-
-                if (
-                    self.seasonState.startswith("off") or self.seasonState == "post:out"
-                ) and self.settings.get("Off Day Thread", {}).get(
-                    "SUPPRESS_OFFSEASON", True
-                ):
-                    self.log.info("Suppressing off day thread during offseason.")
-                    self.activeGames.update({"off": {"STOP_FLAG": True}})
-                elif not self.settings.get("Off Day Thread", {}).get("ENABLED", True):
-                    self.log.info("Off day thread disabled.")
-                    self.activeGames.update({"off": {"STOP_FLAG": True}})
-                else:
-                    # Spawn a thread to wait for post time and then keep off day thread updated
-                    self.activeGames.update(
-                        {"off": {"STOP_FLAG": False}}
-                    )  # Off day thread is not specific to a gamePk
-                    self.THREADS.update(
-                        {
-                            "OFFDAY_THREAD": threading.Thread(
-                                target=self.off_thread_update_loop,
-                                name="bot-{}-{}-offday".format(
-                                    self.bot.id, self.bot.name.replace(" ", "-")
-                                ),
-                                daemon=True,
-                            )
-                        }
-                    )
-                    self.THREADS["OFFDAY_THREAD"].start()
-                    self.log.debug(
-                        "Started off day thread {}.".format(
-                            self.THREADS["OFFDAY_THREAD"]
-                        )
-                    )
-
-                while (
-                    len(
-                        [
-                            {k: v}
-                            for k, v in self.activeGames.items()
-                            if not v["STOP_FLAG"]
-                        ]
-                    )
-                    and redball.SIGNAL is None
-                    and not self.bot.STOP
-                ):
-                    try:
-                        if not self.settings.get("Off Day Thread", {}).get(
-                            "ENABLED", True
-                        ):
-                            # Off day thread is disabled, so don't start an update thread...
-                            pass
-                        elif (
-                            not self.activeGames["off"]["STOP_FLAG"]
-                            and self.THREADS.get("OFFDAY_THREAD")
-                            and isinstance(
-                                self.THREADS["OFFDAY_THREAD"], threading.Thread
-                            )
-                            and self.THREADS["OFFDAY_THREAD"].isAlive()
-                        ):
-                            self.log.debug(
-                                "Off day update thread looks fine..."
-                            )  # debug - need this here to see if the condition is working when the thread crashes
-                            # pass
-                        elif self.activeGames["off"]["STOP_FLAG"]:
-                            # Off day thread is already done
-                            pass
-                        else:
-                            raise Exception(
-                                "Off day thread update process is not running!"
-                            )
-                    except Exception as e:
-                        self.log.error(
-                            "Off day thread update process is not running. Attempting to start. (Error: {})".format(
-                                e
-                            )
-                        )
-                        self.error_notification(
-                            f"Off day thread update process is not running"
-                        )
-                        self.THREADS.update(
-                            {
-                                "OFFDAY_THREAD": threading.Thread(
-                                    target=self.off_thread_update_loop,
-                                    name="bot-{}-{}-offday".format(
-                                        self.bot.id, self.bot.name.replace(" ", "-")
-                                    ),
-                                    daemon=True,
-                                )
-                            }
-                        )
-                        self.THREADS["OFFDAY_THREAD"].start()
-                        self.log.debug(
-                            "Started off day thread {}.".format(
-                                self.THREADS["OFFDAY_THREAD"]
-                            )
-                        )
-
-                    if (
-                        len(
-                            [
-                                {k: v}
-                                for k, v in self.activeGames.items()
-                                if not v.get("STOP_FLAG", False)
-                                or not v.get("POST_STOP_FLAG", False)
-                            ]
-                        )
-                        > 0
-                    ):
-                        # There are still active threads
-                        self.log.debug(
-                            "Active games/threads: {}".format(
-                                [
-                                    k
-                                    for k, v in self.activeGames.items()
-                                    if not v["STOP_FLAG"]
-                                    or not v.get("POST_STOP_FLAG", True)
-                                ]
-                            )
-                        )
-                        self.log.debug(
-                            "Active threads: {}".format(
-                                [
-                                    t
-                                    for t in threading.enumerate()
-                                    if t.name.startswith(
-                                        "bot-{}-{}".format(
-                                            self.bot.id, self.bot.name.replace(" ", "-")
-                                        )
-                                    )
-                                ]
-                            )
-                        )
-                        self.sleep(30)
-                    else:
-                        break
-
+                self.off_day()  # Start the off day thread update process and enter a loop
                 if redball.SIGNAL is not None or self.bot.STOP:
                     break
             else:
@@ -406,389 +272,111 @@ class Bot(object):
                 # Collect data for all games
                 self.collect_data(todayGamePks)
 
-                if not self.settings.get("Game Day Thread", {}).get("ENABLED", True):
-                    self.log.info("Game day thread disabled.")
-                    self.activeGames["gameday"].update({"STOP_FLAG": True})
-                else:
-                    # Spawn a thread to wait for post time and then keep game day thread updated
-                    self.THREADS.update(
-                        {
-                            "GAMEDAY_THREAD": threading.Thread(
-                                target=self.gameday_thread_update_loop,
-                                args=(todayGamePks,),
-                                name="bot-{}-{}-gameday".format(
-                                    self.bot.id, self.bot.name.replace(" ", "-")
-                                ),
-                                daemon=True,
-                            )
-                        }
-                    )
-                    self.THREADS["GAMEDAY_THREAD"].start()
-                    self.log.debug(
-                        "Started game day thread {}.".format(
-                            self.THREADS["GAMEDAY_THREAD"]
-                        )
-                    )
-
-                # Game thread update processes
-                for (
-                    pk
-                ) in (
-                    todayGamePks
-                ):  # Loop through gamePks since each game gets its own thread
-                    if self.settings.get("Game Thread", {}).get("ENABLED", True):
-                        # Spawn separate thread to wait for post time and then keep game thread updated
-                        self.THREADS[pk].update(
-                            {
-                                "GAME_THREAD": threading.Thread(
-                                    target=self.game_thread_update_loop,
-                                    args=(pk,),
-                                    name="bot-{}-{}-game-{}".format(
-                                        self.bot.id, self.bot.name.replace(" ", "-"), pk
-                                    ),
-                                    daemon=True,
-                                )
-                            }
-                        )
-                        self.THREADS[pk]["GAME_THREAD"].start()
-                        self.log.debug(
-                            "Started game thread {}.".format(
-                                self.THREADS[pk]["GAME_THREAD"]
-                            )
-                        )
-                    else:
-                        self.log.info("Game thread is disabled! [pk: {}]".format(pk))
-                        self.activeGames[pk].update({"STOP_FLAG": True})
-
-                    if self.settings.get("Post Game Thread", {}).get("ENABLED", True):
-                        # Spawn separate thread to wait for game to be final and then submit and keep post game thread updated
-                        self.THREADS[pk].update(
-                            {
-                                "POSTGAME_THREAD": threading.Thread(
-                                    target=self.postgame_thread_update_loop,
-                                    args=(pk,),
-                                    name="bot-{}-{}-postgame-{}".format(
-                                        self.bot.id, self.bot.name.replace(" ", "-"), pk
-                                    ),
-                                    daemon=True,
-                                )
-                            }
-                        )
-                        self.THREADS[pk]["POSTGAME_THREAD"].start()
-                        self.log.debug(
-                            "Started post game thread {}.".format(
-                                self.THREADS[pk]["POSTGAME_THREAD"]
-                            )
-                        )
-                    else:
-                        self.log.info(
-                            "Post game thread is disabled! [pk: {}]".format(pk)
-                        )
-                        self.activeGames[pk].update({"POST_STOP_FLAG": True})
-
-                # Loop over active games, make sure submit/update and comment threads are running
-                while (
-                    len(
-                        [
-                            {k: v}
-                            for k, v in self.activeGames.items()
-                            if not v.get("STOP_FLAG", True)
-                            or not v.get("POST_STOP_FLAG", True)
-                        ]
-                    )
-                    > 0
-                    and redball.SIGNAL is None
-                    and not self.bot.STOP
+                # Check if all MLB games are postponed (league is suspended)
+                if not next(
+                    (
+                        True
+                        for x in self.commonData[0]["leagueSchedule"]
+                        if x["status"]["abstractGameCode"] != "F"
+                        and x["status"]["codedGameState"] != "D"
+                    ),
+                    False,
                 ):
-                    for pk in (
+                    # All games are postponed -- assume league is suspended
+                    self.log.info(
+                        "All of today's MLB games are postponed. Assuming the league is suspended and treating as off day..."
+                    )
+                    self.commonData.update({"seasonSuspended": True})
+                    # Remove game data from cache since we're treating as off day
+                    self.activeGames.pop("gameday")
+                    for pk in todayGamePks:
+                        self.commonData.pop(pk)
+                        self.activeGames.pop(pk)
+
+                    self.off_day()
+                else:
+                    if not self.settings.get("Game Day Thread", {}).get("ENABLED", True):
+                        self.log.info("Game day thread disabled.")
+                        self.activeGames["gameday"].update({"STOP_FLAG": True})
+                    else:
+                        # Spawn a thread to wait for post time and then keep game day thread updated
+                        self.THREADS.update(
+                            {
+                                "GAMEDAY_THREAD": threading.Thread(
+                                    target=self.gameday_thread_update_loop,
+                                    args=(todayGamePks,),
+                                    name="bot-{}-{}-gameday".format(
+                                        self.bot.id, self.bot.name.replace(" ", "-")
+                                    ),
+                                    daemon=True,
+                                )
+                            }
+                        )
+                        self.THREADS["GAMEDAY_THREAD"].start()
+                        self.log.debug(
+                            "Started game day thread {}.".format(
+                                self.THREADS["GAMEDAY_THREAD"]
+                            )
+                        )
+
+                    # Game thread update processes
+                    for (
                         pk
-                        for pk in self.activeGames
-                        if not self.activeGames[pk]["STOP_FLAG"]
-                        and isinstance(pk, int)
-                        and pk > 0
-                    ):
-                        # Check submit/update thread for game thread
-                        try:
-                            if not self.settings.get("Game Thread", {}).get(
-                                "ENABLED", True
-                            ):
-                                # Game thread is disabled, so don't start an update thread...
-                                pass
-                            elif (
-                                pk > 0
-                                and not self.activeGames[pk]["STOP_FLAG"]
-                                and self.THREADS[pk].get("GAME_THREAD")
-                                and isinstance(
-                                    self.THREADS[pk]["GAME_THREAD"], threading.Thread
-                                )
-                                and self.THREADS[pk]["GAME_THREAD"].isAlive()
-                            ):
-                                self.log.debug(
-                                    "Game thread for game {} looks fine...".format(pk)
-                                )  # debug - need this here to see if the condition is working when the thread crashes
-                                # pass
-                            elif pk > 0 and self.activeGames[pk]["STOP_FLAG"]:
-                                # Game thread is already done
-                                pass
-                            else:
-                                raise Exception(
-                                    "Game {} thread update process is not running!".format(
-                                        pk
-                                    )
-                                )
-                        except Exception as e:
-                            if "is not running" in str(e):
-                                self.log.error(
-                                    "Game {} thread update process is not running. Attempting to start.".format(
-                                        pk
-                                    )
-                                )
-                                self.error_notification(
-                                    f"Game {pk} thread update process is not running"
-                                )
-                                self.THREADS[pk].update(
-                                    {
-                                        "GAME_THREAD": threading.Thread(
-                                            target=self.game_thread_update_loop,
-                                            args=(pk,),
-                                            name="bot-{}-{}-game-{}".format(
-                                                self.bot.id,
-                                                self.bot.name.replace(" ", "-"),
-                                                pk,
-                                            ),
-                                            daemon=True,
-                                        )
-                                    }
-                                )
-                                self.THREADS[pk]["GAME_THREAD"].start()
-                                self.log.debug(
-                                    "Started game thread {}.".format(
-                                        self.THREADS[pk]["GAME_THREAD"]
-                                    )
-                                )
-                            else:
-                                raise
-
-                        # Check submit/update thread for post game thread
-                        try:
-                            if not self.settings.get("Post Game Thread", {}).get(
-                                "ENABLED", True
-                            ):
-                                # Post game thread is disabled, so don't start an update thread...
-                                pass
-                            elif (
-                                pk > 0
-                                and not self.activeGames[pk]["POST_STOP_FLAG"]
-                                and self.THREADS[pk].get("POSTGAME_THREAD")
-                                and isinstance(
-                                    self.THREADS[pk]["POSTGAME_THREAD"],
-                                    threading.Thread,
-                                )
-                                and self.THREADS[pk]["POSTGAME_THREAD"].isAlive()
-                            ):
-                                self.log.debug(
-                                    "Post game thread for game {} looks fine...".format(
-                                        pk
-                                    )
-                                )  # debug - need this here to see if the condition is working when the thread crashes
-                                # pass
-                            elif pk > 0 and self.activeGames[pk]["POST_STOP_FLAG"]:
-                                # Post game thread is already done
-                                pass
-                            else:
-                                raise Exception(
-                                    "Post game {} thread update process is not running!".format(
-                                        pk
-                                    )
-                                )
-                        except Exception as e:
-                            if "is not running" in str(e):
-                                self.log.error(
-                                    "Post game {} thread update process is not running. Attempting to start.".format(
-                                        pk
-                                    )
-                                )
-                                self.error_notification(
-                                    f"Game {pk} post game thread update process is not running"
-                                )
-                                self.THREADS[pk].update(
-                                    {
-                                        "POSTGAME_THREAD": threading.Thread(
-                                            target=self.postgame_thread_update_loop,
-                                            args=(pk,),
-                                            name="bot-{}-{}-postgame-{}".format(
-                                                self.bot.id,
-                                                self.bot.name.replace(" ", "-"),
-                                                pk,
-                                            ),
-                                            daemon=True,
-                                        )
-                                    }
-                                )
-                                self.THREADS[pk]["POSTGAME_THREAD"].start()
-                                self.log.debug(
-                                    "Started post game thread {}.".format(
-                                        self.THREADS[pk]["POSTGAME_THREAD"]
-                                    )
-                                )
-                            else:
-                                raise
-
-                        # Check comment thread
-                        try:
-                            if not self.settings.get("Game Thread", {}).get(
-                                "ENABLED", True
-                            ) or not self.settings.get("Comments", {}).get(
-                                "ENABLED", True
-                            ):
-                                # Game thread or commenting is disabled, so don't start a comment thread...
-                                pass
-                            elif (
-                                pk > 0
-                                and not self.activeGames[pk]["STOP_FLAG"]
-                                and self.THREADS[pk].get("COMMENT_THREAD")
-                                and isinstance(
-                                    self.THREADS[pk]["COMMENT_THREAD"], threading.Thread
-                                )
-                                and self.THREADS[pk]["COMMENT_THREAD"].isAlive()
-                            ):
-                                self.log.debug(
-                                    "Comment thread for game {} looks fine...".format(
-                                        pk
-                                    )
-                                )  # debug - need this here to see if the condition is working when the thread crashes
-                                pass
-                            elif pk > 0 and not self.activeGames[pk].get("gameThread"):
-                                # Game thread isn't posted yet, so comment process should not be running
-                                self.log.debug(
-                                    "Not starting comment process because game thread is not posted."
-                                )
-                                pass
-                            elif pk > 0 and self.activeGames[pk]["STOP_FLAG"]:
-                                # Game thread is already done
-                                self.log.debug(
-                                    "Not starting comment process because game thread is already done updating."
-                                )
-                                pass
-                            elif self.commonData.get(pk, {}).get("schedule", {}).get(
-                                "status", {}
-                            ).get("abstractGameCode") == "F" or self.commonData.get(
-                                pk, {}
-                            ).get(
-                                "schedule", {}
-                            ).get(
-                                "status", {}
-                            ).get(
-                                "codedGameState"
-                            ) in [
-                                "C",
-                                "D",
-                                "U",
-                                "T",
-                            ]:
-                                # Game is over, so don't add any comments
-                                self.log.debug(
-                                    "Not starting comment process because game is over."
-                                )
-                                pass
-                            else:
-                                raise Exception(
-                                    "Game {} comment process is not running!".format(pk)
-                                )
-                        except Exception as e:
-                            if "is not running" in str(e):
-                                self.log.error(
-                                    "Game {} comment process is not running. Attempting to start.".format(
-                                        pk
-                                    )
-                                )
-                                self.error_notification(
-                                    f"Game {pk} comment process is not running"
-                                )
-                                self.THREADS[pk].update(
-                                    {
-                                        "COMMENT_THREAD": threading.Thread(
-                                            target=self.monitor_game_plays,
-                                            args=(
-                                                pk,
-                                                self.activeGames[pk]["gameThread"],
-                                            ),
-                                            name="bot-{}-{}-game-{}-comments".format(
-                                                self.bot.id,
-                                                self.bot.name.replace(" ", "-"),
-                                                pk,
-                                            ),
-                                            daemon=True,
-                                        )
-                                    }
-                                )
-                                self.THREADS[pk]["COMMENT_THREAD"].start()
-                                self.log.debug(
-                                    "Started comment thread {}.".format(
-                                        self.THREADS[pk]["COMMENT_THREAD"]
-                                    )
-                                )
-                            else:
-                                raise
-
-                    # Make sure game day thread update process is running
-                    try:
-                        if not self.settings.get("Game Day Thread", {}).get(
-                            "ENABLED", True
-                        ):
-                            # Game day thread is disabled, so don't start an update thread...
-                            pass
-                        elif (
-                            not self.activeGames["gameday"]["STOP_FLAG"]
-                            and self.THREADS.get("GAMEDAY_THREAD")
-                            and isinstance(
-                                self.THREADS["GAMEDAY_THREAD"], threading.Thread
-                            )
-                            and self.THREADS["GAMEDAY_THREAD"].isAlive()
-                        ):
-                            self.log.debug(
-                                "Game day update thread looks fine..."
-                            )  # debug - need this here to see if the condition is working when the thread crashes
-                            # pass
-                        elif self.activeGames["gameday"]["STOP_FLAG"]:
-                            # Game day thread is already done
-                            pass
-                        else:
-                            raise Exception(
-                                "Game day thread update process is not running!"
-                            )
-                    except Exception as e:
-                        if "is not running" in str(e):
-                            self.log.error(
-                                "Game day thread update process is not running. Attempting to start. Error: {}".format(
-                                    e
-                                )
-                            )
-                            self.error_notification(
-                                f"Game day thread update process is not running"
-                            )
-                            self.THREADS.update(
+                    ) in (
+                        todayGamePks
+                    ):  # Loop through gamePks since each game gets its own thread
+                        if self.settings.get("Game Thread", {}).get("ENABLED", True):
+                            # Spawn separate thread to wait for post time and then keep game thread updated
+                            self.THREADS[pk].update(
                                 {
-                                    "GAMEDAY_THREAD": threading.Thread(
-                                        target=self.gameday_thread_update_loop,
-                                        args=(todayGamePks,),
-                                        name="bot-{}-{}-gameday".format(
-                                            self.bot.id, self.bot.name.replace(" ", "-")
+                                    "GAME_THREAD": threading.Thread(
+                                        target=self.game_thread_update_loop,
+                                        args=(pk,),
+                                        name="bot-{}-{}-game-{}".format(
+                                            self.bot.id, self.bot.name.replace(" ", "-"), pk
                                         ),
                                         daemon=True,
                                     )
                                 }
                             )
-                            self.THREADS["GAMEDAY_THREAD"].start()
+                            self.THREADS[pk]["GAME_THREAD"].start()
                             self.log.debug(
-                                "Started game day thread {}.".format(
-                                    self.THREADS["GAMEDAY_THREAD"]
+                                "Started game thread {}.".format(
+                                    self.THREADS[pk]["GAME_THREAD"]
                                 )
                             )
                         else:
-                            raise
+                            self.log.info("Game thread is disabled! [pk: {}]".format(pk))
+                            self.activeGames[pk].update({"STOP_FLAG": True})
 
-                    if (
+                        if self.settings.get("Post Game Thread", {}).get("ENABLED", True):
+                            # Spawn separate thread to wait for game to be final and then submit and keep post game thread updated
+                            self.THREADS[pk].update(
+                                {
+                                    "POSTGAME_THREAD": threading.Thread(
+                                        target=self.postgame_thread_update_loop,
+                                        args=(pk,),
+                                        name="bot-{}-{}-postgame-{}".format(
+                                            self.bot.id, self.bot.name.replace(" ", "-"), pk
+                                        ),
+                                        daemon=True,
+                                    )
+                                }
+                            )
+                            self.THREADS[pk]["POSTGAME_THREAD"].start()
+                            self.log.debug(
+                                "Started post game thread {}.".format(
+                                    self.THREADS[pk]["POSTGAME_THREAD"]
+                                )
+                            )
+                        else:
+                            self.log.info(
+                                "Post game thread is disabled! [pk: {}]".format(pk)
+                            )
+                            self.activeGames[pk].update({"POST_STOP_FLAG": True})
+
+                    # Loop over active games, make sure submit/update and comment threads are running
+                    while (
                         len(
                             [
                                 {k: v}
@@ -798,34 +386,335 @@ class Bot(object):
                             ]
                         )
                         > 0
+                        and redball.SIGNAL is None
+                        and not self.bot.STOP
                     ):
-                        # There are still games pending/in progress
-                        self.log.debug(
-                            "Active games/threads: {}".format(
+                        for pk in (
+                            pk
+                            for pk in self.activeGames
+                            if not self.activeGames[pk]["STOP_FLAG"]
+                            and isinstance(pk, int)
+                            and pk > 0
+                        ):
+                            # Check submit/update thread for game thread
+                            try:
+                                if not self.settings.get("Game Thread", {}).get(
+                                    "ENABLED", True
+                                ):
+                                    # Game thread is disabled, so don't start an update thread...
+                                    pass
+                                elif (
+                                    pk > 0
+                                    and not self.activeGames[pk]["STOP_FLAG"]
+                                    and self.THREADS[pk].get("GAME_THREAD")
+                                    and isinstance(
+                                        self.THREADS[pk]["GAME_THREAD"], threading.Thread
+                                    )
+                                    and self.THREADS[pk]["GAME_THREAD"].isAlive()
+                                ):
+                                    self.log.debug(
+                                        "Game thread for game {} looks fine...".format(pk)
+                                    )  # debug - need this here to see if the condition is working when the thread crashes
+                                    # pass
+                                elif pk > 0 and self.activeGames[pk]["STOP_FLAG"]:
+                                    # Game thread is already done
+                                    pass
+                                else:
+                                    raise Exception(
+                                        "Game {} thread update process is not running!".format(
+                                            pk
+                                        )
+                                    )
+                            except Exception as e:
+                                if "is not running" in str(e):
+                                    self.log.error(
+                                        "Game {} thread update process is not running. Attempting to start.".format(
+                                            pk
+                                        )
+                                    )
+                                    self.error_notification(
+                                        f"Game {pk} thread update process is not running"
+                                    )
+                                    self.THREADS[pk].update(
+                                        {
+                                            "GAME_THREAD": threading.Thread(
+                                                target=self.game_thread_update_loop,
+                                                args=(pk,),
+                                                name="bot-{}-{}-game-{}".format(
+                                                    self.bot.id,
+                                                    self.bot.name.replace(" ", "-"),
+                                                    pk,
+                                                ),
+                                                daemon=True,
+                                            )
+                                        }
+                                    )
+                                    self.THREADS[pk]["GAME_THREAD"].start()
+                                    self.log.debug(
+                                        "Started game thread {}.".format(
+                                            self.THREADS[pk]["GAME_THREAD"]
+                                        )
+                                    )
+                                else:
+                                    raise
+
+                            # Check submit/update thread for post game thread
+                            try:
+                                if not self.settings.get("Post Game Thread", {}).get(
+                                    "ENABLED", True
+                                ):
+                                    # Post game thread is disabled, so don't start an update thread...
+                                    pass
+                                elif (
+                                    pk > 0
+                                    and not self.activeGames[pk]["POST_STOP_FLAG"]
+                                    and self.THREADS[pk].get("POSTGAME_THREAD")
+                                    and isinstance(
+                                        self.THREADS[pk]["POSTGAME_THREAD"],
+                                        threading.Thread,
+                                    )
+                                    and self.THREADS[pk]["POSTGAME_THREAD"].isAlive()
+                                ):
+                                    self.log.debug(
+                                        "Post game thread for game {} looks fine...".format(
+                                            pk
+                                        )
+                                    )  # debug - need this here to see if the condition is working when the thread crashes
+                                    # pass
+                                elif pk > 0 and self.activeGames[pk]["POST_STOP_FLAG"]:
+                                    # Post game thread is already done
+                                    pass
+                                else:
+                                    raise Exception(
+                                        "Post game {} thread update process is not running!".format(
+                                            pk
+                                        )
+                                    )
+                            except Exception as e:
+                                if "is not running" in str(e):
+                                    self.log.error(
+                                        "Post game {} thread update process is not running. Attempting to start.".format(
+                                            pk
+                                        )
+                                    )
+                                    self.error_notification(
+                                        f"Game {pk} post game thread update process is not running"
+                                    )
+                                    self.THREADS[pk].update(
+                                        {
+                                            "POSTGAME_THREAD": threading.Thread(
+                                                target=self.postgame_thread_update_loop,
+                                                args=(pk,),
+                                                name="bot-{}-{}-postgame-{}".format(
+                                                    self.bot.id,
+                                                    self.bot.name.replace(" ", "-"),
+                                                    pk,
+                                                ),
+                                                daemon=True,
+                                            )
+                                        }
+                                    )
+                                    self.THREADS[pk]["POSTGAME_THREAD"].start()
+                                    self.log.debug(
+                                        "Started post game thread {}.".format(
+                                            self.THREADS[pk]["POSTGAME_THREAD"]
+                                        )
+                                    )
+                                else:
+                                    raise
+
+                            # Check comment thread
+                            try:
+                                if not self.settings.get("Game Thread", {}).get(
+                                    "ENABLED", True
+                                ) or not self.settings.get("Comments", {}).get(
+                                    "ENABLED", True
+                                ):
+                                    # Game thread or commenting is disabled, so don't start a comment thread...
+                                    pass
+                                elif (
+                                    pk > 0
+                                    and not self.activeGames[pk]["STOP_FLAG"]
+                                    and self.THREADS[pk].get("COMMENT_THREAD")
+                                    and isinstance(
+                                        self.THREADS[pk]["COMMENT_THREAD"], threading.Thread
+                                    )
+                                    and self.THREADS[pk]["COMMENT_THREAD"].isAlive()
+                                ):
+                                    self.log.debug(
+                                        "Comment thread for game {} looks fine...".format(
+                                            pk
+                                        )
+                                    )  # debug - need this here to see if the condition is working when the thread crashes
+                                    pass
+                                elif pk > 0 and not self.activeGames[pk].get("gameThread"):
+                                    # Game thread isn't posted yet, so comment process should not be running
+                                    self.log.debug(
+                                        "Not starting comment process because game thread is not posted."
+                                    )
+                                    pass
+                                elif pk > 0 and self.activeGames[pk]["STOP_FLAG"]:
+                                    # Game thread is already done
+                                    self.log.debug(
+                                        "Not starting comment process because game thread is already done updating."
+                                    )
+                                    pass
+                                elif self.commonData.get(pk, {}).get("schedule", {}).get(
+                                    "status", {}
+                                ).get("abstractGameCode") == "F" or self.commonData.get(
+                                    pk, {}
+                                ).get(
+                                    "schedule", {}
+                                ).get(
+                                    "status", {}
+                                ).get(
+                                    "codedGameState"
+                                ) in [
+                                    "C",
+                                    "D",
+                                    "U",
+                                    "T",
+                                ]:
+                                    # Game is over, so don't add any comments
+                                    self.log.debug(
+                                        "Not starting comment process because game is over."
+                                    )
+                                    pass
+                                else:
+                                    raise Exception(
+                                        "Game {} comment process is not running!".format(pk)
+                                    )
+                            except Exception as e:
+                                if "is not running" in str(e):
+                                    self.log.error(
+                                        "Game {} comment process is not running. Attempting to start.".format(
+                                            pk
+                                        )
+                                    )
+                                    self.error_notification(
+                                        f"Game {pk} comment process is not running"
+                                    )
+                                    self.THREADS[pk].update(
+                                        {
+                                            "COMMENT_THREAD": threading.Thread(
+                                                target=self.monitor_game_plays,
+                                                args=(
+                                                    pk,
+                                                    self.activeGames[pk]["gameThread"],
+                                                ),
+                                                name="bot-{}-{}-game-{}-comments".format(
+                                                    self.bot.id,
+                                                    self.bot.name.replace(" ", "-"),
+                                                    pk,
+                                                ),
+                                                daemon=True,
+                                            )
+                                        }
+                                    )
+                                    self.THREADS[pk]["COMMENT_THREAD"].start()
+                                    self.log.debug(
+                                        "Started comment thread {}.".format(
+                                            self.THREADS[pk]["COMMENT_THREAD"]
+                                        )
+                                    )
+                                else:
+                                    raise
+
+                        # Make sure game day thread update process is running
+                        try:
+                            if not self.settings.get("Game Day Thread", {}).get(
+                                "ENABLED", True
+                            ):
+                                # Game day thread is disabled, so don't start an update thread...
+                                pass
+                            elif (
+                                not self.activeGames["gameday"]["STOP_FLAG"]
+                                and self.THREADS.get("GAMEDAY_THREAD")
+                                and isinstance(
+                                    self.THREADS["GAMEDAY_THREAD"], threading.Thread
+                                )
+                                and self.THREADS["GAMEDAY_THREAD"].isAlive()
+                            ):
+                                self.log.debug(
+                                    "Game day update thread looks fine..."
+                                )  # debug - need this here to see if the condition is working when the thread crashes
+                                # pass
+                            elif self.activeGames["gameday"]["STOP_FLAG"]:
+                                # Game day thread is already done
+                                pass
+                            else:
+                                raise Exception(
+                                    "Game day thread update process is not running!"
+                                )
+                        except Exception as e:
+                            if "is not running" in str(e):
+                                self.log.error(
+                                    "Game day thread update process is not running. Attempting to start. Error: {}".format(
+                                        e
+                                    )
+                                )
+                                self.error_notification(
+                                    f"Game day thread update process is not running"
+                                )
+                                self.THREADS.update(
+                                    {
+                                        "GAMEDAY_THREAD": threading.Thread(
+                                            target=self.gameday_thread_update_loop,
+                                            args=(todayGamePks,),
+                                            name="bot-{}-{}-gameday".format(
+                                                self.bot.id, self.bot.name.replace(" ", "-")
+                                            ),
+                                            daemon=True,
+                                        )
+                                    }
+                                )
+                                self.THREADS["GAMEDAY_THREAD"].start()
+                                self.log.debug(
+                                    "Started game day thread {}.".format(
+                                        self.THREADS["GAMEDAY_THREAD"]
+                                    )
+                                )
+                            else:
+                                raise
+
+                        if (
+                            len(
                                 [
-                                    k
+                                    {k: v}
                                     for k, v in self.activeGames.items()
                                     if not v.get("STOP_FLAG", True)
                                     or not v.get("POST_STOP_FLAG", True)
                                 ]
                             )
-                        )
-                        self.log.debug(
-                            "Active threads: {}".format(
-                                [
-                                    t
-                                    for t in threading.enumerate()
-                                    if t.name.startswith(
-                                        "bot-{}-{}".format(
-                                            self.bot.id, self.bot.name.replace(" ", "-")
-                                        )
-                                    )
-                                ]
+                            > 0
+                        ):
+                            # There are still games pending/in progress
+                            self.log.debug(
+                                "Active games/threads: {}".format(
+                                    [
+                                        k
+                                        for k, v in self.activeGames.items()
+                                        if not v.get("STOP_FLAG", True)
+                                        or not v.get("POST_STOP_FLAG", True)
+                                    ]
+                                )
                             )
-                        )
-                        self.sleep(30)
-                    else:
-                        break
+                            self.log.debug(
+                                "Active threads: {}".format(
+                                    [
+                                        t
+                                        for t in threading.enumerate()
+                                        if t.name.startswith(
+                                            "bot-{}-{}".format(
+                                                self.bot.id, self.bot.name.replace(" ", "-")
+                                            )
+                                        )
+                                    ]
+                                )
+                            )
+                            self.sleep(30)
+                        else:
+                            break
 
                 if redball.SIGNAL is not None or self.bot.STOP:
                     break
@@ -843,6 +732,121 @@ class Bot(object):
                 "markdown": "Bot has been stopped.",
             },
         }
+
+    def off_day(self):
+        if (
+            self.seasonState.startswith("off") or self.seasonState == "post:out"
+        ) and self.settings.get("Off Day Thread", {}).get("SUPPRESS_OFFSEASON", True):
+            self.log.info("Suppressing off day thread during offseason.")
+            self.activeGames.update({"off": {"STOP_FLAG": True}})
+        elif not self.settings.get("Off Day Thread", {}).get("ENABLED", True):
+            self.log.info("Off day thread disabled.")
+            self.activeGames.update({"off": {"STOP_FLAG": True}})
+        else:
+            # Spawn a thread to wait for post time and then keep off day thread updated
+            self.activeGames.update(
+                {"off": {"STOP_FLAG": False}}
+            )  # Off day thread is not specific to a gamePk
+            self.THREADS.update(
+                {
+                    "OFFDAY_THREAD": threading.Thread(
+                        target=self.off_thread_update_loop,
+                        name="bot-{}-{}-offday".format(
+                            self.bot.id, self.bot.name.replace(" ", "-")
+                        ),
+                        daemon=True,
+                    )
+                }
+            )
+            self.THREADS["OFFDAY_THREAD"].start()
+            self.log.debug(
+                "Started off day thread {}.".format(self.THREADS["OFFDAY_THREAD"])
+            )
+
+        while (
+            len([{k: v} for k, v in self.activeGames.items() if not v["STOP_FLAG"]])
+            and redball.SIGNAL is None
+            and not self.bot.STOP
+        ):
+            try:
+                if not self.settings.get("Off Day Thread", {}).get("ENABLED", True):
+                    # Off day thread is disabled, so don't start an update thread...
+                    pass
+                elif (
+                    not self.activeGames["off"]["STOP_FLAG"]
+                    and self.THREADS.get("OFFDAY_THREAD")
+                    and isinstance(self.THREADS["OFFDAY_THREAD"], threading.Thread)
+                    and self.THREADS["OFFDAY_THREAD"].isAlive()
+                ):
+                    self.log.debug(
+                        "Off day update thread looks fine..."
+                    )  # debug - need this here to see if the condition is working when the thread crashes
+                    # pass
+                elif self.activeGames["off"]["STOP_FLAG"]:
+                    # Off day thread is already done
+                    pass
+                else:
+                    raise Exception("Off day thread update process is not running!")
+            except Exception as e:
+                self.log.error(
+                    "Off day thread update process is not running. Attempting to start. (Error: {})".format(
+                        e
+                    )
+                )
+                self.error_notification(f"Off day thread update process is not running")
+                self.THREADS.update(
+                    {
+                        "OFFDAY_THREAD": threading.Thread(
+                            target=self.off_thread_update_loop,
+                            name="bot-{}-{}-offday".format(
+                                self.bot.id, self.bot.name.replace(" ", "-")
+                            ),
+                            daemon=True,
+                        )
+                    }
+                )
+                self.THREADS["OFFDAY_THREAD"].start()
+                self.log.debug(
+                    "Started off day thread {}.".format(self.THREADS["OFFDAY_THREAD"])
+                )
+
+            if (
+                len(
+                    [
+                        {k: v}
+                        for k, v in self.activeGames.items()
+                        if not v.get("STOP_FLAG", False)
+                        or not v.get("POST_STOP_FLAG", False)
+                    ]
+                )
+                > 0
+            ):
+                # There are still active threads
+                self.log.debug(
+                    "Active games/threads: {}".format(
+                        [
+                            k
+                            for k, v in self.activeGames.items()
+                            if not v["STOP_FLAG"] or not v.get("POST_STOP_FLAG", True)
+                        ]
+                    )
+                )
+                self.log.debug(
+                    "Active threads: {}".format(
+                        [
+                            t
+                            for t in threading.enumerate()
+                            if t.name.startswith(
+                                "bot-{}-{}".format(
+                                    self.bot.id, self.bot.name.replace(" ", "-")
+                                )
+                            )
+                        ]
+                    )
+                )
+                self.sleep(30)
+            else:
+                break
 
     def weekly_thread_wait_and_post(self):
         weeklyDate = {
@@ -5945,7 +5949,10 @@ class Bot(object):
                 # Off Day
                 botStatus["summary"][
                     "text"
-                ] += "\n\nToday is an off day.\n\nOff day thread{}".format(
+                ] += "\n\nToday is an off day{}.\n\nOff day thread{}".format(
+                    " (Season Suspended)"
+                    if self.commonData.get("seasonSuspended")
+                    else "",
                     " disabled."
                     if not botStatus["offDayThread"]["enabled"]
                     else " suppressed during off season."
@@ -5968,11 +5975,14 @@ class Bot(object):
                         botStatus["offDayThread"]["title"],
                         botStatus["offDayThread"]["id"],
                         botStatus["offDayThread"]["url"],
-                    )
+                    ),
                 )
                 botStatus["summary"][
                     "html"
-                ] += "<br /><br />Today is an off day.<br /><br /><strong>Off day thread</strong>{}".format(
+                ] += "<br /><br />Today is an off day{}.<br /><br /><strong>Off day thread</strong>{}".format(
+                    " (<strong>Season Suspended</strong>)"
+                    if self.commonData.get("seasonSuspended")
+                    else "",
                     " disabled."
                     if not botStatus["offDayThread"]["enabled"]
                     else " suppressed during off season."
@@ -5999,7 +6009,10 @@ class Bot(object):
                 )
                 botStatus["summary"][
                     "markdown"
-                ] += "\n\nToday is an off day.\n\n**Off day thread**{}".format(
+                ] += "\n\nToday is an off day{}.\n\n**Off day thread**{}".format(
+                    " (**Season Suspended**)"
+                    if self.commonData.get("seasonSuspended")
+                    else "",
                     " disabled."
                     if not botStatus["offDayThread"]["enabled"]
                     else " suppressed during off season."
