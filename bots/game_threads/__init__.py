@@ -295,7 +295,9 @@ class Bot(object):
 
                     self.off_day()
                 else:
-                    if not self.settings.get("Game Day Thread", {}).get("ENABLED", True):
+                    if not self.settings.get("Game Day Thread", {}).get(
+                        "ENABLED", True
+                    ):
                         self.log.info("Game day thread disabled.")
                         self.activeGames["gameday"].update({"STOP_FLAG": True})
                     else:
@@ -333,7 +335,9 @@ class Bot(object):
                                         target=self.game_thread_update_loop,
                                         args=(pk,),
                                         name="bot-{}-{}-game-{}".format(
-                                            self.bot.id, self.bot.name.replace(" ", "-"), pk
+                                            self.bot.id,
+                                            self.bot.name.replace(" ", "-"),
+                                            pk,
                                         ),
                                         daemon=True,
                                     )
@@ -346,10 +350,14 @@ class Bot(object):
                                 )
                             )
                         else:
-                            self.log.info("Game thread is disabled! [pk: {}]".format(pk))
+                            self.log.info(
+                                "Game thread is disabled! [pk: {}]".format(pk)
+                            )
                             self.activeGames[pk].update({"STOP_FLAG": True})
 
-                        if self.settings.get("Post Game Thread", {}).get("ENABLED", True):
+                        if self.settings.get("Post Game Thread", {}).get(
+                            "ENABLED", True
+                        ):
                             # Spawn separate thread to wait for game to be final and then submit and keep post game thread updated
                             self.THREADS[pk].update(
                                 {
@@ -357,7 +365,9 @@ class Bot(object):
                                         target=self.postgame_thread_update_loop,
                                         args=(pk,),
                                         name="bot-{}-{}-postgame-{}".format(
-                                            self.bot.id, self.bot.name.replace(" ", "-"), pk
+                                            self.bot.id,
+                                            self.bot.name.replace(" ", "-"),
+                                            pk,
                                         ),
                                         daemon=True,
                                     )
@@ -408,12 +418,15 @@ class Bot(object):
                                     and not self.activeGames[pk]["STOP_FLAG"]
                                     and self.THREADS[pk].get("GAME_THREAD")
                                     and isinstance(
-                                        self.THREADS[pk]["GAME_THREAD"], threading.Thread
+                                        self.THREADS[pk]["GAME_THREAD"],
+                                        threading.Thread,
                                     )
                                     and self.THREADS[pk]["GAME_THREAD"].isAlive()
                                 ):
                                     self.log.debug(
-                                        "Game thread for game {} looks fine...".format(pk)
+                                        "Game thread for game {} looks fine...".format(
+                                            pk
+                                        )
                                     )  # debug - need this here to see if the condition is working when the thread crashes
                                     # pass
                                 elif pk > 0 and self.activeGames[pk]["STOP_FLAG"]:
@@ -537,7 +550,8 @@ class Bot(object):
                                     and not self.activeGames[pk]["STOP_FLAG"]
                                     and self.THREADS[pk].get("COMMENT_THREAD")
                                     and isinstance(
-                                        self.THREADS[pk]["COMMENT_THREAD"], threading.Thread
+                                        self.THREADS[pk]["COMMENT_THREAD"],
+                                        threading.Thread,
                                     )
                                     and self.THREADS[pk]["COMMENT_THREAD"].isAlive()
                                 ):
@@ -547,7 +561,9 @@ class Bot(object):
                                         )
                                     )  # debug - need this here to see if the condition is working when the thread crashes
                                     pass
-                                elif pk > 0 and not self.activeGames[pk].get("gameThread"):
+                                elif pk > 0 and not self.activeGames[pk].get(
+                                    "gameThread"
+                                ):
                                     # Game thread isn't posted yet, so comment process should not be running
                                     self.log.debug(
                                         "Not starting comment process because game thread is not posted."
@@ -559,9 +575,11 @@ class Bot(object):
                                         "Not starting comment process because game thread is already done updating."
                                     )
                                     pass
-                                elif self.commonData.get(pk, {}).get("schedule", {}).get(
-                                    "status", {}
-                                ).get("abstractGameCode") == "F" or self.commonData.get(
+                                elif self.commonData.get(pk, {}).get(
+                                    "schedule", {}
+                                ).get("status", {}).get(
+                                    "abstractGameCode"
+                                ) == "F" or self.commonData.get(
                                     pk, {}
                                 ).get(
                                     "schedule", {}
@@ -582,7 +600,9 @@ class Bot(object):
                                     pass
                                 else:
                                     raise Exception(
-                                        "Game {} comment process is not running!".format(pk)
+                                        "Game {} comment process is not running!".format(
+                                            pk
+                                        )
                                     )
                             except Exception as e:
                                 if "is not running" in str(e):
@@ -662,7 +682,8 @@ class Bot(object):
                                             target=self.gameday_thread_update_loop,
                                             args=(todayGamePks,),
                                             name="bot-{}-{}-gameday".format(
-                                                self.bot.id, self.bot.name.replace(" ", "-")
+                                                self.bot.id,
+                                                self.bot.name.replace(" ", "-"),
                                             ),
                                             daemon=True,
                                         )
@@ -706,7 +727,8 @@ class Bot(object):
                                         for t in threading.enumerate()
                                         if t.name.startswith(
                                             "bot-{}-{}".format(
-                                                self.bot.id, self.bot.name.replace(" ", "-")
+                                                self.bot.id,
+                                                self.bot.name.replace(" ", "-"),
                                             )
                                         )
                                     ]
@@ -6005,7 +6027,7 @@ class Bot(object):
                         botStatus["offDayThread"]["title"],
                         botStatus["offDayThread"]["url"],
                         botStatus["offDayThread"]["id"],
-                    )
+                    ),
                 )
                 botStatus["summary"][
                     "markdown"
@@ -6035,7 +6057,7 @@ class Bot(object):
                         botStatus["offDayThread"]["title"],
                         botStatus["offDayThread"]["id"],
                         botStatus["offDayThread"]["url"],
-                    )
+                    ),
                 )
             else:
                 # Game Day
