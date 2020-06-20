@@ -1,4 +1,4 @@
-FROM python:alpine3.7
+FROM python:alpine3.8
 
 LABEL Name=redball Version=0.0.6
 
