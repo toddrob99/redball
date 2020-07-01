@@ -1,6 +1,6 @@
 FROM python:alpine3.8
 
-LABEL Name=redball Version=0.0.6
+LABEL Name=redball Version=0.0.7
 
 WORKDIR /app
 ADD . /app
