@@ -35,6 +35,18 @@
             "parent_key": null
         },
         {
+            "key": "LIVE_DISCUSSION",
+            "description": "Submit posts as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
             "key": "FOOTER",
             "description": "Footer text to include at the bottom of the thread.",
             "type": "str",
@@ -181,6 +193,18 @@
             "type": "str",
             "val": "Game Thread",
             "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LIVE_DISCUSSION",
+            "description": "Submit posts as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
             "subkeys": [],
             "parent_key": null
         },
@@ -577,6 +601,18 @@
             "parent_key": null
         },
         {
+            "key": "LIVE_DISCUSSION",
+            "description": "Submit posts as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
             "key": "FOOTER",
             "description": "Footer text to include at the bottom of the thread.",
             "type": "str",
@@ -724,6 +760,18 @@
             "type": "str",
             "val": "Post Game Thread",
             "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LIVE_DISCUSSION",
+            "description": "Submit posts as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
             "subkeys": [],
             "parent_key": null
         },
@@ -901,6 +949,18 @@
             "type": "str",
             "val": "Weekly Thread",
             "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LIVE_DISCUSSION",
+            "description": "Submit posts as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
             "subkeys": [],
             "parent_key": null
         },
