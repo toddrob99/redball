@@ -1,0 +1,16 @@
+version: '3.0'
+services:
+  redball:
+    container_name: redball
+    image: toddrob/redball:latest
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./custom_templates:/app/custom_templates
+      - ./certs:/app/certs
+    environment:
+      - TZ=America/New_York
+    restart: unless-stopped
+    network_mode: bridge
+    ports:
+      - 8087:8087
