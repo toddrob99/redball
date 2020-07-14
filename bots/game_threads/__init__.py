@@ -126,7 +126,8 @@ class Bot(object):
                 break
 
             self.myTeam = self.get_team(
-                self.settings.get("MLB", {}).get("TEAM", "").split("|")[1]
+                self.settings.get("MLB", {}).get("TEAM", "").split("|")[1],
+                s=datetime.now().strftime("%Y")  # band-aid due to MLB defaulting team page to 2021 season in July 2020
             )
             self.log.info("Configured team: {}".format(self.myTeam["name"]))
 
@@ -3442,6 +3443,7 @@ class Bot(object):
         return pks
 
     def get_seasonState(self, t=None):
+        self.log.debug(f"myteam league seasondateinfo: {self.myTeam['league']['seasonDateInfo']}")
         if (
             datetime.strptime(
                 self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
@@ -4802,9 +4804,13 @@ class Bot(object):
         s = self.api_call("schedule", params)
         return s
 
-    def get_team(self, t, h="league,division,venue(timezone)"):
-        # t = teamId, h = hydrate
-        return self.api_call("team", {"teamId": t, "hydrate": h})["teams"][0]
+    def get_team(self, t, h="league,division,venue(timezone)", s=None):
+        # t = teamId, h = hydrate, s = season
+        params = {"teamId": t, "hydrate": h}
+        if s:
+            params.update({"season": s})
+
+        return self.api_call("team", params)["teams"][0]
 
     def log_last_updated_date_in_db(self, threadId, t=None):
         # threadId = Reddit thread id that was edited, t = timestamp of edit
