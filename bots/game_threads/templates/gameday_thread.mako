@@ -20,7 +20,7 @@ ${'###'}\
 ## probable pitchers vs. teams
 % endfor
 
-% if data[0]['myTeam']['seasonState'] == 'regular':
+% if data[0]['myTeam']['seasonState'] == 'regular' and data[pk]['schedule']['gameType'] == "R":
 <%include file="standings.mako" />
 % endif
 
