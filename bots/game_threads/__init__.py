@@ -1289,8 +1289,8 @@ class Bot(object):
                         and x["status"]["codedGameState"] not in ["C", "D", "U", "T"]
                         and self.myTeam["division"]["id"]
                         in [
-                            x["teams"]["away"]["team"]["division"]["id"],
-                            x["teams"]["home"]["team"]["division"]["id"],
+                            x["teams"]["away"]["team"].get("division", {}).get("id"),
+                            x["teams"]["home"]["team"].get("division", {}).get("id"),
                         ]
                     ),
                     False,
@@ -1636,8 +1636,8 @@ class Bot(object):
                         and x["status"]["codedGameState"] not in ["C", "D", "U", "T"]
                         and self.myTeam["division"]["id"]
                         in [
-                            x["teams"]["away"]["team"]["division"]["id"],
-                            x["teams"]["home"]["team"]["division"]["id"],
+                            x["teams"]["away"]["team"].get("division", {}).get("id"),
+                            x["teams"]["home"]["team"].get("division", {}).get("id"),
                         ]
                     ),
                     False,
@@ -2187,8 +2187,8 @@ class Bot(object):
                         and x["status"]["codedGameState"] not in ["C", "D", "U", "T"]
                         and self.myTeam["division"]["id"]
                         in [
-                            x["teams"]["away"]["team"]["division"]["id"],
-                            x["teams"]["home"]["team"]["division"]["id"],
+                            x["teams"]["away"]["team"].get("division", {}).get("id"),
+                            x["teams"]["home"]["team"].get("division", {}).get("id"),
                         ]
                     ),
                     False,
@@ -2544,8 +2544,8 @@ class Bot(object):
                         and x["status"]["codedGameState"] not in ["C", "D", "U", "T"]
                         and self.myTeam["division"]["id"]
                         in [
-                            x["teams"]["away"]["team"]["division"]["id"],
-                            x["teams"]["home"]["team"]["division"]["id"],
+                            x["teams"]["away"]["team"].get("division", {}).get("id"),
+                            x["teams"]["home"]["team"].get("division", {}).get("id"),
                         ]
                     ),
                     False,
