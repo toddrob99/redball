@@ -30,7 +30,7 @@ ${'- ' + str(data[gamePk]['schedule']['linescore']['outs']) + ' out' + ('s' if d
 
 ## Game status is not final or live (except warmup), include standings, probable pitchers, lineups if posted
 % if (data[gamePk]['schedule']['status']['abstractGameCode'] != 'L' or data[gamePk]['schedule']['status']['statusCode'] == 'PW') and data[gamePk]['schedule']['status']['abstractGameCode'] != 'F':
-% if data[0]['myTeam']['seasonState'] == 'regular':
+% if data[0]['myTeam']['seasonState'] == 'regular' and data[gamePk]['schedule']['gameType'] == "R":
 <%include file="standings.mako" />
 % endif
 

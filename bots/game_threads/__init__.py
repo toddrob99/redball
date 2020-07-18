@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 
 def run(bot, settings):
@@ -126,7 +126,8 @@ class Bot(object):
                 break
 
             self.myTeam = self.get_team(
-                self.settings.get("MLB", {}).get("TEAM", "").split("|")[1]
+                self.settings.get("MLB", {}).get("TEAM", "").split("|")[1],
+                s=datetime.now().strftime("%Y")  # band-aid due to MLB defaulting team page to 2021 season in July 2020
             )
             self.log.info("Configured team: {}".format(self.myTeam["name"]))
 
@@ -150,7 +151,7 @@ class Bot(object):
                         )
                     )
                     self.error_notification(
-                        f"Error overriding game date. Falling back to today's date"
+                        "Error overriding game date. Falling back to today's date"
                     )
                     todayObj = datetime.today()
             else:
@@ -674,7 +675,7 @@ class Bot(object):
                                     )
                                 )
                                 self.error_notification(
-                                    f"Game day thread update process is not running"
+                                    "Game day thread update process is not running"
                                 )
                                 self.THREADS.update(
                                     {
@@ -815,7 +816,7 @@ class Bot(object):
                         e
                     )
                 )
-                self.error_notification(f"Off day thread update process is not running")
+                self.error_notification("Off day thread update process is not running")
                 self.THREADS.update(
                     {
                         "OFFDAY_THREAD": threading.Thread(
@@ -1260,7 +1261,7 @@ class Bot(object):
                         self.count_check_edit(offDayThread.id, "NA", edit=False)
                 except Exception as e:
                     self.log.error("Error editing off day thread: {}".format(e))
-                    self.error_notification(f"Error editing off day thread")
+                    self.error_notification("Error editing off day thread")
 
             update_off_thread_until = self.settings.get("Off Day Thread", {}).get(
                 "UPDATE_UNTIL", "All MLB games are final"
@@ -1289,8 +1290,8 @@ class Bot(object):
                         and x["status"]["codedGameState"] not in ["C", "D", "U", "T"]
                         and self.myTeam["division"]["id"]
                         in [
-                            x["teams"]["away"]["team"]["division"]["id"],
-                            x["teams"]["home"]["team"]["division"]["id"],
+                            x["teams"]["away"]["team"].get("division", {}).get("id"),
+                            x["teams"]["home"]["team"].get("division", {}).get("id"),
                         ]
                     ),
                     False,
@@ -1569,7 +1570,7 @@ class Bot(object):
                         )
                 except Exception as e:
                     self.log.error("Error editing game day thread: {}".format(e))
-                    self.error_notification(f"Error editing game day thread")
+                    self.error_notification("Error editing game day thread")
 
             update_gameday_thread_until = self.settings.get("Game Day Thread", {}).get(
                 "UPDATE_UNTIL", "Game thread is posted"
@@ -1636,8 +1637,8 @@ class Bot(object):
                         and x["status"]["codedGameState"] not in ["C", "D", "U", "T"]
                         and self.myTeam["division"]["id"]
                         in [
-                            x["teams"]["away"]["team"]["division"]["id"],
-                            x["teams"]["home"]["team"]["division"]["id"],
+                            x["teams"]["away"]["team"].get("division", {}).get("id"),
+                            x["teams"]["home"]["team"].get("division", {}).get("id"),
                         ]
                     ),
                     False,
@@ -2187,8 +2188,8 @@ class Bot(object):
                         and x["status"]["codedGameState"] not in ["C", "D", "U", "T"]
                         and self.myTeam["division"]["id"]
                         in [
-                            x["teams"]["away"]["team"]["division"]["id"],
-                            x["teams"]["home"]["team"]["division"]["id"],
+                            x["teams"]["away"]["team"].get("division", {}).get("id"),
+                            x["teams"]["home"]["team"].get("division", {}).get("id"),
                         ]
                     ),
                     False,
@@ -2374,7 +2375,7 @@ class Bot(object):
             )
             postGameThread = self.reddit.submission(pgThread[0]["id"])
             if not postGameThread.author:
-                self.log.warning("Game day thread appears to have been deleted.")
+                self.log.warning("Post game thread appears to have been deleted.")
                 q = "update {}threads set deleted=1 where id='{}';".format(
                     self.dbTablePrefix, postGameThread.id
                 )
@@ -2544,8 +2545,8 @@ class Bot(object):
                         and x["status"]["codedGameState"] not in ["C", "D", "U", "T"]
                         and self.myTeam["division"]["id"]
                         in [
-                            x["teams"]["away"]["team"]["division"]["id"],
-                            x["teams"]["home"]["team"]["division"]["id"],
+                            x["teams"]["away"]["team"].get("division", {}).get("id"),
+                            x["teams"]["home"]["team"].get("division", {}).get("id"),
                         ]
                     ),
                     False,
@@ -3361,7 +3362,7 @@ class Bot(object):
                                         # do nothing, because it will be handled on the next loop
                                         if redball.DEV:
                                             self.log.debug(
-                                                f"missing key, but not a problem because op=add; continuing..."
+                                                "missing key, but not a problem because op=add; continuing..."
                                             )
                                         continue
                                     else:
@@ -3442,6 +3443,7 @@ class Bot(object):
         return pks
 
     def get_seasonState(self, t=None):
+        self.log.debug(f"myteam league seasondateinfo: {self.myTeam['league']['seasonDateInfo']}")
         if (
             datetime.strptime(
                 self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
@@ -4802,9 +4804,13 @@ class Bot(object):
         s = self.api_call("schedule", params)
         return s
 
-    def get_team(self, t, h="league,division,venue(timezone)"):
-        # t = teamId, h = hydrate
-        return self.api_call("team", {"teamId": t, "hydrate": h})["teams"][0]
+    def get_team(self, t, h="league,division,venue(timezone)", s=None):
+        # t = teamId, h = hydrate, s = season
+        params = {"teamId": t, "hydrate": h}
+        if s:
+            params.update({"season": s})
+
+        return self.api_call("team", params)["teams"][0]
 
     def log_last_updated_date_in_db(self, threadId, t=None):
         # threadId = Reddit thread id that was edited, t = timestamp of edit
@@ -4988,7 +4994,7 @@ class Bot(object):
                     break
         except Exception as e:
             self.log.error("Error checking subreddit for existing posts: {}".format(e))
-            self.error_notification(f"Error checking subreddit for existing posts")
+            self.error_notification("Error checking subreddit for existing posts")
 
         if not theThread:
             try:
@@ -5170,7 +5176,7 @@ class Bot(object):
                     accessSecret=tAccessSecret,
                 )
                 if tweetResult:
-                    self.log.info(f"Tweet submitted successfully!")
+                    self.log.info("Tweet submitted successfully!")
         else:
             self.log.warning("No thread object present. Something went wrong!")
 
@@ -5253,7 +5259,7 @@ class Bot(object):
                     )
                 )
                 self.error_notification(
-                    f"Failed to convert webhook template from json format. Ensure there are no line breaks or other special characters in the rendered template"
+                    "Failed to convert webhook template from json format. Ensure there are no line breaks or other special characters in the rendered template"
                 )
                 return "Failed to convert webhook template from json format. Ensure there are no line breaks or other special characters in the rendered template. Error: {}".format(
                     e
@@ -5329,7 +5335,7 @@ class Bot(object):
                         "Failed to set flair on thread {post.id} (check mod privileges or change FLAIR_MODE to submitter), continuing..."
                     )
                     self.error_notification(
-                        f"Failed to set flair (check mod privileges or change FLAIR_MODE to submitter)"
+                        "Failed to set flair (check mod privileges or change FLAIR_MODE to submitter)"
                     )
 
         if sort not in [None, ""]:
@@ -5585,7 +5591,7 @@ class Bot(object):
             self.log.error(
                 "Error encountered attempting to initialize Reddit: {}".format(e)
             )
-            self.error_notification(f"Error initializing Reddit")
+            self.error_notification("Error initializing Reddit")
             raise
 
         scopes = [
@@ -5607,7 +5613,7 @@ class Bot(object):
                 )
             )
             self.error_notification(
-                f"Error encountered attempting to look up authorized Reddit scopes"
+                "Error encountered attempting to look up authorized Reddit scopes"
             )
             raise
 
@@ -5622,7 +5628,7 @@ class Bot(object):
                 )
             )
             self.error_notification(
-                f"Error encountered attempting to identify authorized Reddit user (identity scope may not be authorized)"
+                "Error encountered attempting to identify authorized Reddit user (identity scope may not be authorized)"
             )
 
         for scope in scopes:
@@ -6272,7 +6278,7 @@ class Bot(object):
                     "markdown": "Error retrieving bot state: {}".format(e),
                 },
             }
-            self.error_notification(f"Error retrieving bot state")
+            self.error_notification("Error retrieving bot state")
 
         self.log.debug("Bot Status: {}".format(botStatus))  # debug
         self.bot.detailedState = botStatus
