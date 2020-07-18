@@ -2375,7 +2375,7 @@ class Bot(object):
             )
             postGameThread = self.reddit.submission(pgThread[0]["id"])
             if not postGameThread.author:
-                self.log.warning("Game day thread appears to have been deleted.")
+                self.log.warning("Post game thread appears to have been deleted.")
                 q = "update {}threads set deleted=1 where id='{}';".format(
                     self.dbTablePrefix, postGameThread.id
                 )
