@@ -127,7 +127,9 @@ class Bot(object):
 
             self.myTeam = self.get_team(
                 self.settings.get("MLB", {}).get("TEAM", "").split("|")[1],
-                s=datetime.now().strftime("%Y")  # band-aid due to MLB defaulting team page to 2021 season in July 2020
+                s=datetime.now().strftime(
+                    "%Y"
+                ),  # band-aid due to MLB defaulting team page to 2021 season in July 2020
             )
             self.log.info("Configured team: {}".format(self.myTeam["name"]))
 
@@ -3327,15 +3329,29 @@ class Bot(object):
                                             )
 
                                         continue
-                                    else:
+                                    elif d.get("op") == "replace":
                                         if redball.DEV:
                                             self.log.debug(
                                                 f"updating target[{p}] to [{value}]; target type:{type(target)}"
                                             )
 
-                                        target[
-                                            int(p) if isinstance(target, list) else p
-                                        ] = value
+                                        if isinstance(target, list):
+                                            if len(target) > 0 and len(target) > int(p):
+                                                target[int(p)] = value
+                                            elif int(p) == len(target):
+                                                if redball.DEV:
+                                                    self.log.debug(
+                                                        "op=replace, but provided index does not exist yet (it's next up); appending value to list"
+                                                    )
+
+                                                target.append(value)
+                                            else:
+                                                raise IndexError(
+                                                    f"List is not long enough (len: {len(target)}) to replace index {p}"
+                                                )
+                                        else:
+                                            target[p] = value
+
                                         continue
                                 elif (
                                     isinstance(target, dict)
@@ -3354,9 +3370,15 @@ class Bot(object):
                                                 f"missing key, adding list for target[{p}]"
                                             )
 
-                                        target[
-                                            int(p) if isinstance(target, list) else p
-                                        ] = []
+                                        if isinstance(target, list):
+                                            if len(target) == int(p):
+                                                target.append([])
+                                            else:
+                                                raise IndexError(
+                                                    f"List is not long enough to append index [{p}] (len: {len(target)})."
+                                                )
+                                        else:
+                                            target[p] = []
                                     elif i == len(path) - 3 and d.get("op") == "add":
                                         # next hop is the target key to add
                                         # do nothing, because it will be handled on the next loop
@@ -3372,9 +3394,15 @@ class Bot(object):
                                                 f"missing key, adding dict for target[{p}]"
                                             )
 
-                                        target[
-                                            int(p) if isinstance(target, list) else p
-                                        ] = {}
+                                        if isinstance(target, list):
+                                            if len(target) == int(p):
+                                                target.append({})
+                                            else:
+                                                raise IndexError(
+                                                    f"List is not long enough to append index [{p}] (len: {len(target)})."
+                                                )
+                                        else:
+                                            target[p] = {}
                                 # point to next key in the path
                                 target = target[
                                     int(p) if isinstance(target, list) else p
@@ -3396,6 +3424,7 @@ class Bot(object):
                     self.error_notification(f"Error patching gumbo data: {e}")
                     return False
 
+        self.log.debug("Patch complete.")
         return True
 
     def get_gameStatus(self, pk, d=None):
@@ -3443,7 +3472,9 @@ class Bot(object):
         return pks
 
     def get_seasonState(self, t=None):
-        self.log.debug(f"myteam league seasondateinfo: {self.myTeam['league']['seasonDateInfo']}")
+        self.log.debug(
+            f"myteam league seasondateinfo: {self.myTeam['league']['seasonDateInfo']}"
+        )
         if (
             datetime.strptime(
                 self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
