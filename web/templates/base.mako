@@ -1,9 +1,13 @@
 <% 
-	import cherrypy
-	import redball
-	from redball import user
-	if cherrypy.session.get("_cp_username") and cherrypy.session["_cp_username"] in redball.LOGGED_IN_USERS.keys():
-		user.refresh_user_privileges(cherrypy.session["_cp_username"])
+    import cherrypy
+    import redball
+    from redball import config, user
+    if cherrypy.session.get("_cp_username") and cherrypy.session["_cp_username"] in redball.LOGGED_IN_USERS.keys():
+        user.refresh_user_privileges(cherrypy.session["_cp_username"])
+    auth_type = config.get_sys_config(category="Web/Security", key="AUTH_TYPE")
+    wideOpen = auth_type[0]["val"] == "None"
+    if wideOpen:
+        cherrypy.session["_cp_username"] = "admin"
 %>
 <%page args="errors='', info='', errorcontainer_hide=' class=hide', infocontainer_hide=' class=hide'" />
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -92,13 +96,13 @@ $(window).resize(function() {
 <header role="banner">
 	<div id="loginstatus">
 		<div id="userbox">
-			${'{}<a href="/password" title="Change Password"><span class="ui-icon ui-icon-wrench"></span></a><a href="/logout"><span class="ui-icon ui-icon-locked" title="Logout"></span></a>'.format(cherrypy.session.get("_cp_username")) if cherrypy.session.get("_cp_username") else '<a href="/login"><span class="ui-icon ui-icon-locked"></span>Login</a>'}
+			${'' if wideOpen else '{}<a href="/password" title="Change Password"><span class="ui-icon ui-icon-wrench"></span></a><a href="/logout"><span class="ui-icon ui-icon-locked" title="Logout"></span></a>'.format(cherrypy.session.get("_cp_username")) if cherrypy.session.get("_cp_username") else '<a href="/login"><span class="ui-icon ui-icon-locked"></span>Login</a>'}
 		</div>
 	</div>
 	<div id="logo"><a href="/" class="logo"><img src="/img/redball.png" height="40" width="40" style="vertical-align:middle"> ${self.siteHeader()}</a></div>
 	<div id="menu">
 		<ul class="menu">
-			% if cherrypy.session.get("_cp_username"):
+			% if cherrypy.session.get("_cp_username") or wideOpen == True:
 				% if 'Bot' in title and 'System Configuration' not in title:
 				<a href="/"><li class="active">Bots</li></a>
 				% else:

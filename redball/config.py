@@ -266,8 +266,14 @@ def add_bot_config(
         q = "INSERT OR IGNORE INTO rb_botConfig (botId, category, key, val, description, type, options, subkeys, parent_key, system) VALUES "
 
     if isinstance(multi, dict):
-        local_args = tuple()
+        log.debug(f"Multiple [{len(multi)}] config categories provided.")
+        query = []
         for k, v in multi.items():
+            log.debug(
+                f"Generating query for category [{k}] containing [{len(multi[k])}] items..."
+            )
+            local_args = tuple()
+            q2 = q
             for z in v:
                 if z.get("type") == "bool":
                     z["val"] = (
@@ -281,9 +287,9 @@ def add_bot_config(
                     z["val"] = int(z["val"])
 
                 if len(local_args):
-                    q += ", "
+                    q2 += ", "
 
-                q += "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                q2 += "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 local_args += (
                     int(botId),
                     k,
@@ -311,8 +317,8 @@ def add_bot_config(
                     else "False",
                 )
 
-        q += ";"
-        query = (q, local_args)
+            q2 += ";"
+            query.append((q2, local_args))
     else:
         if dataType == "bool":
             val = val if isinstance(val, bool) else (val.lower() == "true")
@@ -350,6 +356,8 @@ def add_bot_config(
     return database.db_qry(
         query, con=con, cur=cur, commit=commit, closeAfter=closeAfter
     )
+
+    return None
 
 
 def add_default_bot_config(botId, con=None, cur=None):
