@@ -4888,8 +4888,8 @@ class Bot(object):
         else:
             return True
 
-    def insert_thread_to_db(self, pk, threadId, type):
-        # pk = gamePk (or list of gamePks), threadId = thread object returned from Reddit (OFF+date for off day threads), type = ['gameday', 'game', 'post', 'off', 'weekly']
+    def insert_thread_to_db(self, pk, threadId, threadType):
+        # pk = gamePk (or list of gamePks), threadId = thread object returned from Reddit (OFF+date for off day threads), threadType = ['gameday', 'game', 'post', 'off', 'weekly']
         q = "insert or ignore into {}threads (gamePk, type, gameDate, id, dateCreated, dateUpdated) values".format(
             self.dbTablePrefix
         )
@@ -4898,18 +4898,18 @@ class Bot(object):
                 if q[:-1] == ")":
                     q += ","
                 q += " ({}, '{}', '{}', '{}', {}, {})".format(
-                    k, type, self.today["Y-m-d"], threadId, time.time(), time.time()
+                    k, threadType, self.today["Y-m-d"], threadId, time.time(), time.time()
                 )
         else:
             q += " ({}, '{}', '{}', '{}', {}, {})".format(
-                pk, type, self.today["Y-m-d"], threadId, time.time(), time.time()
+                pk, threadType, self.today["Y-m-d"], threadId, time.time(), time.time()
             )
 
         q += ";"
         i = rbdb.db_qry(q, commit=True, closeAfter=True, logg=self.log)
         if isinstance(i, str):
             self.log.error(
-                "Error inserting post game thread into database: {}".format(i)
+                "Error inserting thread into database: {}".format(i)
             )
             return False
         else:

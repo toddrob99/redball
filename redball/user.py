@@ -246,7 +246,7 @@ def check_privilege(userid, privilege, refresh=False, checkAll=True):
     # or user has rb_bot_1_rw and privilege = rb_bot_1_ro
     # return False if user does not have required privilege
     auth_type = config.get_sys_config(category="Web/Security", key="AUTH_TYPE")[0]["val"]
-    if auth_type != "form":
+    if auth_type in ["Basic", "None"]:
         return True
 
     if userid is None or privilege in ["", None]:

@@ -186,7 +186,7 @@ def restart_webServer():
 def check_auth(*args, **kwargs):
     webSettings = rbConfig.get_sys_config(category="Web/Security")
     auth_type = next(x["val"] for x in webSettings if x["key"] == "AUTH_TYPE")
-    if auth_type != "form":
+    if auth_type != "Form":
         return True
 
     log.debug("Checking authentication against session: {}".format(cherrypy.session.items()))
