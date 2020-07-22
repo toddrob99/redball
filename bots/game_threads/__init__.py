@@ -2719,16 +2719,16 @@ class Bot(object):
                         )
                         or (
                             "scoring_play" in myTeamBattingEvents
-                            and atBat["playEvents"][actionIndex]["details"][
+                            and atBat["playEvents"][actionIndex]["details"].get(
                                 "isScoringPlay"
-                            ]
+                            )
                             and myTeamBatting
                         )
                         or (
                             "scoring_play" in myTeamPitchingEvents
-                            and atBat["playEvents"][actionIndex]["details"][
+                            and atBat["playEvents"][actionIndex]["details"].get(
                                 "isScoringPlay"
-                            ]
+                            )
                             and not myTeamBatting
                         )
                     ):
@@ -2743,9 +2743,9 @@ class Bot(object):
                                     .replace(" ", "_"),
                                 ),
                                 "/scoring_play"
-                                if atBat["playEvents"][actionIndex]["details"][
+                                if atBat["playEvents"][actionIndex]["details"].get(
                                     "isScoringPlay"
-                                ]
+                                )
                                 else "",
                                 myTeamBatting,
                             )
@@ -2892,12 +2892,12 @@ class Bot(object):
                         )
                         or (
                             "scoring_play" in myTeamBattingEvents
-                            and atBat["about"]["isScoringPlay"]
+                            and atBat["about"].get("isScoringPlay")
                             and myTeamBatting
                         )
                         or (
                             "scoring_play" in myTeamPitchingEvents
-                            and atBat["about"]["isScoringPlay"]
+                            and atBat["about"].get("isScoringPlay")
                             and not myTeamBatting
                         )
                     ):
@@ -2912,7 +2912,7 @@ class Bot(object):
                                     .replace(" ", "_"),
                                 ),
                                 "/scoring_play"
-                                if atBat["about"]["isScoringPlay"]
+                                if atBat["about"].get("isScoringPlay")
                                 else "",
                                 myTeamBatting,
                             )
@@ -2950,7 +2950,7 @@ class Bot(object):
                                     atBatIndex=atBat["atBatIndex"],
                                     actionIndex=None,
                                     isScoringPlay=1
-                                    if atBat["about"]["isScoringPlay"]
+                                    if atBat["about"].get("isScoringPlay")
                                     else 0,
                                     eventType=atBat["result"].get(
                                         "eventType",
@@ -4898,7 +4898,12 @@ class Bot(object):
                 if q[:-1] == ")":
                     q += ","
                 q += " ({}, '{}', '{}', '{}', {}, {})".format(
-                    k, threadType, self.today["Y-m-d"], threadId, time.time(), time.time()
+                    k,
+                    threadType,
+                    self.today["Y-m-d"],
+                    threadId,
+                    time.time(),
+                    time.time(),
                 )
         else:
             q += " ({}, '{}', '{}', '{}', {}, {})".format(
@@ -4908,9 +4913,7 @@ class Bot(object):
         q += ";"
         i = rbdb.db_qry(q, commit=True, closeAfter=True, logg=self.log)
         if isinstance(i, str):
-            self.log.error(
-                "Error inserting thread into database: {}".format(i)
-            )
+            self.log.error("Error inserting thread into database: {}".format(i))
             return False
         else:
             return True
