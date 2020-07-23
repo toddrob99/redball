@@ -67,7 +67,7 @@ Hit by ${atBat['matchup']['batter']['fullName']}: Launched ${atBat['playEvents']
 
 ${atBat['about']['halfInning'].capitalize()} ${atBat['about']['inning']} - \
 ${max(atBat['result']['homeScore'], atBat['result']['awayScore'])}-${min(atBat['result']['homeScore'], atBat['result']['awayScore'])} 
-${'TIE' if atBat['result']['homeScore'] == atBat['result']['awayScore'] else data[0]['myTeam']['teamName'] if atBat['result']['homeScore'] > atBat['result']['awayScore'] and data[gamePk]['homeAway']=='home' else data[gamePk]['oppTeam']['teamName']}
+${'TIE' if atBat['result']['homeScore'] == atBat['result']['awayScore'] else data[0]['myTeam']['teamName'] if ((atBat['result']['homeScore'] > atBat['result']['awayScore'] and data[gamePk]['homeAway']=='home') or (atBat['result']['awayScore'] > atBat['result']['homeScore'] and data[gamePk]['homeAway']=='away')) else data[gamePk]['oppTeam']['teamName']}
     % endif
     % if settings.get("Comments", {}).get(("MYTEAM_BATTING_FOOTER_" if myTeamBatting else "MYTEAM_PITCHING_FOOTER_") + eventType.upper()):
     ## Footer is defined for this event

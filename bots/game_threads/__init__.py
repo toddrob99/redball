@@ -1206,10 +1206,6 @@ class Bot(object):
             )
             skipFlag = True
 
-        # Mark off day thread as stale so it will be unstickied tomorrow
-        if offDayThread:
-            self.staleThreads.append(offDayThread)
-
         while (
             not self.activeGames["off"]["STOP_FLAG"]
             and redball.SIGNAL is None
@@ -1339,6 +1335,10 @@ class Bot(object):
 
         if redball.SIGNAL is not None or self.bot.STOP:
             self.log.debug("Caught a stop signal...")
+
+        # Mark off day thread as stale so it will be unstickied tomorrow
+        if offDayThread:
+            self.staleThreads.append(offDayThread)
 
         self.log.debug("Ending off day update thread...")
         return
