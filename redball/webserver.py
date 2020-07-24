@@ -1185,7 +1185,7 @@ class WebInterface(object):
                     reddit_appId=kwargs["redditAuth_redditAppId"],
                     reddit_appSecret=kwargs["redditAuth_redditAppSecret"],
                     reddit_scopes=kwargs["redditAuth_redditScopes"],
-                    reddit_refreshToken=kwargs.get("reddit_refreshToken", ""),
+                    reddit_refreshToken=kwargs.get("redditAuth_redditRefreshToken", ""),
                 )
                 if isinstance(result, str):
                     local_args.update({"errors": result, "errorcontainer_hide": ""})
