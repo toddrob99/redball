@@ -1,13 +1,17 @@
 ## Scoring plays
 <%
 	sortedPlays = []
-	if not data[gamePk]['schedule'].get('scoringPlays'):
+	if not len(data[gamePk]['gumbo']["liveData"]["plays"].get('scoringPlays', [])):
 		return
 	else:
 		unorderedPlays = {}
-		for s in data[gamePk]['schedule']['scoringPlays']:
-			if s['result'].get('description'):
-				unorderedPlays.update({s['about']['endTime'] : s})
+		for i in data[gamePk]['gumbo']["liveData"]["plays"]["scoringPlays"]:
+			play = next(
+				(p for p in data[gamePk]['gumbo']["liveData"]["plays"]["allPlays"] if p.get("atBatIndex") == i),
+				None,
+			)
+			if play and play['result'].get('description'):
+				unorderedPlays.update({play["about"]["endTime"]: play})
 
 		for x in sorted(unorderedPlays):
 			sortedPlays.append(unorderedPlays[x])
