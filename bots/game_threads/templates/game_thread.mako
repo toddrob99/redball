@@ -15,14 +15,68 @@ due to ${data[gamePk]['schedule']['status']['reason']} \
 
 % elif (data[gamePk]['schedule']['status']['abstractGameCode'] == 'L' and data[gamePk]['schedule']['status']['statusCode'] != 'PW') or (data[gamePk]['schedule']['status']['abstractGameCode'] == 'F' and data[gamePk]['schedule']['status']['codedGameState'] not in ['C','D']):
 ## Game status is live and not warmup, so include info about inning and outs on the game status line
-- <%include file="score.mako" />\
+- <%include file="score.mako" /> \
 % if data[gamePk]['schedule']['status']['abstractGameCode'] != 'F':
 ## Only include inning if game is in progress (status!=F since we're already inside the other condition)
- - ${data[gamePk]['schedule']['linescore']['inningState']} of the ${data[gamePk]['schedule']['linescore']['currentInningOrdinal']} \
-% endif
-${'- ' + str(data[gamePk]['schedule']['linescore']['outs']) + ' out' + ('s' if data[gamePk]['schedule']['linescore']['outs'] != 1 else '') if data[gamePk]['schedule']['linescore']['outs'] < 3 else ''}
 
+% if data[gamePk]['schedule']['linescore']['inningState'] == "Middle" and data[gamePk]['schedule']['linescore']['currentInningOrdinal'] == "7th":
+Seventh inning stretch\
+% else:
+${data[gamePk]['schedule']['linescore']['inningState']} of the ${data[gamePk]['schedule']['linescore']['currentInningOrdinal']}\
+% endif
 ## current pitcher/batter matchup, count, on deck, in hole -- or due up
+<%
+    currentPlay = data[gamePk]['gumbo']["liveData"].get('plays',{}).get('currentPlay',{})
+    offense = data[gamePk]['gumbo']["liveData"].get('linescore',{}).get('offense',{})
+    defense = data[gamePk]['gumbo']["liveData"].get('linescore',{}).get('defense',{})
+    outs =currentPlay.get('count',{}).get('outs','0')
+    comingUpTeamName = data[gamePk]['schedule']['teams']['away']['team']['teamName'] if data[gamePk]['schedule']['teams']['away']['team']['id'] == offense.get('team',{}).get('id') else data[gamePk]['schedule']['teams']['home']['team']['teamName']
+%>\
+% if outs == 3:
+% if offense.get('batter',{}).get('fullName'):
+## due up batter is in the data, so include them
+${' '}with ${offense.get('batter',{}).get('fullName','*Unknown*')}, \
+${offense.get('onDeck',{}).get('fullName','*Unknown')}, \
+and ${offense.get('inHole',{}).get('fullName','*Unknown')} \
+due up for the ${comingUpTeamName}
+% else:
+## due up batter is not in the data, so just put the team name due up
+with the ${comingUpTeamName} coming up to bat
+% endif
+% else:
+## else condition from if outs == 3--inning is in progress, so list outs, runners, matchup, on deck, and in hole
+## Outs
+, ${data[gamePk]['schedule']['linescore']['outs']} out${'s' if data[gamePk]['schedule']['linescore']['outs'] != 1 else ''}\
+<%
+    runners = (
+        "bases empty" if not offense.get('first') and not offense.get('second') and not offense.get('third')
+        else "runner on first" if offense.get('first') and not offense.get('second') and not offense.get('third')
+        else "runner on second" if not offense.get('first') and offense.get('second') and not offense.get('third')
+        else "runner on third" if not offense.get('first') and not offense.get('second') and offense.get('third')
+        else "runners on first and second" if offense.get('first') and offense.get('second') and not offense.get('third')
+        else "runners on first and third" if offense.get('first') and not offense.get('second') and offense.get('third')
+        else "runners on second and third" if not offense.get('first') and offense.get('second') and offense.get('third')
+        else "bases loaded" if offense.get('first') and offense.get('second') and offense.get('third')
+        else None
+    )
+    ondeck = offense.get('onDeck',{}).get('fullName')
+    inthehole = offense.get('inHole',{}).get('fullName')
+%>\
+${(', ' + runners) if runners else ''}\
+## Count
+, ${currentPlay.get('count',{}).get('balls','0')}-${currentPlay.get('count',{}).get('strikes','0')} count \
+## Matchup
+with ${currentPlay.get('matchup',{}).get('pitcher',{}).get('fullName','*Unknown*')} pitching and ${currentPlay.get('matchup',{}).get('batter',{}).get('fullName','*Unknown*')} batting. \
+## Ondeck
+% if ondeck:
+${ondeck} is on deck\
+## In hole
+% if inthehole:
+, and ${inthehole} is in the hole.
+% endif
+% endif
+% endif
+% endif
 % endif
 
 ## Broadcasts, gameday link, (strikezone map commented out since it doesn't seem to have data), (game notes commented out due to new press pass requirement)

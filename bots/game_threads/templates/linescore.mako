@@ -9,7 +9,10 @@
     for i in data[gamePk]['schedule']['linescore']['innings']:
         header_row.append(str(i['num']))
         away.append(str(i['away'].get('runs',0)))
-        home.append(str(i['home'].get('runs',0)))
+        if data[gamePk]['schedule']['linescore'].get('isTopInning'):
+            home.append(str(i['home'].get('runs','')))
+        else:
+            home.append(str(i['home'].get('runs',0)))
 
     if len(data[gamePk]['schedule']['linescore']['innings']) < 9:
         for i in range(len(data[gamePk]['schedule']['linescore']['innings'])+1, 10):
