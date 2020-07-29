@@ -1606,12 +1606,24 @@ class Bot(object):
                 break
             elif update_gameday_thread_until == "Game thread is posted":
                 if next(
-                    (True for k, v in self.activeGames.items() if v.get("gameThread")),
+                    (True for k, v in self.activeGames.items() if v.get("gameThread") or v.get("postGameThread")),
+                    False,
+                ) or next(
+                    (
+                        True
+                        for k, v in self.commonData.items()
+                        if k != 0
+                        and (
+                            v["schedule"]["status"]["abstractGameCode"] == "F"
+                            or v["schedule"]["status"]["codedGameState"]
+                            in ["C", "D", "U", "T"]
+                        )
+                    ),
                     False,
                 ):
                     # Game thread is posted
                     self.log.info(
-                        "At least one game thread is posted. Stopping game day thread update loop per UPDATE_UNTIL setting."
+                        "At least one game thread is posted (or post game thread is posted, or game is final). Stopping game day thread update loop per UPDATE_UNTIL setting."
                     )
                     self.activeGames[pk].update({"STOP_FLAG": True})
                     break
