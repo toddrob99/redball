@@ -1606,7 +1606,11 @@ class Bot(object):
                 break
             elif update_gameday_thread_until == "Game thread is posted":
                 if next(
-                    (True for k, v in self.activeGames.items() if v.get("gameThread") or v.get("postGameThread")),
+                    (
+                        True
+                        for k, v in self.activeGames.items()
+                        if v.get("gameThread") or v.get("postGameThread")
+                    ),
                     False,
                 ) or next(
                     (
@@ -2665,8 +2669,14 @@ class Bot(object):
 
                 myTeamBatting = (
                     True
-                    if atBat["about"]["halfInning"].lower() == "bottom"
-                    and self.commonData.get(pk, {}).get("homeAway", "") == "home"
+                    if (
+                        atBat["about"]["isTopInning"]
+                        and self.commonData.get(pk, {}).get("homeAway", "") == "away"
+                    )
+                    or (
+                        not atBat["about"]["isTopInning"]
+                        and self.commonData.get(pk, {}).get("homeAway", "") == "home"
+                    )
                     else False
                 )
                 if not processedAtBats.get(str(atBat["atBatIndex"])):
