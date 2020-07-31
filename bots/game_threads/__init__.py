@@ -1478,7 +1478,27 @@ class Bot(object):
                 # Only sticky when posting the thread
                 # if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(gameDayThread)
 
-        if not gameDayThread:
+        # Check if post game thread is already posted, and skip game day thread if so
+        if sum(1 for k, v in self.activeGames.items() if k != 0 and v.get("postGameThread")) == len(self.activeGames) - 1:
+            # Post game thread is already posted for all games
+            self.log.info("Post game thread is already submitted for all games, but game day thread is not. Skipping game day thread...")
+            skipFlag = True
+            self.activeGames[pk].update({"STOP_FLAG": True})
+        else:
+            # Check DB (record in pkThreads with gamePk and type='post' and gameDate=today)
+            pgq = "select * from {}threads where type='post' and gamePk in ({}) and gameDate = '{}' and deleted=0;".format(
+                self.dbTablePrefix, ",".join([str(x) for x in self.activeGames.keys() if x != pk]), self.today["Y-m-d"]
+            )
+            pgThread = rbdb.db_qry(pgq, closeAfter=True, logg=self.log)
+
+            if len(pgThread) == len(self.activeGames) - 1:
+                self.log.info(
+                    "Post Game Thread found in database for all games, but game day thread not posted yet. Skipping game day thread.."
+                )
+                skipFlag = True
+                self.activeGames[pk].update({"STOP_FLAG": True})
+
+        if not gameDayThread and not skipFlag:
             # Submit game day thread
             (gameDayThread, gameDayThreadText) = self.prep_and_post(
                 "gameday",
@@ -1705,7 +1725,7 @@ class Bot(object):
             return
 
         # Mark game day thread as stale
-        if self.activeGames[pk]["gameDayThread"]:
+        if self.activeGames[pk].get("gameDayThread"):
             self.staleThreads.append(self.activeGames[pk]["gameDayThread"])
 
         self.log.debug("Ending gameday update thread...")
@@ -1765,6 +1785,27 @@ class Bot(object):
                 # if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(self.activeGames[pk]['gameThread'])
 
         if not gameThread:
+            # Check if post game thread is already posted, and skip game thread if so
+            if self.activeGames[pk].get("postGameThread"):
+                # Post game thread is already known
+                self.log.info("Post game thread is already submitted, but game thread is not. Skipping game thread...")
+                skipFlag = True
+                self.activeGames[pk].update({"STOP_FLAG": True})
+            else:
+                # Check DB (record in pkThreads with gamePk and type='post' and gameDate=today)
+                pgq = "select * from {}threads where type='post' and gamePk = {} and gameDate = '{}' and deleted=0;".format(
+                    self.dbTablePrefix, pk, self.today["Y-m-d"]
+                )
+                pgThread = rbdb.db_qry(pgq, closeAfter=True, logg=self.log)
+
+                if len(pgThread) > 0:
+                    self.log.info(
+                        "Post Game Thread found in database, but game thread not posted yet. Skipping game thread.."
+                    )
+                    skipFlag = True
+                    self.activeGames[pk].update({"STOP_FLAG": True})
+
+        if not gameThread and not skipFlag:
             # Determine time to post
             gameStart = self.commonData[pk]["gameTime"]["bot"]
             postBy = tzlocal.get_localzone().localize(

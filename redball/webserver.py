@@ -502,23 +502,24 @@ class WebInterface(object):
                 if isinstance(newBot.id, str):
                     local_args.update({"errors": newBot.id, "errorcontainer_hide": ""})
                 else:
-                    redball.BOTS.update({str(newBot.id): newBot})
-                    # Grant rw access to the bot creator
-                    redball.LOGGED_IN_USERS[cherrypy.session.get("_cp_username")][
-                        "PRIVS"
-                    ].append("rb_bot_{}_rw".format(newBot.id))
-                    q = (
-                        "UPDATE rb_users SET privileges = ? WHERE userid=?;",
-                        (
-                            json.dumps(
-                                redball.LOGGED_IN_USERS[
-                                    cherrypy.session.get("_cp_username")
-                                ]["PRIVS"]
+                    if cherrypy.session.get("_cp_username") != "authOff":
+                        redball.BOTS.update({str(newBot.id): newBot})
+                        # Grant rw access to the bot creator
+                        redball.LOGGED_IN_USERS[cherrypy.session.get("_cp_username")][
+                            "PRIVS"
+                        ].append("rb_bot_{}_rw".format(newBot.id))
+                        q = (
+                            "UPDATE rb_users SET privileges = ? WHERE userid=?;",
+                            (
+                                json.dumps(
+                                    redball.LOGGED_IN_USERS[
+                                        cherrypy.session.get("_cp_username")
+                                    ]["PRIVS"]
+                                ),
+                                cherrypy.session.get("_cp_username"),
                             ),
-                            cherrypy.session.get("_cp_username"),
-                        ),
-                    )
-                    database.db_qry(q, commit=True, closeAfter=True)
+                        )
+                        database.db_qry(q, commit=True, closeAfter=True)
         elif kwargs.get("action") == "delete" and bot_id:
             if not user.check_privilege(
                 cherrypy.session.get("_cp_username"),
