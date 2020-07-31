@@ -6221,7 +6221,7 @@ class Bot(object):
                 botStatus["summary"]["text"] += "\n\nGame Day Thread{}.".format(
                     " disabled"
                     if not botStatus["gameDayThread"]["enabled"]
-                    else " failed to post (check log for error)"
+                    else " skipped or failed to post (check log for error)"
                     if not botStatus["gameDayThread"]["posted"]
                     and datetime.strptime(
                         botStatus["gameDayThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
@@ -6240,7 +6240,7 @@ class Bot(object):
                 ] += "<br /><br /><strong>Game Day Thread</strong>{}.".format(
                     " disabled."
                     if not botStatus["gameDayThread"]["enabled"]
-                    else " failed to post (check log for error)"
+                    else " skipped or failed to post (check log for error)"
                     if not botStatus["gameDayThread"]["posted"]
                     and datetime.strptime(
                         botStatus["gameDayThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
@@ -6265,7 +6265,7 @@ class Bot(object):
                         botStatus["seasonState"].startswith("off")
                         or botStatus["seasonState"] == "post:out"
                     )
-                    else " failed to post (check log for error)"
+                    else " skipped or failed to post (check log for error)"
                     if not botStatus["gameDayThread"]["posted"]
                     and datetime.strptime(
                         botStatus["gameDayThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
@@ -6289,6 +6289,9 @@ class Bot(object):
                                 k,
                                 " disabled."
                                 if not v["threads"]["game"]["enabled"]
+                                else " skipped"
+                                if v["threads"]["game"].get("postTime", "") == ""
+                                and not v["threads"]["game"]["posted"]
                                 else " failed to post (check log for error)"
                                 if not v["threads"]["game"]["posted"]
                                 and datetime.strptime(
@@ -6324,6 +6327,9 @@ class Bot(object):
                                 k,
                                 " disabled."
                                 if not v["threads"]["game"]["enabled"]
+                                else " skipped"
+                                if v["threads"]["game"].get("postTime", "") == ""
+                                and not v["threads"]["game"]["posted"]
                                 else " failed to post (check log for error)"
                                 if not v["threads"]["game"]["posted"]
                                 and datetime.strptime(
@@ -6359,6 +6365,9 @@ class Bot(object):
                                 k,
                                 " disabled."
                                 if not v["threads"]["game"]["enabled"]
+                                else " skipped"
+                                if v["threads"]["game"].get("postTime", "") == ""
+                                and not v["threads"]["game"]["posted"]
                                 else " failed to post (check log for error)"
                                 if not v["threads"]["game"]["posted"]
                                 and datetime.strptime(
