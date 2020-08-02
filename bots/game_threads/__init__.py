@@ -1855,7 +1855,7 @@ class Bot(object):
                 )
                 self.log.debug(
                     "Other Game ({}) abstractGameCode: {} - codedGameState: {}".format(
-                        otherGame["gamePk"],
+                        otherGame["schedule"]["gamePk"],
                         otherGame["schedule"]["status"]["abstractGameCode"],
                         otherGame["schedule"]["status"]["codedGameState"],
                     )
