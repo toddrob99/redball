@@ -283,8 +283,7 @@ class Bot(object):
                     (
                         True
                         for x in self.commonData[0]["leagueSchedule"]
-                        if x["status"]["abstractGameCode"] != "F"
-                        and x["status"]["codedGameState"] != "D"
+                        if x["status"]["codedGameState"] != "D"
                     ),
                     False,
                 ):
@@ -1483,7 +1482,7 @@ class Bot(object):
             sum(
                 1
                 for k, v in self.activeGames.items()
-                if k not in [0, 'weekly', 'off', 'gameday'] and v.get("postGameThread")
+                if k not in [0, "weekly", "off", "gameday"] and v.get("postGameThread")
             )
             == len(self.activeGames) - 1
         ):
@@ -1497,7 +1496,13 @@ class Bot(object):
             # Check DB (record in pkThreads with gamePk and type='post' and gameDate=today)
             pgq = "select * from {}threads where type='post' and gamePk in ({}) and gameDate = '{}' and deleted=0;".format(
                 self.dbTablePrefix,
-                ",".join([str(x) for x in self.activeGames.keys() if isinstance(x, int) and x > 0 and x != pk]),
+                ",".join(
+                    [
+                        str(x)
+                        for x in self.activeGames.keys()
+                        if isinstance(x, int) and x > 0 and x != pk
+                    ]
+                ),
                 self.today["Y-m-d"],
             )
             pgThread = rbdb.db_qry(pgq, closeAfter=True, logg=self.log)

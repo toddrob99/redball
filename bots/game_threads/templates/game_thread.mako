@@ -11,8 +11,10 @@ ${'###'}Game Status: ${data[gamePk]['schedule']['status']['detailedState']} \
 due to ${data[gamePk]['schedule']['status']['reason']} \
 % endif
 % if data[gamePk]['gameTime']['utc'] > datetime.utcnow().replace(tzinfo=pytz.utc) and data[gamePk]['schedule']['status']['abstractGameCode'] != 'F':
+%if not (data[gamePk]['schedule']['doubleHeader'] == 'Y' and data[gamePk]['schedule']['gameNumber'] == 2):
 - First Pitch is scheduled for ${data[gamePk]['gameTime']['myTeam'].strftime('%I:%M %p %Z')}
 
+% endif
 % elif (data[gamePk]['schedule']['status']['abstractGameCode'] == 'L' and data[gamePk]['schedule']['status']['statusCode'] != 'PW') or (data[gamePk]['schedule']['status']['abstractGameCode'] == 'F' and data[gamePk]['schedule']['status']['codedGameState'] not in ['C','D']):
 ## Game status is live and not warmup, so include info about inning and outs on the game status line
 - <%include file="score.mako" /> \
