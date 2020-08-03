@@ -9,4 +9,11 @@ ${'Game ' + str(data[gamePk]['schedule']['seriesGameNumber']) + ' - ' if data[ga
 %endif
 ${data[gamePk]['schedule']['teams']['away']['team']['teamName']} (${data[gamePk]['schedule']['teams']['away']['leagueRecord']['wins']}-${data[gamePk]['schedule']['teams']['away']['leagueRecord']['losses']})\
  @ ${data[gamePk]['schedule']['teams']['home']['team']['teamName']} (${data[gamePk]['schedule']['teams']['home']['leagueRecord']['wins']}-${data[gamePk]['schedule']['teams']['home']['leagueRecord']['losses']})\
+%if data[gamePk]['schedule']['doubleHeader'] == 'Y' and data[gamePk]['schedule']['gameNumber'] == 2:
+ - ${data[gamePk]['gameTime']['myTeam'].strftime('%a, %b %d')} - Doubleheader Game 2
+%else:
  - ${data[gamePk]['gameTime']['myTeam'].strftime('%a, %b %d @ %I:%M %p %Z')}
+%endif
+%if data[gamePk]['schedule']['doubleHeader'] == 'S':
+ - Doubleheader Game ${data[gamePk]['schedule']['gameNumber']}
+%endif

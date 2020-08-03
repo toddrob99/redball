@@ -40,4 +40,11 @@ ${data[0]['myTeam']['teamName']} Post Game Thread\
 % endif
 % endif
 \
- - ${data[gamePk]['gameTime']['myTeam'].strftime('%a, %b %d @ %I:%M %p %Z')}
+%if data[gamePk]['schedule']['doubleHeader'] == 'Y' and data[gamePk]['schedule']['gameNumber'] == 2:
+ - ${data[gamePk]['gameTime']['myTeam'].strftime('%a, %b %d')} - Doubleheader Game 2
+%else:
+ - ${data[gamePk]['gameTime']['myTeam'].strftime('%a, %b %d @ %I:%M %p %Z')}\
+%endif
+%if data[gamePk]['schedule']['doubleHeader'] == 'S':
+ - Doubleheader Game ${data[gamePk]['schedule']['gameNumber']}
+%endif

@@ -1479,15 +1479,26 @@ class Bot(object):
                 # if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(gameDayThread)
 
         # Check if post game thread is already posted, and skip game day thread if so
-        if sum(1 for k, v in self.activeGames.items() if k != 0 and v.get("postGameThread")) == len(self.activeGames) - 1:
+        if (
+            sum(
+                1
+                for k, v in self.activeGames.items()
+                if k not in [0, 'weekly', 'off', 'gameday'] and v.get("postGameThread")
+            )
+            == len(self.activeGames) - 1
+        ):
             # Post game thread is already posted for all games
-            self.log.info("Post game thread is already submitted for all games, but game day thread is not. Skipping game day thread...")
+            self.log.info(
+                "Post game thread is already submitted for all games, but game day thread is not. Skipping game day thread..."
+            )
             skipFlag = True
             self.activeGames[pk].update({"STOP_FLAG": True})
         else:
             # Check DB (record in pkThreads with gamePk and type='post' and gameDate=today)
             pgq = "select * from {}threads where type='post' and gamePk in ({}) and gameDate = '{}' and deleted=0;".format(
-                self.dbTablePrefix, ",".join([str(x) for x in self.activeGames.keys() if x != pk]), self.today["Y-m-d"]
+                self.dbTablePrefix,
+                ",".join([str(x) for x in self.activeGames.keys() if isinstance(x, int) and x > 0 and x != pk]),
+                self.today["Y-m-d"],
             )
             pgThread = rbdb.db_qry(pgq, closeAfter=True, logg=self.log)
 
@@ -1788,7 +1799,9 @@ class Bot(object):
             # Check if post game thread is already posted, and skip game thread if so
             if self.activeGames[pk].get("postGameThread"):
                 # Post game thread is already known
-                self.log.info("Post game thread is already submitted, but game thread is not. Skipping game thread...")
+                self.log.info(
+                    "Post game thread is already submitted, but game thread is not. Skipping game thread..."
+                )
                 skipFlag = True
                 self.activeGames[pk].update({"STOP_FLAG": True})
             else:
@@ -3843,6 +3856,43 @@ class Bot(object):
                     ) in (
                         games
                     ):  # Include all games and filter out current gamePk when displaying
+                        if x["doubleHeader"] == "Y" and x["gameNumber"] == 2:
+                            # Find DH game 1
+                            otherGame = next(
+                                (
+                                    v
+                                    for v in games
+                                    if v.get("gamePk") != x["gamePk"]
+                                    and v.get("doubleHeader") == "Y"
+                                    and v.get("gameNumber") == 1
+                                    and v.get("teams", {})
+                                    .get("home", {})
+                                    .get("team", {})
+                                    .get("id")
+                                    == x.get("teams", {})
+                                    .get("home", {})
+                                    .get("team", {})
+                                    .get("id")
+                                ),
+                                None,
+                            )
+                            if otherGame:
+                                # Replace gameDate for straight doubleheader game 2 to reflect game 1 + 3.5 hours
+                                self.log.debug(f"DH Game 1: {otherGame['gamePk']}")
+                                x["gameDate"] = (
+                                    datetime.strptime(
+                                        otherGame["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
+                                    ).replace(tzinfo=pytz.utc)
+                                    + timedelta(hours=3, minutes=30)
+                                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+                                self.log.info(
+                                    f"Replaced game time for DH Game 2 [{x['gamePk']}] to 3.5 hours after Game 1 [{otherGame['gamePk']}] game time: [{x['gameDate']}]"
+                                )
+                            else:
+                                self.log.debug(
+                                    f"Failed to find DH game 1 for DH game 2 [{x['gamePk']}]"
+                                )
+
                         # Convert game time to myTeam's timezone as well as local (homeTeam's) timezone
                         x.update(
                             {
@@ -3961,6 +4011,116 @@ class Bot(object):
                     pkData.update({"schedule": game})
                     self.log.debug("Appended schedule for pk {}".format(pk))
 
+                    if game["doubleHeader"] == "Y" and game["gameNumber"] == 2:
+                        # Find DH game 1
+                        otherGame = next(
+                            (
+                                {
+                                    "gamePk": v["schedule"]["gamePk"],
+                                    "gameDate": v["schedule"]["gameDate"],
+                                }
+                                for k, v in self.commonData.items()
+                                if k not in [0, "weekly", "off", "gameday"]
+                                and v.get("schedule", {}).get("gamePk")
+                                != game["gamePk"]
+                                and v.get("schedule", {}).get("doubleHeader") == "Y"
+                                and v.get("schedule", {}).get("gameNumber") == 1
+                                and v.get("schedule", {})
+                                .get("teams", {})
+                                .get("home", {})
+                                .get("team", {})
+                                .get("id")
+                                == game.get("teams", {})
+                                .get("home", {})
+                                .get("team", {})
+                                .get("id")
+                            ),
+                            None,
+                        )
+                        self.log.debug(
+                            f"Result of check for DH game 1 in commonData: {otherGame}"
+                        )
+
+                        if not otherGame:
+                            # Check league schedule
+                            otherGame = next(
+                                (
+                                    {"gamePk": v["gamePk"], "gameDate": v["gameDate"]}
+                                    for v in self.commonData.get(0, {}).get(
+                                        "leagueSchedule", []
+                                    )
+                                    if v.get("gamePk") != game["gamePk"]
+                                    and v.get("doubleHeader") == "Y"
+                                    and v.get("gameNumber") == 1
+                                    and v.get("teams", {})
+                                    .get("home", {})
+                                    .get("team", {})
+                                    .get("id")
+                                    == game.get("teams", {})
+                                    .get("home", {})
+                                    .get("team", {})
+                                    .get("id")
+                                ),
+                                None,
+                            )
+                            self.log.debug(
+                                f"Result of check for DH game 1 in leagueSchedule: {otherGame}"
+                            )
+
+                        if not otherGame:
+                            # Get schedule data from MLB
+                            self.log.debug(
+                                f"Getting schedule data for team id [{self.myTeam['id']}] and date [{self.today['Y-m-d']}]..."
+                            )
+                            sched = self.api_call(
+                                "schedule",
+                                {
+                                    "sportId": 1,
+                                    "date": self.today["Y-m-d"],
+                                    "teamId": self.myTeam["id"],
+                                    "fields": "dates,date,games,gamePk,gameDate,doubleHeader,gameNumber",
+                                },
+                            )
+                            schedGames = sched["dates"][
+                                next(
+                                    (
+                                        i
+                                        for i, x in enumerate(sched["dates"])
+                                        if x["date"] == self.today["Y-m-d"]
+                                    ),
+                                    0,
+                                )
+                            ]["games"]
+                            otherGame = next(
+                                (
+                                    v
+                                    for v in schedGames
+                                    if v.get("gamePk") != game["gamePk"]
+                                    and v.get("doubleHeader") == "Y"
+                                    and v.get("gameNumber") == 1
+                                ),
+                                None,
+                            )
+                            self.log.debug(
+                                f"Result of check for DH game 1 in MLB schedule data: {otherGame}"
+                            )
+
+                        if otherGame:
+                            # Replace gameDate for straight doubleheader game 2 to reflect game 1 + 3.5 hours
+                            self.log.debug(f"DH Game 1: {otherGame['gamePk']}")
+                            game["gameDate"] = (
+                                datetime.strptime(
+                                    otherGame["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
+                                ).replace(tzinfo=pytz.utc)
+                                + timedelta(hours=3, minutes=30)
+                            ).strftime("%Y-%m-%dT%H:%M:%SZ")
+                            self.log.info(
+                                f"Replaced game time for DH Game 2 [{game['gamePk']}] to 3.5 hours after Game 1 [{otherGame['gamePk']}] game time: [{game['gameDate']}] -- pkData['schedule']['gameDate']: [{pkData['schedule']['gameDate']}]"
+                            )
+                        else:
+                            self.log.debug(
+                                f"Failed to find DH game 1 for DH game 2 [{game['gamePk']}]"
+                            )
                     # Store game time in myTeam's timezone as well as local (homeTeam's) timezone
                     pkData.update(
                         {
