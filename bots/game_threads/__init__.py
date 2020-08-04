@@ -100,7 +100,7 @@ class Bot(object):
 
         # Start a scheduled task to update self.bot.detailedState every minute
         self.SCHEDULER.add_job(
-            self.bot_state, "interval", name="statusUpdateTask", minutes=1
+            self.bot_state, "interval", name=f"bot-{self.bot.id}-statusUpdateTask", minutes=1
         )
 
         settings_date = datetime.today().strftime("%Y-%m-%d")
