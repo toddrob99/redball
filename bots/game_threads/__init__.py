@@ -1983,7 +1983,7 @@ class Bot(object):
                             pk,
                             self.activeGames[pk]["postTime"],
                             " (will hold past post time until doubleheader game 1 ({}) is final)".format(
-                                otherGame["gamePk"]
+                                otherGame["schedule"]["gamePk"]
                             )
                             if self.commonData[pk]["schedule"]["doubleHeader"] != "N"
                             and self.commonData[pk]["schedule"]["gameNumber"] != 1
@@ -2001,7 +2001,7 @@ class Bot(object):
                 ):
                     self.log.info(
                         "Game {} thread post time has passed, but holding until doubleheader game 1 ({}) is final. Sleeping for 5 minutes....".format(
-                            pk, otherGame["gamePk"]
+                            pk, otherGame["schedule"]["gamePk"]
                         )
                     )
                     self.sleep(300)
