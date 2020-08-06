@@ -1890,7 +1890,9 @@ class Bot(object):
                 and self.commonData[pk]["schedule"]["gameNumber"] == 2
             ):
                 # Refresh game status
-                self.get_gameStatus(pk, self.today["Y-m-d"])
+                with GAME_DATA_LOCK:
+                    self.get_gameStatus(pk, self.today["Y-m-d"])
+
                 if self.commonData[pk]["schedule"]["status"][
                     "abstractGameCode"
                 ] == "F" or self.commonData[pk]["schedule"]["status"][
@@ -3865,33 +3867,116 @@ class Bot(object):
                             # Find DH game 1
                             otherGame = next(
                                 (
-                                    v
-                                    for v in games
-                                    if v.get("gamePk") != x["gamePk"]
-                                    and v.get("doubleHeader") == "Y"
-                                    and v.get("gameNumber") == 1
-                                    and v.get("teams", {})
+                                    {
+                                        "gamePk": v["schedule"]["gamePk"],
+                                        "gameDate": v["schedule"]["gameDate"],
+                                    }
+                                    for k, v in self.commonData.items()
+                                    if k not in [0, "weekly", "off", "gameday"]
+                                    and v.get("schedule", {}).get("gamePk") != x["gamePk"]
+                                    and v.get("schedule", {}).get("doubleHeader") == "Y"
+                                    and v.get("schedule", {}).get("gameNumber") == 1
+                                    and v.get("schedule", {})
+                                    .get("teams", {})
                                     .get("home", {})
                                     .get("team", {})
                                     .get("id")
-                                    == x.get("teams", {})
-                                    .get("home", {})
-                                    .get("team", {})
-                                    .get("id")
+                                    in [
+                                        x.get("teams", {})
+                                        .get("home", {})
+                                        .get("team", {})
+                                        .get("id"),
+                                        x.get("teams", {})
+                                        .get("away", {})
+                                        .get("team", {})
+                                        .get("id"),
+                                    ]
                                 ),
                                 None,
                             )
+                            self.log.debug(
+                                f"Result of check for DH game 1 in commonData: {otherGame}"
+                            )
+
+                            if not otherGame:
+                                # Check league schedule
+                                otherGame = next(
+                                    (
+                                        {"gamePk": v["gamePk"], "gameDate": v["gameDate"]}
+                                        for v in games
+                                        if v.get("gamePk") != x["gamePk"]
+                                        and v.get("doubleHeader") == "Y"
+                                        and v.get("gameNumber") == 1
+                                        and v.get("teams", {})
+                                        .get("home", {})
+                                        .get("team", {})
+                                        .get("id")
+                                        in [
+                                            x.get("teams", {})
+                                            .get("home", {})
+                                            .get("team", {})
+                                            .get("id"),
+                                            x.get("teams", {})
+                                            .get("away", {})
+                                            .get("team", {})
+                                            .get("id"),
+                                        ]
+                                    ),
+                                    None,
+                                )
+                                self.log.debug(
+                                    f"Result of check for DH game 1 in leagueSchedule: {otherGame}"
+                                )
+
+                            if not otherGame:
+                                # Get schedule data from MLB
+                                self.log.debug(
+                                    f"Getting schedule data for team id [{self.myTeam['id']}] and date [{self.today['Y-m-d']}]..."
+                                )
+                                sched = self.api_call(
+                                    "schedule",
+                                    {
+                                        "sportId": 1,
+                                        "date": self.today["Y-m-d"],
+                                        "teamId": self.myTeam["id"],
+                                        "fields": "dates,date,games,gamePk,gameDate,doubleHeader,gameNumber",
+                                    },
+                                )
+                                schedGames = sched["dates"][
+                                    next(
+                                        (
+                                            i
+                                            for i, y in enumerate(sched["dates"])
+                                            if y["date"] == self.today["Y-m-d"]
+                                        ),
+                                        0,
+                                    )
+                                ]["games"]
+                                otherGame = next(
+                                    (
+                                        v
+                                        for v in schedGames
+                                        if v.get("gamePk") != x["gamePk"]
+                                        and v.get("doubleHeader") == "Y"
+                                        and v.get("gameNumber") == 1
+                                    ),
+                                    None,
+                                )
+                                self.log.debug(
+                                    f"Result of check for DH game 1 in MLB schedule data: {otherGame}"
+                                )
+
                             if otherGame:
-                                # Replace gameDate for straight doubleheader game 2 to reflect game 1 + 3.5 hours
+                                # Replace gameDate for straight doubleheader game 2 to reflect game 1 + 3 hours
                                 self.log.debug(f"DH Game 1: {otherGame['gamePk']}")
                                 x["gameDate"] = (
                                     datetime.strptime(
                                         otherGame["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
                                     ).replace(tzinfo=pytz.utc)
-                                    + timedelta(hours=3, minutes=30)
+                                    + timedelta(hours=3)
                                 ).strftime("%Y-%m-%dT%H:%M:%SZ")
                                 self.log.info(
-                                    f"Replaced game time for DH Game 2 [{x['gamePk']}] to 3.5 hours after Game 1 [{otherGame['gamePk']}] game time: [{x['gameDate']}]"
+                                    f"Replaced game time for DH Game 2 [{x['gamePk']}] to 3 hours after Game 1 [{otherGame['gamePk']}] game time: [{x['gameDate']}]"
                                 )
                             else:
                                 self.log.debug(
@@ -4035,10 +4120,16 @@ class Bot(object):
                                 .get("home", {})
                                 .get("team", {})
                                 .get("id")
-                                == game.get("teams", {})
-                                .get("home", {})
-                                .get("team", {})
-                                .get("id")
+                                in [
+                                    game.get("teams", {})
+                                    .get("home", {})
+                                    .get("team", {})
+                                    .get("id"),
+                                    game.get("teams", {})
+                                    .get("away", {})
+                                    .get("team", {})
+                                    .get("id"),
+                                ]
                             ),
                             None,
                         )
@@ -4061,10 +4152,16 @@ class Bot(object):
                                     .get("home", {})
                                     .get("team", {})
                                     .get("id")
-                                    == game.get("teams", {})
-                                    .get("home", {})
-                                    .get("team", {})
-                                    .get("id")
+                                    in [
+                                        game.get("teams", {})
+                                        .get("home", {})
+                                        .get("team", {})
+                                        .get("id"),
+                                        game.get("teams", {})
+                                        .get("away", {})
+                                        .get("team", {})
+                                        .get("id"),
+                                    ]
                                 ),
                                 None,
                             )
@@ -4111,16 +4208,16 @@ class Bot(object):
                             )
 
                         if otherGame:
-                            # Replace gameDate for straight doubleheader game 2 to reflect game 1 + 3.5 hours
+                            # Replace gameDate for straight doubleheader game 2 to reflect game 1 + 3 hours
                             self.log.debug(f"DH Game 1: {otherGame['gamePk']}")
                             game["gameDate"] = (
                                 datetime.strptime(
                                     otherGame["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
                                 ).replace(tzinfo=pytz.utc)
-                                + timedelta(hours=3, minutes=30)
+                                + timedelta(hours=3)
                             ).strftime("%Y-%m-%dT%H:%M:%SZ")
                             self.log.info(
-                                f"Replaced game time for DH Game 2 [{game['gamePk']}] to 3.5 hours after Game 1 [{otherGame['gamePk']}] game time: [{game['gameDate']}] -- pkData['schedule']['gameDate']: [{pkData['schedule']['gameDate']}]"
+                                f"Replaced game time for DH Game 2 [{game['gamePk']}] to 3 hours after Game 1 [{otherGame['gamePk']}] game time: [{game['gameDate']}] -- pkData['schedule']['gameDate']: [{pkData['schedule']['gameDate']}]"
                             )
                         else:
                             self.log.debug(
