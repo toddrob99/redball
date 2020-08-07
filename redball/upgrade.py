@@ -302,5 +302,5 @@ upgradeScripts = {
         "UPDATE rb_meta SET val='4', lastUpdate='{}' WHERE key='dbVersion';".format(
             time.time()
         ),
-    ]
+    ],
 }

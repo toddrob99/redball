@@ -100,7 +100,10 @@ class Bot(object):
 
         # Start a scheduled task to update self.bot.detailedState every minute
         self.SCHEDULER.add_job(
-            self.bot_state, "interval", name=f"bot-{self.bot.id}-statusUpdateTask", minutes=1
+            self.bot_state,
+            "interval",
+            name=f"bot-{self.bot.id}-statusUpdateTask",
+            minutes=1,
         )
 
         settings_date = datetime.today().strftime("%Y-%m-%d")
@@ -3840,7 +3843,8 @@ class Bot(object):
                                     }
                                     for k, v in self.commonData.items()
                                     if k not in [0, "weekly", "off", "gameday"]
-                                    and v.get("schedule", {}).get("gamePk") != x["gamePk"]
+                                    and v.get("schedule", {}).get("gamePk")
+                                    != x["gamePk"]
                                     and v.get("schedule", {}).get("doubleHeader") == "Y"
                                     and v.get("schedule", {}).get("gameNumber") == 1
                                     and v.get("schedule", {})
@@ -3869,7 +3873,10 @@ class Bot(object):
                                 # Check league schedule
                                 otherGame = next(
                                     (
-                                        {"gamePk": v["gamePk"], "gameDate": v["gameDate"]}
+                                        {
+                                            "gamePk": v["gamePk"],
+                                            "gameDate": v["gameDate"],
+                                        }
                                         for v in games
                                         if v.get("gamePk") != x["gamePk"]
                                         and v.get("doubleHeader") == "Y"
