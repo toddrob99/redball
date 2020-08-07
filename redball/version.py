@@ -1,3 +1,3 @@
 #!/usr/bin/env python
 
-VERSION = "1.0-alpha_b22"
+VERSION = "1.0-alpha_b24"

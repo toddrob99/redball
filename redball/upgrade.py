@@ -13,6 +13,7 @@ def upgrade_database(toVer=None):
     # returns True if version is satisfactory, False if error
     toVer = toVer if toVer else max(upgradeScripts.keys())
     fromVer = database.get_database_version(logg=log)
+    origVer = fromVer
 
     if fromVer == toVer:
         log.info("Database is up to date (version: {})!".format(fromVer))
@@ -61,6 +62,25 @@ def upgrade_database(toVer=None):
                     con.commit()
                     fromVer += 1
                     log.debug("Database upgraded to version {}.".format(fromVer))
+
+        if origVer != toVer:
+            # Upgrade happened, so let's clean up the db and run an integrity check
+            database.db_qry(
+                query="VACUUM;",
+                con=con,
+                cur=cur,
+                commit=False,
+                closeAfter=False,
+                logg=log,
+            )
+            database.db_qry(
+                query="PRAGMA INTEGRITY_CHECK;",
+                con=con,
+                cur=cur,
+                commit=False,
+                closeAfter=False,
+                logg=log,
+            )
 
         con.close()
         log.debug("Database upgrade process is complete.")
@@ -256,4 +276,31 @@ upgradeScripts = {
             time.time()
         ),
     ],
+    4: [
+        # Drop *games table from game thread bots
+        # Create temp table to hold table names
+        "CREATE TABLE temp_gamesTableNames (tableName text not null);",
+        # Insert *games tables for game thread bots into temp table
+        """INSERT OR IGNORE INTO temp_gamesTableNames (tableName)
+        WITH RECURSIVE
+            bots(tableName) AS (
+            VALUES(NULL)
+            UNION
+            SELECT 'rb_bot_' || b.id || '_games' as tableName
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * from bots;""",
+        # Set writable_schema = 1 to allow deleting tables via sqlite_master
+        "PRAGMA writable_schema = 1;",
+        # Drop *games tables for game thread bots listed in temp table
+        "DELETE FROM sqlite_master WHERE tbl_name in (SELECT * FROM temp_gamesTableNames);",
+        # Set writable_schema back to 0
+        "PRAGMA writable_schema = 0;",
+        # Delete temp table
+        "DROP TABLE temp_gamesTableNames;",
+        # Update DB version to 4
+        "UPDATE rb_meta SET val='4', lastUpdate='{}' WHERE key='dbVersion';".format(
+            time.time()
+        ),
+    ]
 }

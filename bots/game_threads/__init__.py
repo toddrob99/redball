@@ -239,39 +239,6 @@ class Bot(object):
 
                 self.log.debug("activeGames: {}".format(self.activeGames))
 
-                # Check DB for gamePks
-                gq = "select * from {}games where gamePk in ({}) and gameDate = '{}';".format(
-                    self.dbTablePrefix,
-                    ",".join(str(i) for i in todayGamePks),
-                    self.today["Y-m-d"],
-                )
-                pkGames = rbdb.db_qry(gq, closeAfter=True, logg=self.log)
-
-                # Add gamePks to DB
-                q = "insert into {}games (gamePk, gameDate, dateAdded) values".format(
-                    self.dbTablePrefix
-                )
-                for g in (
-                    g
-                    for g in todayGamePks
-                    if len(pkGames) == 0
-                    or not any(x for x in pkGames if x.get("gamePk") == g)
-                ):
-                    if q[-1:] == ")":
-                        q += ","
-                    q += " ({}, '{}', {})".format(g, self.today["Y-m-d"], time.time())
-
-                q += ";"
-                if (
-                    q
-                    != "insert into {}games (gamePk, gameDate, dateAdded) values;".format(
-                        self.dbTablePrefix
-                    )
-                ):
-                    rbdb.db_qry(q, commit=True, closeAfter=True, logg=self.log)
-                else:
-                    self.log.debug("All gamePks are already in the DB.")
-
                 for pk in todayGamePks:
                     self.commonData.update({pk: {"gamePk": pk}})
 
@@ -4115,17 +4082,13 @@ class Bot(object):
                                 != game["gamePk"]
                                 and v.get("schedule", {}).get("doubleHeader") == "Y"
                                 and v.get("schedule", {}).get("gameNumber") == 1
-                                and v.get("schedule", {})
-                                .get("teams", {})
-                                .get("home", {})
-                                .get("team", {})
-                                .get("id")
+                                and self.myTeam["id"]
                                 in [
-                                    game.get("teams", {})
+                                    v.get("teams", {})
                                     .get("home", {})
                                     .get("team", {})
                                     .get("id"),
-                                    game.get("teams", {})
+                                    v.get("teams", {})
                                     .get("away", {})
                                     .get("team", {})
                                     .get("id"),
@@ -4148,16 +4111,13 @@ class Bot(object):
                                     if v.get("gamePk") != game["gamePk"]
                                     and v.get("doubleHeader") == "Y"
                                     and v.get("gameNumber") == 1
-                                    and v.get("teams", {})
-                                    .get("home", {})
-                                    .get("team", {})
-                                    .get("id")
+                                    and self.myTeam["id"]
                                     in [
-                                        game.get("teams", {})
+                                        v.get("teams", {})
                                         .get("home", {})
                                         .get("team", {})
                                         .get("id"),
-                                        game.get("teams", {})
+                                        v.get("teams", {})
                                         .get("away", {})
                                         .get("team", {})
                                         .get("id"),
@@ -5852,17 +5812,6 @@ class Bot(object):
 
     def build_tables(self):
         queries = []
-        queries.append(
-            """CREATE TABLE IF NOT EXISTS {}games (
-                id integer primary key autoincrement,
-                gamePk integer unique not null,
-                gameDate text not null,
-                dateAdded text not null
-            );""".format(
-                self.dbTablePrefix
-            )
-        )
-
         queries.append(
             """CREATE TABLE IF NOT EXISTS {}threads (
                 gamePk integer not null,
