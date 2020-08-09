@@ -1918,6 +1918,13 @@ class Bot(object):
                     )
                 ):
                     # Straight doubleheader game 2 - post time doesn't matter, submit post after game 1 is final
+                    # But wait 5 minutes and update common data to pull in new records
+                    self.log.info(
+                        "Waiting 5 minutes and then proceeding with game thread for straight doubleheader game 2 ({}) because doubleheader game 1 is {}.".format(
+                            pk, otherGame["schedule"]["status"]["detailedState"]
+                        )
+                    )
+                    self.sleep(300)
                     self.log.info(
                         "Proceeding with game thread for straight doubleheader game 2 ({}) because doubleheader game 1 is {}.".format(
                             pk, otherGame["schedule"]["status"]["detailedState"]

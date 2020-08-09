@@ -55,7 +55,11 @@ ${atBat['result']['description']}
     % if len(atBat['pitchIndex']) > 0 and atBat['playEvents'][atBat['pitchIndex'][-1]].get('pitchData'):
     ## Event has pitch data
 
-Pitch from ${atBat['matchup']['pitcher']['fullName']}: ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('preCount',{}).get('balls','0')}-${atBat['playEvents'][atBat['pitchIndex'][-1]].get('preCount',{}).get('strikes','0')} ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('details',{}).get('type',{}).get('description','Unknown pitch type')} @ ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('pitchData',{}).get('startSpeed','-')} mph
+Pitch from ${atBat['matchup']['pitcher']['fullName']}: \
+% if atBat['playEvents'][atBat['pitchIndex'][-1]].get('preCount'):  # preCount is no longer included in the data, so don't list pitch count as 0-0
+${atBat['playEvents'][atBat['pitchIndex'][-1]].get('preCount',{}).get('balls','0')}-${atBat['playEvents'][atBat['pitchIndex'][-1]].get('preCount',{}).get('strikes','0')} \
+% endif
+${atBat['playEvents'][atBat['pitchIndex'][-1]].get('details',{}).get('type',{}).get('description','Unknown pitch type')} @ ${atBat['playEvents'][atBat['pitchIndex'][-1]].get('pitchData',{}).get('startSpeed','-')} mph
     % endif
     % if len(atBat['pitchIndex']) > 0 and atBat['playEvents'][atBat['pitchIndex'][-1]].get('hitData'):
     ## Event has hit data
