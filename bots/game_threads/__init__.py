@@ -1912,8 +1912,13 @@ class Bot(object):
                     self.commonData[pk]["schedule"]["doubleHeader"] == "Y"
                     and self.commonData[pk]["schedule"]["gameNumber"] == 2
                     and (
-                        otherGame["schedule"]["status"]["abstractGameCode"] == "F"
-                        or otherGame["schedule"]["status"]["codedGameState"]
+                        self.commonData[otherGame["schedule"]["gamePk"]]["schedule"][
+                            "status"
+                        ]["abstractGameCode"]
+                        == "F"
+                        or self.commonData[otherGame["schedule"]["gamePk"]]["schedule"][
+                            "status"
+                        ]["codedGameState"]
                         in ["C", "D", "U", "T"]
                     )
                 ):
@@ -1921,13 +1926,19 @@ class Bot(object):
                     # But wait 5 minutes and update common data to pull in new records
                     self.log.info(
                         "Waiting 5 minutes and then proceeding with game thread for straight doubleheader game 2 ({}) because doubleheader game 1 is {}.".format(
-                            pk, otherGame["schedule"]["status"]["detailedState"]
+                            pk,
+                            self.commonData[otherGame["schedule"]["gamePk"]][
+                                "schedule"
+                            ]["status"]["detailedState"],
                         )
                     )
                     self.sleep(300)
                     self.log.info(
                         "Proceeding with game thread for straight doubleheader game 2 ({}) because doubleheader game 1 is {}.".format(
-                            pk, otherGame["schedule"]["status"]["detailedState"]
+                            pk,
+                            self.commonData[otherGame["schedule"]["gamePk"]][
+                                "schedule"
+                            ]["status"]["detailedState"],
                         )
                     )
                     break
@@ -1936,15 +1947,23 @@ class Bot(object):
                     and self.commonData[pk]["schedule"]["doubleHeader"] == "S"
                     and self.commonData[pk]["schedule"]["gameNumber"] == 2
                     and (
-                        otherGame["schedule"]["status"]["abstractGameCode"] == "F"
-                        or otherGame["schedule"]["status"]["codedGameState"]
+                        self.commonData[otherGame["schedule"]["gamePk"]]["schedule"][
+                            "status"
+                        ]["abstractGameCode"]
+                        == "F"
+                        or self.commonData[otherGame["schedule"]["gamePk"]]["schedule"][
+                            "status"
+                        ]["codedGameState"]
                         in ["C", "D", "U", "T"]
                     )
                 ):
                     # Split doubleheader game 2 - honor post time, but only after game 1 is final
                     self.log.info(
                         "Proceeding with game thread for split doubleheader game 2 ({}) because doubleheader game 1 is {} and post time is reached.".format(
-                            pk, otherGame["schedule"]["status"]["detailedState"]
+                            pk,
+                            self.commonData[otherGame["schedule"]["gamePk"]][
+                                "schedule"
+                            ]["status"]["detailedState"],
                         )
                     )
                     break
@@ -1979,8 +1998,12 @@ class Bot(object):
                     and self.commonData[pk]["schedule"]["gameNumber"] != 1
                 ):
                     self.log.info(
-                        "Game {} thread post time has passed, but holding until doubleheader game 1 ({}) is final. Sleeping for 5 minutes....".format(
-                            pk, otherGame["schedule"]["gamePk"]
+                        "Game {} thread post time has passed, but holding until doubleheader game 1 ({}) is final (currently {}). Sleeping for 5 minutes....".format(
+                            pk,
+                            otherGame["schedule"]["gamePk"],
+                            self.commonData[otherGame["schedule"]["gamePk"]][
+                                "schedule"
+                            ]["status"]["detailedState"],
                         )
                     )
                     self.sleep(300)
