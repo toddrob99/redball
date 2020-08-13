@@ -147,6 +147,7 @@ class Bot(object):
             self.log.debug("Today is {}".format(self.today["Y-m-d"]))
 
             # (Re-)Initialize NFL API
+            self.log.debug(f"Initializing NFL API with nflapi v{nflapi.__version__}")
             self.nfl = nflapi.APISession(self.getNflToken())
             # Start a scheduled task to refresh NFL API token before it expires
             self.SCHEDULER.add_job(
