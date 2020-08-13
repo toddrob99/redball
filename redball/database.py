@@ -306,7 +306,8 @@ def build_tables(tables, logg=log):
         queries.append(
             """INSERT OR IGNORE INTO rb_botTypes (name, description, moduleName)
                 VALUES
-                ('game-threads', 'Game Threads', 'game_threads'),
+                ('game-threads', 'MLB Game Threads', 'game_threads'),
+                ('nfl-game-threads', 'NFL Game Threads', 'nfl_game_threads'),
                 ('mlb-data', 'MLB Data', 'mlb_data'),
                 ('comment-response', 'Comment Response', 'comment_response'),
                 ('placeholder', 'Placeholder', '_template')

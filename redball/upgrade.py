@@ -303,4 +303,17 @@ upgradeScripts = {
             time.time()
         ),
     ],
+    5: [
+        # Change display name of game thread bot type to include MLB
+        """UPDATE rb_botTypes SET description='MLB Game Threads' WHERE name='game-threads';""",
+        # Add NFL Game Threads bot type
+        """INSERT OR IGNORE INTO rb_botTypes (name, description, moduleName)
+            VALUES
+            ('nfl-game-threads', 'NFL Game Threads', 'nfl_game_threads')
+        ;""",
+        # Update DB version to 5
+        "UPDATE rb_meta SET val='5', lastUpdate='{}' WHERE key='dbVersion';".format(
+            time.time()
+        ),
+    ],
 }
