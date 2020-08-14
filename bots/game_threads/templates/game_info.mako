@@ -1,8 +1,10 @@
 <%page args="gamePk" />
 ${'###'}Links & Info
 ## Venue & weather
-% if data[gamePk]['schedule'].get('weather') and len(data[gamePk]['schedule']['weather']):
-* Current conditions at ${data[gamePk]['schedule']['venue']['name']}: ${data[gamePk]['schedule']['weather']['temp']+'&#176;F' if data[gamePk]['schedule']['weather'].get('temp') else ''} ${'- ' + data[gamePk]['schedule']['weather']['condition'] if data[gamePk]['schedule']['weather'].get('condition') else ''} ${'- Wind ' + data[gamePk]['schedule']['weather']['wind'] if data[gamePk]['schedule']['weather'].get('wind') else ''}
+% if data[gamePk]['schedule'].get('weather') and len(data[gamePk]['schedule']['weather']) and (data[gamePk]['schedule']['weather'].get('temp') or data[gamePk]['schedule']['weather'].get('condition') or data[gamePk]['schedule']['weather'].get('wind') != 'null mph, null'):
+* Current conditions at ${data[gamePk]['schedule']['venue']['name']}: ${data[gamePk]['schedule']['weather']['temp']+'&#176;F' if data[gamePk]['schedule']['weather'].get('temp') else ''} ${'- ' + data[gamePk]['schedule']['weather']['condition'] if data[gamePk]['schedule']['weather'].get('condition') else ''} ${'- Wind ' + data[gamePk]['schedule']['weather']['wind'] if data[gamePk]['schedule']['weather'].get('wind')  != 'null mph, null' else ''}
+% else:
+* Venue: ${data[gamePk]['schedule']['venue']['name']}
 % endif
 <%
     awayTv = [x for x in data[gamePk]['schedule'].get('broadcasts', []) if x.get('type')=='TV' and x.get('homeAway')=='away' and not x.get('isNational',False)]

@@ -30,7 +30,10 @@ import twitter
 
 import praw
 
-__version__ = "0.0.7"
+__version__ = "1.0"
+
+GENERIC_DATA_LOCK = threading.Lock()
+GAME_DATA_LOCK = threading.Lock()
 
 
 def run(bot, settings):
@@ -97,7 +100,10 @@ class Bot(object):
 
         # Start a scheduled task to update self.bot.detailedState every minute
         self.SCHEDULER.add_job(
-            self.bot_state, "interval", name="statusUpdateTask", minutes=1
+            self.bot_state,
+            "interval",
+            name=f"bot-{self.bot.id}-statusUpdateTask",
+            minutes=1,
         )
 
         settings_date = datetime.today().strftime("%Y-%m-%d")
@@ -127,7 +133,9 @@ class Bot(object):
 
             self.myTeam = self.get_team(
                 self.settings.get("MLB", {}).get("TEAM", "").split("|")[1],
-                s=datetime.now().strftime("%Y")  # band-aid due to MLB defaulting team page to 2021 season in July 2020
+                s=datetime.now().strftime(
+                    "%Y"
+                ),  # band-aid due to MLB defaulting team page to 2021 season in July 2020
             )
             self.log.info("Configured team: {}".format(self.myTeam["name"]))
 
@@ -234,39 +242,6 @@ class Bot(object):
 
                 self.log.debug("activeGames: {}".format(self.activeGames))
 
-                # Check DB for gamePks
-                gq = "select * from {}games where gamePk in ({}) and gameDate = '{}';".format(
-                    self.dbTablePrefix,
-                    ",".join(str(i) for i in todayGamePks),
-                    self.today["Y-m-d"],
-                )
-                pkGames = rbdb.db_qry(gq, closeAfter=True, logg=self.log)
-
-                # Add gamePks to DB
-                q = "insert into {}games (gamePk, gameDate, dateAdded) values".format(
-                    self.dbTablePrefix
-                )
-                for g in (
-                    g
-                    for g in todayGamePks
-                    if len(pkGames) == 0
-                    or not any(x for x in pkGames if x.get("gamePk") == g)
-                ):
-                    if q[-1:] == ")":
-                        q += ","
-                    q += " ({}, '{}', {})".format(g, self.today["Y-m-d"], time.time())
-
-                q += ";"
-                if (
-                    q
-                    != "insert into {}games (gamePk, gameDate, dateAdded) values;".format(
-                        self.dbTablePrefix
-                    )
-                ):
-                    rbdb.db_qry(q, commit=True, closeAfter=True, logg=self.log)
-                else:
-                    self.log.debug("All gamePks are already in the DB.")
-
                 for pk in todayGamePks:
                     self.commonData.update({pk: {"gamePk": pk}})
 
@@ -278,8 +253,7 @@ class Bot(object):
                     (
                         True
                         for x in self.commonData[0]["leagueSchedule"]
-                        if x["status"]["abstractGameCode"] != "F"
-                        and x["status"]["codedGameState"] != "D"
+                        if x["status"]["codedGameState"] != "D"
                     ),
                     False,
                 ):
@@ -1201,10 +1175,6 @@ class Bot(object):
             )
             skipFlag = True
 
-        # Mark off day thread as stale so it will be unstickied tomorrow
-        if offDayThread:
-            self.staleThreads.append(offDayThread)
-
         while (
             not self.activeGames["off"]["STOP_FLAG"]
             and redball.SIGNAL is None
@@ -1334,6 +1304,10 @@ class Bot(object):
 
         if redball.SIGNAL is not None or self.bot.STOP:
             self.log.debug("Caught a stop signal...")
+
+        # Mark off day thread as stale so it will be unstickied tomorrow
+        if offDayThread:
+            self.staleThreads.append(offDayThread)
 
         self.log.debug("Ending off day update thread...")
         return
@@ -1473,7 +1447,44 @@ class Bot(object):
                 # Only sticky when posting the thread
                 # if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(gameDayThread)
 
-        if not gameDayThread:
+        # Check if post game thread is already posted, and skip game day thread if so
+        if (
+            sum(
+                1
+                for k, v in self.activeGames.items()
+                if k not in [0, "weekly", "off", "gameday"] and v.get("postGameThread")
+            )
+            == len(self.activeGames) - 1
+        ):
+            # Post game thread is already posted for all games
+            self.log.info(
+                "Post game thread is already submitted for all games, but game day thread is not. Skipping game day thread..."
+            )
+            skipFlag = True
+            self.activeGames[pk].update({"STOP_FLAG": True})
+        else:
+            # Check DB (record in pkThreads with gamePk and type='post' and gameDate=today)
+            pgq = "select * from {}threads where type='post' and gamePk in ({}) and gameDate = '{}' and deleted=0;".format(
+                self.dbTablePrefix,
+                ",".join(
+                    [
+                        str(x)
+                        for x in self.activeGames.keys()
+                        if isinstance(x, int) and x > 0 and x != pk
+                    ]
+                ),
+                self.today["Y-m-d"],
+            )
+            pgThread = rbdb.db_qry(pgq, closeAfter=True, logg=self.log)
+
+            if len(pgThread) == len(self.activeGames) - 1:
+                self.log.info(
+                    "Post Game Thread found in database for all games, but game day thread not posted yet. Skipping game day thread.."
+                )
+                skipFlag = True
+                self.activeGames[pk].update({"STOP_FLAG": True})
+
+        if not gameDayThread and not skipFlag:
             # Submit game day thread
             (gameDayThread, gameDayThreadText) = self.prep_and_post(
                 "gameday",
@@ -1601,12 +1612,28 @@ class Bot(object):
                 break
             elif update_gameday_thread_until == "Game thread is posted":
                 if next(
-                    (True for k, v in self.activeGames.items() if v.get("gameThread")),
+                    (
+                        True
+                        for k, v in self.activeGames.items()
+                        if v.get("gameThread") or v.get("postGameThread")
+                    ),
+                    False,
+                ) or next(
+                    (
+                        True
+                        for k, v in self.commonData.items()
+                        if k != 0
+                        and (
+                            v["schedule"]["status"]["abstractGameCode"] == "F"
+                            or v["schedule"]["status"]["codedGameState"]
+                            in ["C", "D", "U", "T"]
+                        )
+                    ),
                     False,
                 ):
                     # Game thread is posted
                     self.log.info(
-                        "At least one game thread is posted. Stopping game day thread update loop per UPDATE_UNTIL setting."
+                        "At least one game thread is posted (or post game thread is posted, or game is final). Stopping game day thread update loop per UPDATE_UNTIL setting."
                     )
                     self.activeGames[pk].update({"STOP_FLAG": True})
                     break
@@ -1684,7 +1711,7 @@ class Bot(object):
             return
 
         # Mark game day thread as stale
-        if self.activeGames[pk]["gameDayThread"]:
+        if self.activeGames[pk].get("gameDayThread"):
             self.staleThreads.append(self.activeGames[pk]["gameDayThread"])
 
         self.log.debug("Ending gameday update thread...")
@@ -1744,6 +1771,29 @@ class Bot(object):
                 # if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(self.activeGames[pk]['gameThread'])
 
         if not gameThread:
+            # Check if post game thread is already posted, and skip game thread if so
+            if self.activeGames[pk].get("postGameThread"):
+                # Post game thread is already known
+                self.log.info(
+                    "Post game thread is already submitted, but game thread is not. Skipping game thread..."
+                )
+                skipFlag = True
+                self.activeGames[pk].update({"STOP_FLAG": True})
+            else:
+                # Check DB (record in pkThreads with gamePk and type='post' and gameDate=today)
+                pgq = "select * from {}threads where type='post' and gamePk = {} and gameDate = '{}' and deleted=0;".format(
+                    self.dbTablePrefix, pk, self.today["Y-m-d"]
+                )
+                pgThread = rbdb.db_qry(pgq, closeAfter=True, logg=self.log)
+
+                if len(pgThread) > 0:
+                    self.log.info(
+                        "Post Game Thread found in database, but game thread not posted yet. Skipping game thread.."
+                    )
+                    skipFlag = True
+                    self.activeGames[pk].update({"STOP_FLAG": True})
+
+        if not gameThread and not skipFlag:
             # Determine time to post
             gameStart = self.commonData[pk]["gameTime"]["bot"]
             postBy = tzlocal.get_localzone().localize(
@@ -1793,7 +1843,7 @@ class Bot(object):
                 )
                 self.log.debug(
                     "Other Game ({}) abstractGameCode: {} - codedGameState: {}".format(
-                        otherGame["gamePk"],
+                        otherGame["schedule"]["gamePk"],
                         otherGame["schedule"]["status"]["abstractGameCode"],
                         otherGame["schedule"]["status"]["codedGameState"],
                     )
@@ -1810,7 +1860,9 @@ class Bot(object):
                 and self.commonData[pk]["schedule"]["gameNumber"] == 2
             ):
                 # Refresh game status
-                self.get_gameStatus(pk, self.today["Y-m-d"])
+                with GAME_DATA_LOCK:
+                    self.get_gameStatus(pk, self.today["Y-m-d"])
+
                 if self.commonData[pk]["schedule"]["status"][
                     "abstractGameCode"
                 ] == "F" or self.commonData[pk]["schedule"]["status"][
@@ -1860,15 +1912,33 @@ class Bot(object):
                     self.commonData[pk]["schedule"]["doubleHeader"] == "Y"
                     and self.commonData[pk]["schedule"]["gameNumber"] == 2
                     and (
-                        otherGame["schedule"]["status"]["abstractGameCode"] == "F"
-                        or otherGame["schedule"]["status"]["codedGameState"]
+                        self.commonData[otherGame["schedule"]["gamePk"]]["schedule"][
+                            "status"
+                        ]["abstractGameCode"]
+                        == "F"
+                        or self.commonData[otherGame["schedule"]["gamePk"]]["schedule"][
+                            "status"
+                        ]["codedGameState"]
                         in ["C", "D", "U", "T"]
                     )
                 ):
                     # Straight doubleheader game 2 - post time doesn't matter, submit post after game 1 is final
+                    # But wait 5 minutes and update common data to pull in new records
+                    self.log.info(
+                        "Waiting 5 minutes and then proceeding with game thread for straight doubleheader game 2 ({}) because doubleheader game 1 is {}.".format(
+                            pk,
+                            self.commonData[otherGame["schedule"]["gamePk"]][
+                                "schedule"
+                            ]["status"]["detailedState"],
+                        )
+                    )
+                    self.sleep(300)
                     self.log.info(
                         "Proceeding with game thread for straight doubleheader game 2 ({}) because doubleheader game 1 is {}.".format(
-                            pk, otherGame["schedule"]["status"]["detailedState"]
+                            pk,
+                            self.commonData[otherGame["schedule"]["gamePk"]][
+                                "schedule"
+                            ]["status"]["detailedState"],
                         )
                     )
                     break
@@ -1877,15 +1947,23 @@ class Bot(object):
                     and self.commonData[pk]["schedule"]["doubleHeader"] == "S"
                     and self.commonData[pk]["schedule"]["gameNumber"] == 2
                     and (
-                        otherGame["schedule"]["status"]["abstractGameCode"] == "F"
-                        or otherGame["schedule"]["status"]["codedGameState"]
+                        self.commonData[otherGame["schedule"]["gamePk"]]["schedule"][
+                            "status"
+                        ]["abstractGameCode"]
+                        == "F"
+                        or self.commonData[otherGame["schedule"]["gamePk"]]["schedule"][
+                            "status"
+                        ]["codedGameState"]
                         in ["C", "D", "U", "T"]
                     )
                 ):
                     # Split doubleheader game 2 - honor post time, but only after game 1 is final
                     self.log.info(
                         "Proceeding with game thread for split doubleheader game 2 ({}) because doubleheader game 1 is {} and post time is reached.".format(
-                            pk, otherGame["schedule"]["status"]["detailedState"]
+                            pk,
+                            self.commonData[otherGame["schedule"]["gamePk"]][
+                                "schedule"
+                            ]["status"]["detailedState"],
                         )
                     )
                     break
@@ -1903,7 +1981,7 @@ class Bot(object):
                             pk,
                             self.activeGames[pk]["postTime"],
                             " (will hold past post time until doubleheader game 1 ({}) is final)".format(
-                                otherGame["gamePk"]
+                                otherGame["schedule"]["gamePk"]
                             )
                             if self.commonData[pk]["schedule"]["doubleHeader"] != "N"
                             and self.commonData[pk]["schedule"]["gameNumber"] != 1
@@ -1920,8 +1998,12 @@ class Bot(object):
                     and self.commonData[pk]["schedule"]["gameNumber"] != 1
                 ):
                     self.log.info(
-                        "Game {} thread post time has passed, but holding until doubleheader game 1 ({}) is final. Sleeping for 5 minutes....".format(
-                            pk, otherGame["gamePk"]
+                        "Game {} thread post time has passed, but holding until doubleheader game 1 ({}) is final (currently {}). Sleeping for 5 minutes....".format(
+                            pk,
+                            otherGame["schedule"]["gamePk"],
+                            self.commonData[otherGame["schedule"]["gamePk"]][
+                                "schedule"
+                            ]["status"]["detailedState"],
                         )
                     )
                     self.sleep(300)
@@ -2648,8 +2730,14 @@ class Bot(object):
 
                 myTeamBatting = (
                     True
-                    if atBat["about"]["halfInning"].lower() == "bottom"
-                    and self.commonData.get(pk, {}).get("homeAway", "") == "home"
+                    if (
+                        atBat["about"]["isTopInning"]
+                        and self.commonData.get(pk, {}).get("homeAway", "") == "away"
+                    )
+                    or (
+                        not atBat["about"]["isTopInning"]
+                        and self.commonData.get(pk, {}).get("homeAway", "") == "home"
+                    )
                     else False
                 )
                 if not processedAtBats.get(str(atBat["atBatIndex"])):
@@ -2714,16 +2802,16 @@ class Bot(object):
                         )
                         or (
                             "scoring_play" in myTeamBattingEvents
-                            and atBat["playEvents"][actionIndex]["details"][
+                            and atBat["playEvents"][actionIndex]["details"].get(
                                 "isScoringPlay"
-                            ]
+                            )
                             and myTeamBatting
                         )
                         or (
                             "scoring_play" in myTeamPitchingEvents
-                            and atBat["playEvents"][actionIndex]["details"][
+                            and atBat["playEvents"][actionIndex]["details"].get(
                                 "isScoringPlay"
-                            ]
+                            )
                             and not myTeamBatting
                         )
                     ):
@@ -2738,9 +2826,9 @@ class Bot(object):
                                     .replace(" ", "_"),
                                 ),
                                 "/scoring_play"
-                                if atBat["playEvents"][actionIndex]["details"][
+                                if atBat["playEvents"][actionIndex]["details"].get(
                                     "isScoringPlay"
-                                ]
+                                )
                                 else "",
                                 myTeamBatting,
                             )
@@ -2887,12 +2975,12 @@ class Bot(object):
                         )
                         or (
                             "scoring_play" in myTeamBattingEvents
-                            and atBat["about"]["isScoringPlay"]
+                            and atBat["about"].get("isScoringPlay")
                             and myTeamBatting
                         )
                         or (
                             "scoring_play" in myTeamPitchingEvents
-                            and atBat["about"]["isScoringPlay"]
+                            and atBat["about"].get("isScoringPlay")
                             and not myTeamBatting
                         )
                     ):
@@ -2907,7 +2995,7 @@ class Bot(object):
                                     .replace(" ", "_"),
                                 ),
                                 "/scoring_play"
-                                if atBat["about"]["isScoringPlay"]
+                                if atBat["about"].get("isScoringPlay")
                                 else "",
                                 myTeamBatting,
                             )
@@ -2945,7 +3033,7 @@ class Bot(object):
                                     atBatIndex=atBat["atBatIndex"],
                                     actionIndex=None,
                                     isScoringPlay=1
-                                    if atBat["about"]["isScoringPlay"]
+                                    if atBat["about"].get("isScoringPlay")
                                     else 0,
                                     eventType=atBat["result"].get(
                                         "eventType",
@@ -3259,6 +3347,9 @@ class Bot(object):
         # theDict = dict to patch
         # patch = patch to apply to theDict
         # return patched dict
+        if redball.DEV:
+            self.log.debug(f"theDict to be patched: {theDict}")
+            self.log.debug(f"patch to be applied: {patch}")
         for x in patch:
             self.log.debug(f"x:{patch.index(x)}, len(patch): {len(patch)}")
             for d in x.get("diff", []):
@@ -3279,16 +3370,23 @@ class Bot(object):
 
                                 if i == len(path) - 2:
                                     # end of the path--set the value
-                                    if d.get("op") == "add" and isinstance(
-                                        target, list
-                                    ):
-                                        if redball.DEV:
-                                            self.log.debug(
-                                                f"appending [{value}] to target; target type:{type(target)}"
-                                            )
+                                    if d.get("op") == "add":
+                                        if isinstance(target, list):
+                                            if redball.DEV:
+                                                self.log.debug(
+                                                    f"appending [{value}] to target; target type:{type(target)}"
+                                                )
 
-                                        target.append(value)
-                                        continue
+                                            target.append(value)
+                                            continue
+                                        elif isinstance(target, dict):
+                                            if redball.DEV:
+                                                self.log.debug(
+                                                    f"setting target[{p}] to [{value}]; target type:{type(target)}"
+                                                )
+
+                                            target[p] = value
+                                            continue
                                     elif d.get("op") == "remove":
                                         if redball.DEV:
                                             self.log.debug(
@@ -3327,15 +3425,30 @@ class Bot(object):
                                             )
 
                                         continue
-                                    else:
+                                    elif d.get("op") == "replace":
                                         if redball.DEV:
                                             self.log.debug(
                                                 f"updating target[{p}] to [{value}]; target type:{type(target)}"
                                             )
 
-                                        target[
-                                            int(p) if isinstance(target, list) else p
-                                        ] = value
+                                        if isinstance(target, list):
+                                            if len(target) > 0 and len(target) > int(p):
+                                                target[int(p)] = value
+                                            elif int(p) == len(target):
+                                                if redball.DEV:
+                                                    self.log.debug(
+                                                        "op=replace, but provided index does not exist yet (it's next up); appending value to list"
+                                                    )
+
+                                                target.append(value)
+                                            else:
+                                                self.log.warning(
+                                                    f"Data discrepancy found while patching gumbo data: List is not long enough to replace index {p} (len: {len(target)})"
+                                                )
+                                                return False
+                                        else:
+                                            target[p] = value
+
                                         continue
                                 elif (
                                     isinstance(target, dict)
@@ -3354,9 +3467,16 @@ class Bot(object):
                                                 f"missing key, adding list for target[{p}]"
                                             )
 
-                                        target[
-                                            int(p) if isinstance(target, list) else p
-                                        ] = []
+                                        if isinstance(target, list):
+                                            if len(target) == int(p):
+                                                target.append([])
+                                            else:
+                                                self.log.warning(
+                                                    f"Data discrepancy found while patching gumbo data: List is not long enough to append index [{p}] (len: {len(target)})."
+                                                )
+                                                return False
+                                        else:
+                                            target[p] = []
                                     elif i == len(path) - 3 and d.get("op") == "add":
                                         # next hop is the target key to add
                                         # do nothing, because it will be handled on the next loop
@@ -3372,9 +3492,16 @@ class Bot(object):
                                                 f"missing key, adding dict for target[{p}]"
                                             )
 
-                                        target[
-                                            int(p) if isinstance(target, list) else p
-                                        ] = {}
+                                        if isinstance(target, list):
+                                            if len(target) == int(p):
+                                                target.append({})
+                                            else:
+                                                self.log.warning(
+                                                    f"Data discrepancy found while patching gumbo data: List is not long enough (len: {len(target)}) to append index [{p}]."
+                                                )
+                                                return False
+                                        else:
+                                            target[p] = {}
                                 # point to next key in the path
                                 target = target[
                                     int(p) if isinstance(target, list) else p
@@ -3396,6 +3523,7 @@ class Bot(object):
                     self.error_notification(f"Error patching gumbo data: {e}")
                     return False
 
+        self.log.debug("Patch complete.")
         return True
 
     def get_gameStatus(self, pk, d=None):
@@ -3443,7 +3571,9 @@ class Bot(object):
         return pks
 
     def get_seasonState(self, t=None):
-        self.log.debug(f"myteam league seasondateinfo: {self.myTeam['league']['seasonDateInfo']}")
+        self.log.debug(
+            f"myteam league seasondateinfo: {self.myTeam['league']['seasonDateInfo']}"
+        )
         if (
             datetime.strptime(
                 self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
@@ -3682,356 +3812,611 @@ class Bot(object):
 
         if gamePk == 0:
             # Generic data used by all threads
-
-            if self.commonData.get(gamePk) and self.commonData[gamePk].get(
-                "lastUpdate", datetime.today() - timedelta(hours=1)
-            ) >= datetime.today() - timedelta(seconds=cache_seconds):
-                self.log.debug(
-                    "Using cached data for gamePk {}, updated {} seconds ago.".format(
-                        gamePk,
-                        (
-                            datetime.today() - self.commonData[gamePk]["lastUpdate"]
-                        ).total_seconds(),
+            with GENERIC_DATA_LOCK:  # Use lock to prevent multiple threads from updating data at the same time
+                if self.commonData.get(gamePk) and self.commonData[gamePk].get(
+                    "lastUpdate", datetime.today() - timedelta(hours=1)
+                ) >= datetime.today() - timedelta(seconds=cache_seconds):
+                    self.log.debug(
+                        "Using cached data for gamePk {}, updated {} seconds ago.".format(
+                            gamePk,
+                            (
+                                datetime.today() - self.commonData[gamePk]["lastUpdate"]
+                            ).total_seconds(),
+                        )
                     )
-                )
-                return False
-            else:
-                self.log.debug(
-                    "Collecting data for gamePk {} with StatsAPI v{}".format(
-                        gamePk, statsapi.__version__
+                    return False
+                else:
+                    self.log.debug(
+                        "Collecting data for gamePk {} with StatsAPI v{}".format(
+                            gamePk, statsapi.__version__
+                        )
                     )
+
+                pkData = {}  # temp dict to hold the data until it's complete
+
+                # Date that represents 'today'
+                pkData.update({"today": self.today})
+
+                # Update standings info
+                pkData.update(
+                    {"standings": statsapi.standings_data()}
+                )  # TODO: something similar to api_call()?
+
+                # Update schedule data for today's other games - for no-no watch & division/league scoreboard
+                ls = self.get_schedule_data(
+                    d=self.today["Y-m-d"],
+                    h="team(division,league),linescore,flags,venue(timezone)",
                 )
+                pkData.update({"leagueSchedule": []})
+                y = next(
+                    (
+                        i
+                        for i, x in enumerate(ls["dates"])
+                        if x["date"] == self.today["Y-m-d"]
+                    ),
+                    None,
+                )
+                if y is not None:
+                    games = ls["dates"][y]["games"]
+                    for (
+                        x
+                    ) in (
+                        games
+                    ):  # Include all games and filter out current gamePk when displaying
+                        if x["doubleHeader"] == "Y" and x["gameNumber"] == 2:
+                            # Find DH game 1
+                            otherGame = next(
+                                (
+                                    {
+                                        "gamePk": v["schedule"]["gamePk"],
+                                        "gameDate": v["schedule"]["gameDate"],
+                                    }
+                                    for k, v in self.commonData.items()
+                                    if k not in [0, "weekly", "off", "gameday"]
+                                    and v.get("schedule", {}).get("gamePk")
+                                    != x["gamePk"]
+                                    and v.get("schedule", {}).get("doubleHeader") == "Y"
+                                    and v.get("schedule", {}).get("gameNumber") == 1
+                                    and v.get("schedule", {})
+                                    .get("teams", {})
+                                    .get("home", {})
+                                    .get("team", {})
+                                    .get("id")
+                                    in [
+                                        x.get("teams", {})
+                                        .get("home", {})
+                                        .get("team", {})
+                                        .get("id"),
+                                        x.get("teams", {})
+                                        .get("away", {})
+                                        .get("team", {})
+                                        .get("id"),
+                                    ]
+                                ),
+                                None,
+                            )
+                            self.log.debug(
+                                f"Result of check for DH game 1 in commonData: {otherGame}"
+                            )
 
-            pkData = {}  # temp dict to hold the data until it's complete
+                            if not otherGame:
+                                # Check league schedule
+                                otherGame = next(
+                                    (
+                                        {
+                                            "gamePk": v["gamePk"],
+                                            "gameDate": v["gameDate"],
+                                        }
+                                        for v in games
+                                        if v.get("gamePk") != x["gamePk"]
+                                        and v.get("doubleHeader") == "Y"
+                                        and v.get("gameNumber") == 1
+                                        and v.get("teams", {})
+                                        .get("home", {})
+                                        .get("team", {})
+                                        .get("id")
+                                        in [
+                                            x.get("teams", {})
+                                            .get("home", {})
+                                            .get("team", {})
+                                            .get("id"),
+                                            x.get("teams", {})
+                                            .get("away", {})
+                                            .get("team", {})
+                                            .get("id"),
+                                        ]
+                                    ),
+                                    None,
+                                )
+                                self.log.debug(
+                                    f"Result of check for DH game 1 in leagueSchedule: {otherGame}"
+                                )
 
-            # Date that represents 'today'
-            pkData.update({"today": self.today})
+                            if not otherGame:
+                                # Get schedule data from MLB
+                                self.log.debug(
+                                    f"Getting schedule data for team id [{self.myTeam['id']}] and date [{self.today['Y-m-d']}]..."
+                                )
+                                sched = self.api_call(
+                                    "schedule",
+                                    {
+                                        "sportId": 1,
+                                        "date": self.today["Y-m-d"],
+                                        "teamId": self.myTeam["id"],
+                                        "fields": "dates,date,games,gamePk,gameDate,doubleHeader,gameNumber",
+                                    },
+                                )
+                                schedGames = sched["dates"][
+                                    next(
+                                        (
+                                            i
+                                            for i, y in enumerate(sched["dates"])
+                                            if y["date"] == self.today["Y-m-d"]
+                                        ),
+                                        0,
+                                    )
+                                ]["games"]
+                                otherGame = next(
+                                    (
+                                        v
+                                        for v in schedGames
+                                        if v.get("gamePk") != x["gamePk"]
+                                        and v.get("doubleHeader") == "Y"
+                                        and v.get("gameNumber") == 1
+                                    ),
+                                    None,
+                                )
+                                self.log.debug(
+                                    f"Result of check for DH game 1 in MLB schedule data: {otherGame}"
+                                )
 
-            # Update standings info
-            pkData.update(
-                {"standings": statsapi.standings_data()}
-            )  # TODO: something similar to api_call()?
-
-            # Update schedule data for today's other games - for no-no watch & division/league scoreboard
-            ls = self.get_schedule_data(
-                d=self.today["Y-m-d"],
-                h="team(division,league),linescore,flags,venue(timezone)",
-            )
-            pkData.update({"leagueSchedule": []})
-            y = next(
-                (
-                    i
-                    for i, x in enumerate(ls["dates"])
-                    if x["date"] == self.today["Y-m-d"]
-                ),
-                None,
-            )
-            if y is not None:
-                games = ls["dates"][y]["games"]
-                for (
-                    x
-                ) in (
-                    games
-                ):  # Include all games and filter out current gamePk when displaying
-                    # Convert game time to myTeam's timezone as well as local (homeTeam's) timezone
-                    x.update(
-                        {
-                            "gameTime": {
-                                "myTeam": self.convert_timezone(
+                            if otherGame:
+                                # Replace gameDate for straight doubleheader game 2 to reflect game 1 + 3 hours
+                                self.log.debug(f"DH Game 1: {otherGame['gamePk']}")
+                                x["gameDate"] = (
                                     datetime.strptime(
+                                        otherGame["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
+                                    ).replace(tzinfo=pytz.utc)
+                                    + timedelta(hours=3)
+                                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+                                self.log.info(
+                                    f"Replaced game time for DH Game 2 [{x['gamePk']}] to 3 hours after Game 1 [{otherGame['gamePk']}] game time: [{x['gameDate']}]"
+                                )
+                            else:
+                                self.log.debug(
+                                    f"Failed to find DH game 1 for DH game 2 [{x['gamePk']}]"
+                                )
+
+                        # Convert game time to myTeam's timezone as well as local (homeTeam's) timezone
+                        x.update(
+                            {
+                                "gameTime": {
+                                    "myTeam": self.convert_timezone(
+                                        datetime.strptime(
+                                            x["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
+                                        ).replace(tzinfo=pytz.utc),
+                                        self.myTeam["venue"]["timeZone"]["id"],
+                                    ),
+                                    "homeTeam": self.convert_timezone(
+                                        datetime.strptime(
+                                            x["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
+                                        ).replace(tzinfo=pytz.utc),
+                                        x["venue"]["timeZone"]["id"],
+                                    ),
+                                    "bot": self.convert_timezone(
+                                        datetime.strptime(
+                                            x["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
+                                        ).replace(tzinfo=pytz.utc),
+                                        "local",
+                                    ),
+                                    "utc": datetime.strptime(
                                         x["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
                                     ).replace(tzinfo=pytz.utc),
-                                    self.myTeam["venue"]["timeZone"]["id"],
-                                ),
-                                "homeTeam": self.convert_timezone(
-                                    datetime.strptime(
-                                        x["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
-                                    ).replace(tzinfo=pytz.utc),
-                                    x["venue"]["timeZone"]["id"],
-                                ),
-                                "bot": self.convert_timezone(
-                                    datetime.strptime(
-                                        x["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
-                                    ).replace(tzinfo=pytz.utc),
-                                    "local",
-                                ),
-                                "utc": datetime.strptime(
-                                    x["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
-                                ).replace(tzinfo=pytz.utc),
+                                }
                             }
-                        }
-                    )
-                    pkData["leagueSchedule"].append(x)
-            else:
-                self.log.debug("There are no games at all today.")
+                        )
+                        pkData["leagueSchedule"].append(x)
+                else:
+                    self.log.debug("There are no games at all today.")
 
-            # self.myTeam - updated daily
-            pkData.update({"myTeam": self.myTeam})
+                # self.myTeam - updated daily
+                pkData.update({"myTeam": self.myTeam})
 
-            # My team's season state
-            pkData["myTeam"].update({"seasonState": self.seasonState})
+                # My team's season state
+                pkData["myTeam"].update({"seasonState": self.seasonState})
 
-            # My team's next game
-            pkData["myTeam"].update({"nextGame": self.get_nextGame(self.myTeam["id"])})
+                # My team's next game
+                pkData["myTeam"].update(
+                    {"nextGame": self.get_nextGame(self.myTeam["id"])}
+                )
 
-            # Include team subreddit dict
-            pkData.update({"teamSubs": self.teamSubs})
+                # Include team subreddit dict
+                pkData.update({"teamSubs": self.teamSubs})
 
-            # Team leaders (hitting, pitching)
-            # Team stats
-            # Last / next game schedule info
-            # Last game recap/highlights/score/decisions
-            # Next opponent team info/record/standings
+                # Team leaders (hitting, pitching)
+                # Team stats
+                # Last / next game schedule info
+                # Last game recap/highlights/score/decisions
+                # Next opponent team info/record/standings
 
-            pkData.update({"lastUpdate": datetime.today()})
+                pkData.update({"lastUpdate": datetime.today()})
 
-            # Make the data available
-            self.commonData.update({gamePk: pkData})
+                # Make the data available
+                self.commonData.update({gamePk: pkData})
         else:
             # gamePk was provided, update game-specific data
             # Get generic data if it doesn't exist
             if not self.commonData.get(0):
                 self.collect_data(0)
 
-            # Update game-specific data
-            if not isinstance(gamePk, list):
-                gamePks = [gamePk]
-            else:
-                gamePks = [x for x in gamePk]
-
-            for pk in gamePks:
-                if self.commonData.get(pk) and self.commonData[pk].get(
-                    "lastUpdate", datetime.today() - timedelta(hours=1)
-                ) >= datetime.today() - timedelta(seconds=cache_seconds):
-                    self.log.debug(
-                        "Using cached data for gamePk {}, updated {} seconds ago.".format(
-                            pk,
-                            (
-                                datetime.today() - self.commonData[pk]["lastUpdate"]
-                            ).total_seconds(),
-                        )
-                    )
-                    gamePks.remove(pk)
+            with GAME_DATA_LOCK:  # Use lock to prevent multiple threads from updating data at the same time
+                # Update game-specific data
+                if not isinstance(gamePk, list):
+                    gamePks = [gamePk]
                 else:
-                    self.log.debug(
-                        "Collecting data for gamePk {} with StatsAPI v{}".format(
-                            pk, statsapi.__version__
-                        )
-                    )
+                    gamePks = [x for x in gamePk]
 
-            if len(gamePks) == 0:
-                self.log.warning("No gamePks to collect data for.")
-                return False
-
-            self.log.debug("Getting schedule data for gamePks: {}".format(gamePks))
-            s = self.get_schedule_data(
-                ",".join(str(i) for i in gamePks), self.today["Y-m-d"]
-            )
-            for pk in gamePks:
-                self.log.debug("Collecting data for pk: {}".format(pk))
-                pkData = {}  # temp dict to hold the data until it's complete
-
-                # Schedule data includes status, highlights, weather, broadcasts, probable pitchers, officials, and team info (incl. score)
-                games = s["dates"][
-                    next(
-                        (
-                            i
-                            for i, x in enumerate(s["dates"])
-                            if x["date"] == self.today["Y-m-d"]
-                        ),
-                        0,
-                    )
-                ]["games"]
-                game = games[
-                    next((i for i, x in enumerate(games) if x["gamePk"] == pk), 0)
-                ]
-                pkData.update({"schedule": game})
-                self.log.debug("Appended schedule for pk {}".format(pk))
-
-                # Store game time in myTeam's timezone as well as local (homeTeam's) timezone
-                pkData.update(
-                    {
-                        "gameTime": {
-                            "myTeam": self.convert_timezone(
-                                datetime.strptime(
-                                    pkData["schedule"]["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
-                                ).replace(tzinfo=pytz.utc),
-                                self.commonData[0]["myTeam"]["venue"]["timeZone"]["id"],
-                            ),
-                            "homeTeam": self.convert_timezone(
-                                datetime.strptime(
-                                    pkData["schedule"]["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
-                                ).replace(tzinfo=pytz.utc),
-                                pkData["schedule"]["venue"]["timeZone"]["id"],
-                            ),
-                            "bot": self.convert_timezone(
-                                datetime.strptime(
-                                    pkData["schedule"]["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
-                                ).replace(tzinfo=pytz.utc),
-                                "local",
-                            ),
-                            "utc": datetime.strptime(
-                                pkData["schedule"]["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
-                            ).replace(tzinfo=pytz.utc),
-                        }
-                    }
-                )
-                self.log.debug("Added gameTime for pk {}".format(pk))
-
-                # Store a key to indicate if myTeam is home or away
-                pkData.update(
-                    {
-                        "homeAway": "home"
-                        if game["teams"]["home"]["team"]["id"] == self.myTeam["id"]
-                        else "away"
-                    }
-                )
-                self.log.debug("Added homeAway for pk {}".format(pk))
-
-                # Team info for opponent - same info as myTeam, but stored in pk dict because it's game-specific
-                pkData.update(
-                    {
-                        "oppTeam": self.get_team(
-                            game["teams"]["away"]["team"]["id"]
-                            if pkData["homeAway"] == "home"
-                            else game["teams"]["home"]["team"]["id"]
-                        )
-                    }
-                )
-                self.log.debug("Added oppTeam for pk {}".format(pk))
-
-                # Update gumbo data
-                gumboParams = {
-                    "gamePk": pk,
-                    "hydrate": "credits,alignment,flags",
-                }
-                # Get updated list of timestamps
-                self.log.debug("Getting timestamps for pk {}".format(pk))
-                timestamps = self.api_call("game_timestamps", {"gamePk": pk})
-                if not self.commonData.get(pk, {}).get("gumbo") or (
-                    self.commonData[pk]["gumbo"]
-                    .get("metaData", {})
-                    .get("timeStamp", "")
-                    == ""
-                    or self.commonData[pk]["gumbo"]["metaData"]["timeStamp"]
-                    not in timestamps
-                    or len(timestamps)
-                    - timestamps.index(
-                        self.commonData[pk]["gumbo"]["metaData"]["timeStamp"]
-                    )
-                    > 3
-                ):
-                    # Get full gumbo
-                    self.log.debug("Getting full gumbo data for pk {}".format(pk))
-                    gumbo = self.api_call("game", gumboParams)
-                else:
-                    self.log.debug(
-                        f"Latest timestamp from StatsAPI: {timestamps[-1]}; latest timestamp in gumbo cache: {self.commonData[pk]['gumbo'].get('metaData', {}).get('timeStamp')} for pk {pk}"
-                    )
-
-                    gumbo = self.commonData[pk].get("gumbo", {})
-                    if len(timestamps) == 0 or timestamps[-1] == gumbo.get(
-                        "metaData", {}
-                    ).get("timeStamp"):
-                        # We're up to date
-                        self.log.debug("Gumbo data is up to date for pk {}".format(pk))
-                    else:
-                        # Get diff patch to bring us up to date
-                        self.log.debug("Getting gumbo diff patch for pk {}".format(pk))
-                        diffPatch = self.api_call(
-                            "game_diff",
-                            {
-                                "gamePk": pk,
-                                "startTimecode": gumbo["metaData"]["timeStamp"],
-                                "endTimecode": timestamps[-1:],
-                            },
-                            force=True,
-                        )  # use force=True due to MLB-StatsAPI bug #31
-                        # Check if patch is actually the full gumbo data
-                        if isinstance(diffPatch, dict) and diffPatch.get("gamePk"):
-                            # Full gumbo data was returned
-                            self.log.debug(
-                                f"Full gumbo data was returned instead of a patch for pk {pk}. No need to patch!"
+                for pk in gamePks:
+                    if self.commonData.get(pk) and self.commonData[pk].get(
+                        "lastUpdate", datetime.today() - timedelta(hours=1)
+                    ) >= datetime.today() - timedelta(seconds=cache_seconds):
+                        self.log.debug(
+                            "Using cached data for gamePk {}, updated {} seconds ago.".format(
+                                pk,
+                                (
+                                    datetime.today() - self.commonData[pk]["lastUpdate"]
+                                ).total_seconds(),
                             )
-                            gumbo = diffPatch
-                        else:
-                            # Patch the dict
-                            self.log.debug("Patching gumbo data for pk {}".format(pk))
-                            if self.patch_dict(
-                                self.commonData[pk]["gumbo"], diffPatch
-                            ):  # Patch in place
-                                # True result —- patching was successful
-                                gumbo = self.commonData[pk]["gumbo"]  # Carry forward
-                            else:
-                                # Get full gumbo
-                                self.log.debug(
-                                    "Since patching encountered an error, getting full gumbo data for pk {}".format(
-                                        pk
+                        )
+                        gamePks.remove(pk)
+                    else:
+                        self.log.debug(
+                            "Collecting data for gamePk {} with StatsAPI v{}".format(
+                                pk, statsapi.__version__
+                            )
+                        )
+
+                if len(gamePks) == 0:
+                    self.log.warning("No gamePks to collect data for.")
+                    return False
+
+                self.log.debug("Getting schedule data for gamePks: {}".format(gamePks))
+                s = self.get_schedule_data(
+                    ",".join(str(i) for i in gamePks), self.today["Y-m-d"]
+                )
+                for pk in gamePks:
+                    self.log.debug("Collecting data for pk: {}".format(pk))
+                    pkData = {}  # temp dict to hold the data until it's complete
+
+                    # Schedule data includes status, highlights, weather, broadcasts, probable pitchers, officials, and team info (incl. score)
+                    games = s["dates"][
+                        next(
+                            (
+                                i
+                                for i, x in enumerate(s["dates"])
+                                if x["date"] == self.today["Y-m-d"]
+                            ),
+                            0,
+                        )
+                    ]["games"]
+                    game = games[
+                        next((i for i, x in enumerate(games) if x["gamePk"] == pk), 0)
+                    ]
+                    pkData.update({"schedule": game})
+                    self.log.debug("Appended schedule for pk {}".format(pk))
+
+                    if game["doubleHeader"] == "Y" and game["gameNumber"] == 2:
+                        # Find DH game 1
+                        otherGame = next(
+                            (
+                                {
+                                    "gamePk": v["schedule"]["gamePk"],
+                                    "gameDate": v["schedule"]["gameDate"],
+                                }
+                                for k, v in self.commonData.items()
+                                if k not in [0, "weekly", "off", "gameday"]
+                                and v.get("schedule", {}).get("gamePk")
+                                != game["gamePk"]
+                                and v.get("schedule", {}).get("doubleHeader") == "Y"
+                                and v.get("schedule", {}).get("gameNumber") == 1
+                                and self.myTeam["id"]
+                                in [
+                                    v.get("teams", {})
+                                    .get("home", {})
+                                    .get("team", {})
+                                    .get("id"),
+                                    v.get("teams", {})
+                                    .get("away", {})
+                                    .get("team", {})
+                                    .get("id"),
+                                ]
+                            ),
+                            None,
+                        )
+                        self.log.debug(
+                            f"Result of check for DH game 1 in commonData: {otherGame}"
+                        )
+
+                        if not otherGame:
+                            # Check league schedule
+                            otherGame = next(
+                                (
+                                    {"gamePk": v["gamePk"], "gameDate": v["gameDate"]}
+                                    for v in self.commonData.get(0, {}).get(
+                                        "leagueSchedule", []
                                     )
+                                    if v.get("gamePk") != game["gamePk"]
+                                    and v.get("doubleHeader") == "Y"
+                                    and v.get("gameNumber") == 1
+                                    and self.myTeam["id"]
+                                    in [
+                                        v.get("teams", {})
+                                        .get("home", {})
+                                        .get("team", {})
+                                        .get("id"),
+                                        v.get("teams", {})
+                                        .get("away", {})
+                                        .get("team", {})
+                                        .get("id"),
+                                    ]
+                                ),
+                                None,
+                            )
+                            self.log.debug(
+                                f"Result of check for DH game 1 in leagueSchedule: {otherGame}"
+                            )
+
+                        if not otherGame:
+                            # Get schedule data from MLB
+                            self.log.debug(
+                                f"Getting schedule data for team id [{self.myTeam['id']}] and date [{self.today['Y-m-d']}]..."
+                            )
+                            sched = self.api_call(
+                                "schedule",
+                                {
+                                    "sportId": 1,
+                                    "date": self.today["Y-m-d"],
+                                    "teamId": self.myTeam["id"],
+                                    "fields": "dates,date,games,gamePk,gameDate,doubleHeader,gameNumber",
+                                },
+                            )
+                            schedGames = sched["dates"][
+                                next(
+                                    (
+                                        i
+                                        for i, x in enumerate(sched["dates"])
+                                        if x["date"] == self.today["Y-m-d"]
+                                    ),
+                                    0,
                                 )
-                                gumbo = self.api_call("game", gumboParams)
+                            ]["games"]
+                            otherGame = next(
+                                (
+                                    v
+                                    for v in schedGames
+                                    if v.get("gamePk") != game["gamePk"]
+                                    and v.get("doubleHeader") == "Y"
+                                    and v.get("gameNumber") == 1
+                                ),
+                                None,
+                            )
+                            self.log.debug(
+                                f"Result of check for DH game 1 in MLB schedule data: {otherGame}"
+                            )
 
-                # Include gumbo data
-                pkData.update({"timestamps": timestamps, "gumbo": gumbo})
-                self.log.debug("Added gumbo data for pk {}".format(pk))
-
-                # Formatted Boxscore Info
-                pkData.update({"boxscore": self.format_boxscore_data(gumbo)})
-                self.log.debug("Added boxscore for pk {}".format(pk))
-
-                # Update hitter stats vs. probable pitchers - only prior to game start if data already exists
-                if (
-                    not pkData.get("awayBattersVsProb")
-                    and not pkData.get("homeBattersVsProb")
-                ) or (
-                    (
-                        pkData["schedule"]["status"]["abstractGameCode"] != "L"
-                        or pkData["schedule"]["status"]["statusCode"] == "PW"
-                    )
-                    and pkData["schedule"]["status"]["abstractGameCode"] != "F"
-                ):
-                    self.log.debug(
-                        "Adding batter vs probable pitchers for pk {}".format(pk)
-                    )
+                        if otherGame:
+                            # Replace gameDate for straight doubleheader game 2 to reflect game 1 + 3 hours
+                            self.log.debug(f"DH Game 1: {otherGame['gamePk']}")
+                            game["gameDate"] = (
+                                datetime.strptime(
+                                    otherGame["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
+                                ).replace(tzinfo=pytz.utc)
+                                + timedelta(hours=3)
+                            ).strftime("%Y-%m-%dT%H:%M:%SZ")
+                            self.log.info(
+                                f"Replaced game time for DH Game 2 [{game['gamePk']}] to 3 hours after Game 1 [{otherGame['gamePk']}] game time: [{game['gameDate']}] -- pkData['schedule']['gameDate']: [{pkData['schedule']['gameDate']}]"
+                            )
+                        else:
+                            self.log.debug(
+                                f"Failed to find DH game 1 for DH game 2 [{game['gamePk']}]"
+                            )
+                    # Store game time in myTeam's timezone as well as local (homeTeam's) timezone
                     pkData.update(
                         {
-                            "awayBattersVsProb": self.get_batter_stats_vs_pitcher(
-                                batters=pkData.get("gumbo", {})
-                                .get("liveData", {})
-                                .get("boxscore", {})
-                                .get("teams", {})
-                                .get("away", {})
-                                .get("batters", []),
-                                pitcher=pkData["schedule"]["teams"]["home"]
-                                .get("probablePitcher", {})
-                                .get("id", 0),
-                            ),
-                            "homeBattersVsProb": self.get_batter_stats_vs_pitcher(
-                                batters=pkData.get("gumbo", {})
-                                .get("liveData", {})
-                                .get("boxscore", {})
-                                .get("teams", {})
-                                .get("home", {})
-                                .get("batters", []),
-                                pitcher=pkData["schedule"]["teams"]["away"]
-                                .get("probablePitcher", {})
-                                .get("id", 0),
-                            ),
+                            "gameTime": {
+                                "myTeam": self.convert_timezone(
+                                    datetime.strptime(
+                                        pkData["schedule"]["gameDate"],
+                                        "%Y-%m-%dT%H:%M:%SZ",
+                                    ).replace(tzinfo=pytz.utc),
+                                    self.commonData[0]["myTeam"]["venue"]["timeZone"][
+                                        "id"
+                                    ],
+                                ),
+                                "homeTeam": self.convert_timezone(
+                                    datetime.strptime(
+                                        pkData["schedule"]["gameDate"],
+                                        "%Y-%m-%dT%H:%M:%SZ",
+                                    ).replace(tzinfo=pytz.utc),
+                                    pkData["schedule"]["venue"]["timeZone"]["id"],
+                                ),
+                                "bot": self.convert_timezone(
+                                    datetime.strptime(
+                                        pkData["schedule"]["gameDate"],
+                                        "%Y-%m-%dT%H:%M:%SZ",
+                                    ).replace(tzinfo=pytz.utc),
+                                    "local",
+                                ),
+                                "utc": datetime.strptime(
+                                    pkData["schedule"]["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
+                                ).replace(tzinfo=pytz.utc),
+                            }
                         }
                     )
+                    self.log.debug("Added gameTime for pk {}".format(pk))
 
-                # Opponent last game recap/score/decisions/highlights if not against myTeam (only if doesn't already exist in data dict)
+                    # Store a key to indicate if myTeam is home or away
+                    pkData.update(
+                        {
+                            "homeAway": "home"
+                            if game["teams"]["home"]["team"]["id"] == self.myTeam["id"]
+                            else "away"
+                        }
+                    )
+                    self.log.debug("Added homeAway for pk {}".format(pk))
 
-                # Probable pitcher career stats vs. team - can't find the data for this
-                # pkData.update({'awayProbVsTeamStats':self.get_pitching_stats_vs_team()})
-                # pkData.update({'homeProbVsTeamStats':self.get_pitching_stats_vs_team()})
+                    # Team info for opponent - same info as myTeam, but stored in pk dict because it's game-specific
+                    pkData.update(
+                        {
+                            "oppTeam": self.get_team(
+                                game["teams"]["away"]["team"]["id"]
+                                if pkData["homeAway"] == "home"
+                                else game["teams"]["home"]["team"]["id"]
+                            )
+                        }
+                    )
+                    self.log.debug("Added oppTeam for pk {}".format(pk))
 
-                pkData.update({"lastUpdate": datetime.today()})
-                self.log.debug("Added lastUpdate for pk {}".format(pk))
+                    # Update gumbo data
+                    gumboParams = {
+                        "gamePk": pk,
+                        "hydrate": "credits,alignment,flags",
+                    }
+                    # Get updated list of timestamps
+                    self.log.debug("Getting timestamps for pk {}".format(pk))
+                    timestamps = self.api_call("game_timestamps", {"gamePk": pk})
+                    if not self.commonData.get(pk, {}).get("gumbo") or (
+                        self.commonData[pk]["gumbo"]
+                        .get("metaData", {})
+                        .get("timeStamp", "")
+                        == ""
+                        or self.commonData[pk]["gumbo"]["metaData"]["timeStamp"]
+                        not in timestamps
+                        or len(timestamps)
+                        - timestamps.index(
+                            self.commonData[pk]["gumbo"]["metaData"]["timeStamp"]
+                        )
+                        > 3
+                    ):
+                        # Get full gumbo
+                        self.log.debug("Getting full gumbo data for pk {}".format(pk))
+                        gumbo = self.api_call("game", gumboParams)
+                    else:
+                        self.log.debug(
+                            f"Latest timestamp from StatsAPI: {timestamps[-1]}; latest timestamp in gumbo cache: {self.commonData[pk]['gumbo'].get('metaData', {}).get('timeStamp')} for pk {pk}"
+                        )
 
-                # Make the data available
-                self.commonData.update({pk: pkData})
-                self.log.debug("Updated commonData with data for pk {}".format(pk))
+                        gumbo = self.commonData[pk].get("gumbo", {})
+                        if len(timestamps) == 0 or timestamps[-1] == gumbo.get(
+                            "metaData", {}
+                        ).get("timeStamp"):
+                            # We're up to date
+                            self.log.debug(
+                                "Gumbo data is up to date for pk {}".format(pk)
+                            )
+                        else:
+                            # Get diff patch to bring us up to date
+                            self.log.debug(
+                                "Getting gumbo diff patch for pk {}".format(pk)
+                            )
+                            diffPatch = self.api_call(
+                                "game_diff",
+                                {
+                                    "gamePk": pk,
+                                    "startTimecode": gumbo["metaData"]["timeStamp"],
+                                    "endTimecode": timestamps[-1:],
+                                },
+                                force=True,
+                            )  # use force=True due to MLB-StatsAPI bug #31
+                            # Check if patch is actually the full gumbo data
+                            if isinstance(diffPatch, dict) and diffPatch.get("gamePk"):
+                                # Full gumbo data was returned
+                                self.log.debug(
+                                    f"Full gumbo data was returned instead of a patch for pk {pk}. No need to patch!"
+                                )
+                                gumbo = diffPatch
+                            else:
+                                # Patch the dict
+                                self.log.debug(
+                                    "Patching gumbo data for pk {}".format(pk)
+                                )
+                                if self.patch_dict(
+                                    self.commonData[pk]["gumbo"], diffPatch
+                                ):  # Patch in place
+                                    # True result —- patching was successful
+                                    gumbo = self.commonData[pk][
+                                        "gumbo"
+                                    ]  # Carry forward
+                                else:
+                                    # Get full gumbo
+                                    self.log.debug(
+                                        "Since patching encountered an error, getting full gumbo data for pk {}".format(
+                                            pk
+                                        )
+                                    )
+                                    gumbo = self.api_call("game", gumboParams)
+
+                    # Include gumbo data
+                    pkData.update({"timestamps": timestamps, "gumbo": gumbo})
+                    self.log.debug("Added gumbo data for pk {}".format(pk))
+
+                    # Formatted Boxscore Info
+                    pkData.update({"boxscore": self.format_boxscore_data(gumbo)})
+                    self.log.debug("Added boxscore for pk {}".format(pk))
+
+                    # Update hitter stats vs. probable pitchers - only prior to game start if data already exists
+                    if (
+                        not pkData.get("awayBattersVsProb")
+                        and not pkData.get("homeBattersVsProb")
+                    ) or (
+                        (
+                            pkData["schedule"]["status"]["abstractGameCode"] != "L"
+                            or pkData["schedule"]["status"]["statusCode"] == "PW"
+                        )
+                        and pkData["schedule"]["status"]["abstractGameCode"] != "F"
+                    ):
+                        self.log.debug(
+                            "Adding batter vs probable pitchers for pk {}".format(pk)
+                        )
+                        pkData.update(
+                            {
+                                "awayBattersVsProb": self.get_batter_stats_vs_pitcher(
+                                    batters=pkData.get("gumbo", {})
+                                    .get("liveData", {})
+                                    .get("boxscore", {})
+                                    .get("teams", {})
+                                    .get("away", {})
+                                    .get("batters", []),
+                                    pitcher=pkData["schedule"]["teams"]["home"]
+                                    .get("probablePitcher", {})
+                                    .get("id", 0),
+                                ),
+                                "homeBattersVsProb": self.get_batter_stats_vs_pitcher(
+                                    batters=pkData.get("gumbo", {})
+                                    .get("liveData", {})
+                                    .get("boxscore", {})
+                                    .get("teams", {})
+                                    .get("home", {})
+                                    .get("batters", []),
+                                    pitcher=pkData["schedule"]["teams"]["away"]
+                                    .get("probablePitcher", {})
+                                    .get("id", 0),
+                                ),
+                            }
+                        )
+
+                    # Opponent last game recap/score/decisions/highlights if not against myTeam (only if doesn't already exist in data dict)
+
+                    # Probable pitcher career stats vs. team - can't find the data for this
+                    # pkData.update({'awayProbVsTeamStats':self.get_pitching_stats_vs_team()})
+                    # pkData.update({'homeProbVsTeamStats':self.get_pitching_stats_vs_team()})
+
+                    pkData.update({"lastUpdate": datetime.today()})
+                    self.log.debug("Added lastUpdate for pk {}".format(pk))
+
+                    # Make the data available
+                    self.commonData.update({pk: pkData})
+                    self.log.debug("Updated commonData with data for pk {}".format(pk))
 
         if redball.DEV:
             self.log.debug(
@@ -4825,8 +5210,8 @@ class Bot(object):
         else:
             return True
 
-    def insert_thread_to_db(self, pk, threadId, type):
-        # pk = gamePk (or list of gamePks), threadId = thread object returned from Reddit (OFF+date for off day threads), type = ['gameday', 'game', 'post', 'off', 'weekly']
+    def insert_thread_to_db(self, pk, threadId, threadType):
+        # pk = gamePk (or list of gamePks), threadId = thread object returned from Reddit (OFF+date for off day threads), threadType = ['gameday', 'game', 'post', 'off', 'weekly']
         q = "insert or ignore into {}threads (gamePk, type, gameDate, id, dateCreated, dateUpdated) values".format(
             self.dbTablePrefix
         )
@@ -4835,19 +5220,22 @@ class Bot(object):
                 if q[:-1] == ")":
                     q += ","
                 q += " ({}, '{}', '{}', '{}', {}, {})".format(
-                    k, type, self.today["Y-m-d"], threadId, time.time(), time.time()
+                    k,
+                    threadType,
+                    self.today["Y-m-d"],
+                    threadId,
+                    time.time(),
+                    time.time(),
                 )
         else:
             q += " ({}, '{}', '{}', '{}', {}, {})".format(
-                pk, type, self.today["Y-m-d"], threadId, time.time(), time.time()
+                pk, threadType, self.today["Y-m-d"], threadId, time.time(), time.time()
             )
 
         q += ";"
         i = rbdb.db_qry(q, commit=True, closeAfter=True, logg=self.log)
         if isinstance(i, str):
-            self.log.error(
-                "Error inserting post game thread into database: {}".format(i)
-            )
+            self.log.error("Error inserting thread into database: {}".format(i))
             return False
         else:
             return True
@@ -5461,17 +5849,6 @@ class Bot(object):
 
     def build_tables(self):
         queries = []
-        queries.append(
-            """CREATE TABLE IF NOT EXISTS {}games (
-                id integer primary key autoincrement,
-                gamePk integer unique not null,
-                gameDate text not null,
-                dateAdded text not null
-            );""".format(
-                self.dbTablePrefix
-            )
-        )
-
         queries.append(
             """CREATE TABLE IF NOT EXISTS {}threads (
                 gamePk integer not null,
@@ -6092,7 +6469,7 @@ class Bot(object):
                 botStatus["summary"]["text"] += "\n\nGame Day Thread{}.".format(
                     " disabled"
                     if not botStatus["gameDayThread"]["enabled"]
-                    else " failed to post (check log for error)"
+                    else " skipped or failed to post (check log for error)"
                     if not botStatus["gameDayThread"]["posted"]
                     and datetime.strptime(
                         botStatus["gameDayThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
@@ -6111,7 +6488,7 @@ class Bot(object):
                 ] += "<br /><br /><strong>Game Day Thread</strong>{}.".format(
                     " disabled."
                     if not botStatus["gameDayThread"]["enabled"]
-                    else " failed to post (check log for error)"
+                    else " skipped or failed to post (check log for error)"
                     if not botStatus["gameDayThread"]["posted"]
                     and datetime.strptime(
                         botStatus["gameDayThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
@@ -6136,7 +6513,7 @@ class Bot(object):
                         botStatus["seasonState"].startswith("off")
                         or botStatus["seasonState"] == "post:out"
                     )
-                    else " failed to post (check log for error)"
+                    else " skipped or failed to post (check log for error)"
                     if not botStatus["gameDayThread"]["posted"]
                     and datetime.strptime(
                         botStatus["gameDayThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
@@ -6160,6 +6537,9 @@ class Bot(object):
                                 k,
                                 " disabled."
                                 if not v["threads"]["game"]["enabled"]
+                                else " skipped"
+                                if v["threads"]["game"].get("postTime", "") == ""
+                                and not v["threads"]["game"]["posted"]
                                 else " failed to post (check log for error)"
                                 if not v["threads"]["game"]["posted"]
                                 and datetime.strptime(
@@ -6195,6 +6575,9 @@ class Bot(object):
                                 k,
                                 " disabled."
                                 if not v["threads"]["game"]["enabled"]
+                                else " skipped"
+                                if v["threads"]["game"].get("postTime", "") == ""
+                                and not v["threads"]["game"]["posted"]
                                 else " failed to post (check log for error)"
                                 if not v["threads"]["game"]["posted"]
                                 and datetime.strptime(
@@ -6230,6 +6613,9 @@ class Bot(object):
                                 k,
                                 " disabled."
                                 if not v["threads"]["game"]["enabled"]
+                                else " skipped"
+                                if v["threads"]["game"].get("postTime", "") == ""
+                                and not v["threads"]["game"]["posted"]
                                 else " failed to post (check log for error)"
                                 if not v["threads"]["game"]["posted"]
                                 and datetime.strptime(

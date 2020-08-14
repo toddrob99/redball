@@ -8,6 +8,12 @@ ${'###'}\
 % endif\
 <%include file="matchup.mako" args="gamePk=pk,dateFormat='%I:%M %p %Z'" />
 
+## Game status: show detailed state and then list first pitch time if game hasn't started yet and isn't final
+${'###'}Game Status: ${data[pk]['schedule']['status']['detailedState']} \
+% if data[pk]['schedule']['status'].get('reason') and len(data[pk]['schedule']['status']['reason']) > 0 and data[pk]['schedule']['status']['reason'] not in data[pk]['schedule']['status']['detailedState']:
+due to ${data[pk]['schedule']['status']['reason']} \
+% endif
+
 ## Broadcasts, gameday link, (strikezone map commented out since it doesn't seem to have data), (game notes commented out due to new press pass requirement)
 <%include file="game_info.mako" args="gamePk=pk" />
 

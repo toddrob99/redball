@@ -184,6 +184,11 @@ def restart_webServer():
 
 
 def check_auth(*args, **kwargs):
+    webSettings = rbConfig.get_sys_config(category="Web/Security")
+    auth_type = next(x["val"] for x in webSettings if x["key"] == "AUTH_TYPE")
+    if auth_type != "Form":
+        return True
+
     log.debug("Checking authentication against session: {}".format(cherrypy.session.items()))
     u = cherrypy.session.get("_cp_username")
     if u:
@@ -497,23 +502,24 @@ class WebInterface(object):
                 if isinstance(newBot.id, str):
                     local_args.update({"errors": newBot.id, "errorcontainer_hide": ""})
                 else:
-                    redball.BOTS.update({str(newBot.id): newBot})
-                    # Grant rw access to the bot creator
-                    redball.LOGGED_IN_USERS[cherrypy.session.get("_cp_username")][
-                        "PRIVS"
-                    ].append("rb_bot_{}_rw".format(newBot.id))
-                    q = (
-                        "UPDATE rb_users SET privileges = ? WHERE userid=?;",
-                        (
-                            json.dumps(
-                                redball.LOGGED_IN_USERS[
-                                    cherrypy.session.get("_cp_username")
-                                ]["PRIVS"]
+                    if cherrypy.session.get("_cp_username") != "authOff":
+                        redball.BOTS.update({str(newBot.id): newBot})
+                        # Grant rw access to the bot creator
+                        redball.LOGGED_IN_USERS[cherrypy.session.get("_cp_username")][
+                            "PRIVS"
+                        ].append("rb_bot_{}_rw".format(newBot.id))
+                        q = (
+                            "UPDATE rb_users SET privileges = ? WHERE userid=?;",
+                            (
+                                json.dumps(
+                                    redball.LOGGED_IN_USERS[
+                                        cherrypy.session.get("_cp_username")
+                                    ]["PRIVS"]
+                                ),
+                                cherrypy.session.get("_cp_username"),
                             ),
-                            cherrypy.session.get("_cp_username"),
-                        ),
-                    )
-                    database.db_qry(q, commit=True, closeAfter=True)
+                        )
+                        database.db_qry(q, commit=True, closeAfter=True)
         elif kwargs.get("action") == "delete" and bot_id:
             if not user.check_privilege(
                 cherrypy.session.get("_cp_username"),
@@ -1180,7 +1186,7 @@ class WebInterface(object):
                     reddit_appId=kwargs["redditAuth_redditAppId"],
                     reddit_appSecret=kwargs["redditAuth_redditAppSecret"],
                     reddit_scopes=kwargs["redditAuth_redditScopes"],
-                    reddit_refreshToken=kwargs.get("reddit_refreshToken", ""),
+                    reddit_refreshToken=kwargs.get("redditAuth_redditRefreshToken", ""),
                 )
                 if isinstance(result, str):
                     local_args.update({"errors": result, "errorcontainer_hide": ""})
