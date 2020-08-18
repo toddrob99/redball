@@ -5,7 +5,7 @@
         "CUT": "Cut",
         "RES": "Reserved",
         "SUS": "Suspended",
-        "RSN": "?",
+        "RSN": "RSN",
         "TRD": "Traded to another division",
         "TRT": "Traded from Team",
         "TRC": "Traded to another Conference",
@@ -29,9 +29,9 @@ ${'##'} ${data["myTeam"]["nickName"]} Inactives & Injury Status
 % endfor
 % endif
 
-% if len(myInactives):
+% if len(oppInactives):
 ${'##'} ${data["oppTeam"]["nickName"]} Inactives & Injury Status
-% for x in set(x["player"]["rosterStatus"] for x in myInactives):
-* ${f"{rosterStatusKey[x]}: {', '.join([p['player']['position']['abbr'] + ' ' + p['displayName'] for p in myInactives if p['player']['rosterStatus'] == x])}"}
+% for x in set(x["player"]["rosterStatus"] for x in oppInactives):
+* ${f"{rosterStatusKey[x]}: {', '.join([p['player']['position']['abbr'] + ' ' + p['displayName'] for p in oppInactives if p['player']['rosterStatus'] == x])}"}
 % endfor
 % endif
