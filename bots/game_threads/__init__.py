@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0"
+__version__ = "1.0.1"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -6320,7 +6320,7 @@ class Bot(object):
                 < datetime.today()
                 else " post time: {}".format(botStatus["weeklyThread"]["postTime"])
                 if not botStatus["weeklyThread"]["posted"]
-                else ': {} (<a href="{}" target="_new">{}</a>)'.format(
+                else ': {} (<a href="{}" target="_blank">{}</a>)'.format(
                     botStatus["weeklyThread"]["title"],
                     botStatus["weeklyThread"]["url"],
                     botStatus["weeklyThread"]["id"],
@@ -6406,7 +6406,7 @@ class Bot(object):
                     < datetime.today()
                     else " post time: {}".format(botStatus["offDayThread"]["postTime"])
                     if not botStatus["offDayThread"]["posted"]
-                    else ': {} (<a href="{}" target="_new">{}</a>)'.format(
+                    else ': {} (<a href="{}" target="_blank">{}</a>)'.format(
                         botStatus["offDayThread"]["title"],
                         botStatus["offDayThread"]["url"],
                         botStatus["offDayThread"]["id"],
@@ -6496,7 +6496,7 @@ class Bot(object):
                     < datetime.today()
                     else " post time: {}".format(botStatus["gameDayThread"]["postTime"])
                     if not botStatus["gameDayThread"]["posted"]
-                    else ': {} (<a href="{}" target="_new">{}</a>)'.format(
+                    else ': {} (<a href="{}" target="_blank">{}</a>)'.format(
                         botStatus["gameDayThread"]["title"],
                         botStatus["gameDayThread"]["url"],
                         botStatus["gameDayThread"]["id"],
@@ -6589,12 +6589,12 @@ class Bot(object):
                                     v["threads"]["game"]["postTime"]
                                 )
                                 if not v["threads"]["game"]["posted"]
-                                else ': {} (<a href="{}" target="_new">{}</a>)'.format(
+                                else ': {} (<a href="{}" target="_blank">{}</a>)'.format(
                                     v["threads"]["game"]["title"],
                                     v["threads"]["game"]["url"],
                                     v["threads"]["game"]["id"],
                                 ),
-                                '<br /><br /><strong>Post game thread</strong>: {} (<a href="{}" target="_new">{}</a>).'.format(
+                                '<br /><br /><strong>Post game thread</strong>: {} (<a href="{}" target="_blank">{}</a>).'.format(
                                     v["threads"]["post"]["title"],
                                     v["threads"]["post"]["url"],
                                     v["threads"]["post"]["id"],

@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0-alpha"
+__version__ = "1.0.1-alpha"
 
 DATA_LOCK = threading.Lock()
 
@@ -99,7 +99,10 @@ class Bot(object):
 
         # Start a scheduled task to update self.bot.detailedState every minute
         self.SCHEDULER.add_job(
-            self.bot_state, "interval", name=f"bot-{self.bot.id}-statusUpdateTask", minutes=1
+            self.bot_state,
+            "interval",
+            name=f"bot-{self.bot.id}-statusUpdateTask",
+            minutes=1,
         )
 
         settings_date = datetime.today().strftime("%Y-%m-%d")
@@ -357,7 +360,9 @@ class Bot(object):
                 # Initialize var to hold game data throughout the day
                 self.allData.update(
                     {
-                        "myTeam": self.nfl.teamById(teamId=todayGames[myGameIndex][homeVisitor + "Team"]["id"]),
+                        "myTeam": self.nfl.teamById(
+                            teamId=todayGames[myGameIndex][homeVisitor + "Team"]["id"]
+                        ),
                         "gameDetailId": gameDetailId,
                         "gameDetails": self.nfl.gameDetails(gameDetailId=gameDetailId)[
                             "data"
@@ -1745,9 +1750,9 @@ class Bot(object):
                 f"self.allData['gameDetailId']: {self.allData['gameDetailId']}; self.allData['gameId']: {self.allData['gameId']}; "
             )
             gameDetails = (
-                self.nfl.gameDetails(
-                    gameDetailId=self.allData["gameDetailId"]
-                )["data"]["viewer"]["gameDetail"]
+                self.nfl.gameDetails(gameDetailId=self.allData["gameDetailId"])["data"][
+                    "viewer"
+                ]["gameDetail"]
                 if self.allData["gameDetailId"]
                 else {}
             )
@@ -1778,7 +1783,11 @@ class Bot(object):
             )["data"]
             self.allData.update(
                 {
-                    "myTeam": self.nfl.teamById(teamId=todayGames[myGameIndex][self.allData["homeVisitor"] + "Team"]["id"]),
+                    "myTeam": self.nfl.teamById(
+                        teamId=todayGames[myGameIndex][
+                            self.allData["homeVisitor"] + "Team"
+                        ]["id"]
+                    ),
                     "oppTeam": self.nfl.teamById(teamId=self.allData["oppTeam"]["id"]),
                     "gameDetails": gameDetails,
                     "gameInsights": gameInsights,
@@ -1948,10 +1957,13 @@ class Bot(object):
             else False
         )
         lockPrevious = (
-            False if thread == "tailgate"
+            False
+            if thread == "tailgate"
             else self.settings.get("Game Thread", {}).get("LOCK_TAILGATE_THREAD", False)
             if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get("LOCK_GAME_THREAD", False)
+            else self.settings.get("Post Game Thread", {}).get(
+                "LOCK_GAME_THREAD", False
+            )
             if thread == "post"
             else False
         )
@@ -2147,23 +2159,33 @@ class Bot(object):
                     commentText = (
                         self.settings.get("Game Thread", {}).get("LOCK_MESSAGE", None)
                         if thread == "game"
-                        else self.settings.get("Post Game Thread", {}).get("LOCK_MESSAGE", None)
+                        else self.settings.get("Post Game Thread", {}).get(
+                            "LOCK_MESSAGE", None
+                        )
                         if thread == "post"
                         else None
                     )
                     if not commentText:
                         commentText = f"This thread has been locked. Please continue the discussion in the [{'game' if thread == 'game' else 'post game' if thread == 'post' else 'new'} thread](link)."
-                    parsedCommentText = commentText.replace("(link)", f"({theThread.shortlink})")
+                    parsedCommentText = commentText.replace(
+                        "(link)", f"({theThread.shortlink})"
+                    )
                     try:
-                        self.log.debug(f"Attempting to lock {'tailgate' if thread == 'game' else 'game' if thread == 'post' else ''} thread [{threadToLock.id}]...")
+                        self.log.debug(
+                            f"Attempting to lock {'tailgate' if thread == 'game' else 'game' if thread == 'post' else ''} thread [{threadToLock.id}]..."
+                        )
                         threadToLock.mod.lock()
                         self.log.debug("Submitting comment with link to new thread...")
                         lockReply = threadToLock.reply(parsedCommentText)
                         self.log.debug("Distinguishing comment...")
                         lockReply.mod.distinguish(sticky=True)
-                        self.log.debug("Successfully locked thread and posted a distinguished/sticky reply.")
+                        self.log.debug(
+                            "Successfully locked thread and posted a distinguished/sticky reply."
+                        )
                     except Exception as e:
-                        self.log.warning(f"Failed to lock {'tailgate' if thread == 'game' else 'game' if thread == 'post' else ''} thread [{threadToLock.id}], submit reply with link to new thread, or distinguish and sticky comment: {e}")
+                        self.log.warning(
+                            f"Failed to lock {'tailgate' if thread == 'game' else 'game' if thread == 'post' else ''} thread [{threadToLock.id}], submit reply with link to new thread, or distinguish and sticky comment: {e}"
+                        )
                 else:
                     self.log.debug("I did not find a previous thread to lock.")
         else:
@@ -2700,6 +2722,11 @@ class Bot(object):
                     "status": self.allData.get("gameDetails", {}).get("phase"),
                     "oppTeam": self.allData.get("oppTeam"),
                     "homeVisitor": self.allData.get("homeVisitor"),
+                    "gameTime": self.allData["gameTime"]["myTeam"].strftime(
+                        "%I:%M %p %Z"
+                    )
+                    if self.allData.get("gameTime", {}).get("myTeam")
+                    else "Unknown game time",
                     "threads": {
                         "game": {
                             "enabled": self.settings.get("Game Thread", {}).get(
@@ -2770,6 +2797,106 @@ class Bot(object):
                     }
                 }
             )
+
+            if botStatus["game"]["gameId"]:
+                botStatus["summary"]["text"] += "\n\n"
+                botStatus["summary"]["html"] += "<br /><br />"
+                botStatus["summary"]["markdown"] += "\n\n"
+
+                botStatus["summary"][
+                    "text"
+                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeVisitor']=='visitor' else 'vs.'} {botStatus['game']['oppTeam']['abbr']}"
+                botStatus["summary"][
+                    "html"
+                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeVisitor']=='visitor' else 'vs.'} {botStatus['game']['oppTeam']['abbr']}"
+                botStatus["summary"][
+                    "markdown"
+                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeVisitor']=='visitor' else 'vs.'} {botStatus['game']['oppTeam']['abbr']}"
+
+                if not botStatus["tailgateThread"]["enabled"]:
+                    # Tailgate thread is disabled
+                    botStatus["summary"]["text"] += "\n\nTailgate thread disabled."
+                    botStatus["summary"][
+                        "html"
+                    ] += "<br /><br /><strong>Tailgate thread</strong> disabled."
+                    botStatus["summary"][
+                        "markdown"
+                    ] += "\n\n**Tailgate thread** disabled."
+                else:
+                    if not botStatus["tailgateThread"]["posted"]:
+                        # Thread is not posted (could be error)
+                        botStatus["summary"][
+                            "text"
+                        ] += f"\n\nTailgate thread post time: {botStatus['tailgateThread']['postTime']}"
+                        botStatus["summary"][
+                            "html"
+                        ] += f"<br /><br /><strong>Tailgate thread</strong> post time: {botStatus['tailgateThread']['postTime']}"
+                        botStatus["summary"][
+                            "markdown"
+                        ] += f"\n\n**Tailgate thread** post time: {botStatus['tailgateThread']['postTime']}"
+                    else:
+                        # Thread is posted
+                        botStatus["summary"][
+                            "text"
+                        ] += f"\n\nTailgate thread: {botStatus['tailgateThread']['title']} ({botStatus['tailgateThread']['id']} - {botStatus['tailgateThread']['url']})"
+                        botStatus["summary"][
+                            "html"
+                        ] += f"<br /><br /><strong>Tailgate thread</strong>: {botStatus['tailgateThread']['title']} (<a href=\"{botStatus['tailgateThread']['url']}\" target=\"_blank\">{botStatus['tailgateThread']['id']}</a>)"
+                        botStatus["summary"][
+                            "markdown"
+                        ] += f"\n\n**Tailgate thread**: {botStatus['tailgateThread']['title']} ([{botStatus['tailgateThread']['id']}]({botStatus['tailgateThread']['url']}))"
+
+                if not botStatus["game"]["threads"]["game"]["enabled"]:
+                    # Game thread is disabled
+                    botStatus["summary"]["text"] += "\n\nGame thread disabled."
+                    botStatus["summary"][
+                        "html"
+                    ] += "<br /><br /><strong>Game thread</strong> disabled."
+                    botStatus["summary"]["markdown"] += "\n\n**Game thread** disabled."
+                else:
+                    if not botStatus["game"]["threads"]["game"]["posted"]:
+                        # Thread is not posted (could be error)
+                        botStatus["summary"][
+                            "text"
+                        ] += f"\n\nGame thread post time: {botStatus['game']['threads']['game']['postTime']}"
+                        botStatus["summary"][
+                            "html"
+                        ] += f"<br /><br /><strong>Game thread</strong> post time: {botStatus['game']['threads']['game']['postTime']}"
+                        botStatus["summary"][
+                            "markdown"
+                        ] += f"\n\n**TailgGameate thread** post time: {botStatus['game']['threads']['game']['postTime']}"
+                    else:
+                        # Thread is posted
+                        botStatus["summary"][
+                            "text"
+                        ] += f"\n\nGame thread: {botStatus['game']['threads']['game']['title']} ({botStatus['game']['threads']['game']['id']} - {botStatus['game']['threads']['game']['url']})"
+                        botStatus["summary"][
+                            "html"
+                        ] += f"<br /><br /><strong>Game thread</strong>: {botStatus['game']['threads']['game']['title']} (<a href=\"{botStatus['game']['threads']['game']['url']}\" target=\"_blank\">{botStatus['game']['threads']['game']['id']}</a>)"
+                        botStatus["summary"][
+                            "markdown"
+                        ] += f"\n\n**Game thread**: {botStatus['game']['threads']['game']['title']} ([{botStatus['game']['threads']['game']['id']}]({botStatus['game']['threads']['game']['url']}))"
+
+                if not botStatus["game"]["threads"]["post"]["enabled"]:
+                    # Post game thread is disabled
+                    botStatus["summary"]["text"] += "\n\nPost Game thread disabled."
+                    botStatus["summary"][
+                        "html"
+                    ] += "<br /><br /><strong>Post Game thread</strong> disabled."
+                    botStatus["summary"][
+                        "markdown"
+                    ] += "\n\n**Post Game thread** disabled."
+                elif botStatus["game"]["threads"]["post"]["posted"]:
+                    # Thread is posted
+                    botStatus["summary"][
+                        "text"
+                    ] += f"\n\nPost Game thread: {botStatus['game']['threads']['post']['title']} ({botStatus['game']['threads']['post']['id']} - {botStatus['game']['threads']['post']['url']})"
+                    botStatus["summary"][
+                        "html"
+                    ] += f"<br /><br /><strong>Post Game thread</strong>: {botStatus['game']['threads']['post']['title']} (<a href=\"{botStatus['game']['threads']['post']['url']}\" target=\"_blank\">{botStatus['game']['threads']['post']['id']}</a>)"
+                    botStatus["summary"][
+                        "markdown"
+                    ] += f"\n\n**Post Game thread**: {botStatus['game']['threads']['post']['title']} ([{botStatus['game']['threads']['post']['id']}]({botStatus['game']['threads']['post']['url']}))"
 
             botStatus["summary"]["text"] += "\n\nLast Updated: {}".format(
                 botStatus["lastUpdated"]
