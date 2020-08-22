@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.1-alpha"
+__version__ = "1.0.2-alpha"
 
 DATA_LOCK = threading.Lock()
 
@@ -2897,6 +2897,11 @@ class Bot(object):
                     botStatus["summary"][
                         "markdown"
                     ] += f"\n\n**Post Game thread**: {botStatus['game']['threads']['post']['title']} ([{botStatus['game']['threads']['post']['id']}]({botStatus['game']['threads']['post']['url']}))"
+            else:
+                # No game today
+                botStatus["summary"]["text"] += "\n\nNo game today."
+                botStatus["summary"]["html"] += "<br /><br />No game today."
+                botStatus["summary"]["markdown"] += "\n\nNo game today."
 
             botStatus["summary"]["text"] += "\n\nLast Updated: {}".format(
                 botStatus["lastUpdated"]

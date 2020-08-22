@@ -316,4 +316,50 @@ upgradeScripts = {
             time.time()
         ),
     ],
+    6: [
+        # Add settings to game thread bots: Game Thread > LOCK_GAMEDAY_THREAD
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Game Thread','LOCK_GAMEDAY_THREAD','Lock game day thread when the game thread is submitted.','bool','false','[true, false]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        # Add settings to game thread bots: Game Thread > LINK_IN_GAMEDAY_THREAD
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Game Thread','LINK_IN_GAMEDAY_THREAD','Post a stickied comment in the game day thread, linking to the game thread, when the game thread is submitted. Add a setting with key=GAMEDAY_THREAD_MESSAGE to override the comment text; use markdown format for the link and just put (link)--e.g. [game thread](link).','bool','true','[true, false]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        # Add settings to game thread bots: Post Game Thread > LOCK_GAME_THREAD
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Post Game Thread','LOCK_GAME_THREAD','Lock game thread when the post game thread is submitted.','bool','false','[true, false]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        # Add settings to game thread bots: Post Game Thread > LINK_IN_GAME_THREAD
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Post Game Thread','LINK_IN_GAME_THREAD','Post a stickied comment in the game thread, linking to the post game thread, when the post game thread is submitted. Add a setting with key=GAME_THREAD_MESSAGE to override the comment text; use markdown format for the link and just put (link)--e.g. [post game thread](link).','bool','true','[true, false]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='game_threads'
+            )
+        SELECT * FROM bots;""",
+        # Update DB version to 6
+        "UPDATE rb_meta SET val='6', lastUpdate='{}' WHERE key='dbVersion';".format(
+            time.time()
+        ),
+    ],
 }

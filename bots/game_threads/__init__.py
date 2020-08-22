@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -5355,6 +5355,24 @@ class Bot(object):
             if thread == "post"
             else False
         )
+        lockPrevious = (
+            self.settings.get("Game Thread", {}).get("LOCK_GAMEDAY_THREAD", False)
+            if thread == "game"
+            else self.settings.get("Post Game Thread", {}).get(
+                "LOCK_GAME_THREAD", False
+            )
+            if thread == "post"
+            else False
+        )
+        linkPrevious = (
+            self.settings.get("Game Thread", {}).get("LINK_IN_GAMEDAY_THREAD", False)
+            if thread == "game"
+            else self.settings.get("Post Game Thread", {}).get(
+                "LINK_IN_GAME_THREAD", False
+            )
+            if thread == "post"
+            else False
+        )
 
         # Check if post already exists
         theThread = None
@@ -5565,6 +5583,61 @@ class Bot(object):
                 )
                 if tweetResult:
                     self.log.info("Tweet submitted successfully!")
+
+            # Lock previous thread
+            if lockPrevious or linkPrevious:
+                if previousThread := (
+                    self.activeGames[pk].get("gameDayThread")
+                    if thread == "game"
+                    else self.activeGames[pk].get("gameThread")
+                    if thread == "post"
+                    else None
+                ):
+                    if lockPrevious:
+                        try:
+                            self.log.debug(
+                                f"Attempting to lock {'gameday' if thread == 'game' else 'game' if thread == 'post' else ''} thread [{previousThread.id}]..."
+                            )
+                            previousThread.mod.lock()
+                        except Exception as e:
+                            self.log.warning(
+                                f"Failed to lock {'gameday' if thread == 'game' else 'game' if thread == 'post' else ''} thread [{previousThread.id}]: {e}"
+                            )
+
+                    if linkPrevious:
+                        commentText = (
+                            self.settings.get("Game Thread", {}).get(
+                                "GAMEDAY_THREAD_MESSAGE", None
+                            )
+                            if thread == "game"
+                            else self.settings.get("Post Game Thread", {}).get(
+                                "GAME_THREAD_MESSAGE", None
+                            )
+                            if thread == "post"
+                            else None
+                        )
+                        if not commentText:
+                            commentText = f"{'This thread has been locked. ' if lockPrevious else ''}Please continue the discussion in the [{'game' if thread == 'game' else 'post game' if thread == 'post' else 'new'} thread](link)."
+
+                        parsedCommentText = commentText.replace(
+                            "(link)", f"({theThread.shortlink})"
+                        )
+                        try:
+                            self.log.debug(
+                                "Submitting comment in previou thread with link to new thread..."
+                            )
+                            lockReply = previousThread.reply(parsedCommentText)
+                            self.log.debug("Distinguishing comment...")
+                            lockReply.mod.distinguish(sticky=True)
+                            self.log.debug(
+                                f"Successfully posted a distinguished/sticky reply in {'gameday' if thread == 'game' else 'game' if thread == 'post' else ''} thread."
+                            )
+                        except Exception as e:
+                            self.log.warning(
+                                f"Failed to submit reply with link to new thread or distinguish and sticky comment in {'gameday' if thread == 'game' else 'game' if thread == 'post' else ''} thread: {e}"
+                            )
+                else:
+                    self.log.debug("I did not find a previous thread to lock or link.")
         else:
             self.log.warning("No thread object present. Something went wrong!")
 
