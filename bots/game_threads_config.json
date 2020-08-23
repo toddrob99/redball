@@ -209,6 +209,30 @@
             "parent_key": null
         },
         {
+            "key": "LOCK_GAMEDAY_THREAD",
+            "description": "Lock game day thread when the game thread is submitted.",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LINK_IN_GAMEDAY_THREAD",
+            "description": "Post a stickied comment in the game day thread, linking to the game thread, when the game thread is submitted. Add a setting with key=GAMEDAY_THREAD_MESSAGE to override the comment text; use markdown format for the link and just put (link)--e.g. [game thread](link).",
+            "type": "bool",
+            "val": true,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
             "key": "FOOTER",
             "description": "Footer text to include at the bottom of the thread.",
             "type": "str",
@@ -768,6 +792,30 @@
             "description": "Submit posts as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).",
             "type": "bool",
             "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LOCK_GAME_THREAD",
+            "description": "Lock game thread when the post game thread is submitted.",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LINK_IN_GAME_THREAD",
+            "description": "Post a stickied comment in the game thread, linking to the post game thread, when the post game thread is submitted. Add a setting with key=GAME_THREAD_MESSAGE to override the comment text; use markdown format for the link and just put (link)--e.g. [post game thread](link).",
+            "type": "bool",
+            "val": true,
             "options": [
                 true,
                 false
