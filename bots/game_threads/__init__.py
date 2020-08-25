@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.2.1"
+__version__ = "1.0.2.2"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -5624,7 +5624,7 @@ class Bot(object):
                         )
                         try:
                             self.log.debug(
-                                "Submitting comment in previou thread with link to new thread..."
+                                "Submitting comment in previous thread with link to new thread..."
                             )
                             lockReply = previousThread.reply(parsedCommentText)
                             self.log.debug("Distinguishing comment...")

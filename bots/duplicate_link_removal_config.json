@@ -1,0 +1,123 @@
+{
+    "Bot": [
+        {
+            "key": "REPORT_ONLY",
+            "description": "Audit mode. Report duplicate posts but do not remove or reply.",
+            "type": "bool",
+            "val": false,
+            "options": [true, false],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "IGNORE_DOMAINS",
+            "description": "Comma-separated list of domains to ignore.",
+            "type": "str",
+            "val": "i.redd.it,v.redd.it",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "HISTORICAL_POSTS",
+            "description": "Load N historical posts from the DB at startup.",
+            "type": "int",
+            "val": 100,
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "PAUSE_AFTER",
+            "description": "Pause after no posts received in stream N times in a row.",
+            "type": "int",
+            "val": 3,
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "REMOVAL_COMMENT_TEXT",
+            "description": "Text for comment reply on removed posts. '(title)' and '(link)' will be replaced with the title and link of the post of which the removed post is a duplicate.",
+            "type": "str",
+            "val": "This post has been automatically removed as a duplicate of [[(title)]((link))]. If you believe this is a mistake, please send a message to the subreddit moderators.",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "REPORT_TEXT",
+            "description": "Text for reports submitted on duplicate posts in audit mode. '(title)' and '(link)' will be replaced with the title and link of the post of which the removed post is a duplicate.",
+            "type": "str",
+            "val": "Duplicate of (link) / [(title)].",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "SUBREDDIT",
+            "description": "Subreddit to monitor.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        }
+    ],
+    "Logging": [
+        {
+            "key": "CONSOLE_LOG_LEVEL",
+            "description": "Console Log Level",
+            "type": "str",
+            "val": "DEBUG",
+            "options": ["DEBUG", "INFO", "WARNING", "ERROR"],
+            "subkeys": [],
+            "parent_key": "LOG_TO_CONSOLE"
+        },
+        {
+            "key": "FILE_LOG_LEVEL",
+            "description": "File Log Level",
+            "type": "str",
+            "val": "DEBUG",
+            "options": ["DEBUG", "INFO", "WARNING", "ERROR"],
+            "subkeys": [],
+            "parent_key": "LOG_TO_FILE"
+        },
+        {
+            "key": "LOG_TO_CONSOLE",
+            "description": "Log to Console",
+            "type": "bool",
+            "val": true,
+            "options": [true, false],
+            "subkeys": ["CONSOLE_LOG_LEVEL"],
+            "parent_key": ""
+        },
+        {
+            "key": "LOG_TO_FILE",
+            "description": "Log to File",
+            "type": "bool",
+            "val": true,
+            "options": [true, false],
+            "subkeys": ["FILE_LOG_LEVEL", "LOG_RETENTION"],
+            "parent_key": ""
+        },
+        {
+            "key": "LOG_RETENTION",
+            "description": "Log File Retention (Days)",
+            "type": "int",
+            "val": 7,
+            "options": [],
+            "subkeys": [],
+            "parent_key": "LOG_TO_FILE"
+        },
+        {
+            "key": "PROPAGATE",
+            "description": "Propagate Logs",
+            "type": "bool",
+            "val": false,
+            "options": [true, false],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ]
+}

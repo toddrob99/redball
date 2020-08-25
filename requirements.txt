@@ -10,3 +10,4 @@ mako
 pyprowl
 python-twitter
 nflapi
+bs4

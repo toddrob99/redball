@@ -362,4 +362,15 @@ upgradeScripts = {
             time.time()
         ),
     ],
+    7: [
+        # Add Duplicate Comment Removal bot type
+        """INSERT OR IGNORE INTO rb_botTypes (name, description, moduleName)
+            VALUES
+            ('duplicate-link-removal', 'Duplicate Link Removal', 'duplicate_link_removal')
+        ;""",
+        # Update DB version to 7
+        "UPDATE rb_meta SET val='7', lastUpdate='{}' WHERE key='dbVersion';".format(
+            time.time()
+        ),
+    ],
 }

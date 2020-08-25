@@ -11,7 +11,7 @@ def run(bot, settings):
     global log  # Make logger available to the whole module
     # Start logging
     log = logger.init_logger(
-        logger_name=threading.current_thread().name,
+        logger_name="redball.bots." + threading.current_thread().name,
         log_to_console=str(
             settings.get("Logging", {}).get("LOG_TO_CONSOLE", True)
         ).lower()
