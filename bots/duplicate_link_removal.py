@@ -14,7 +14,7 @@ import praw
 import requests
 import sqlite3
 
-__version__ = "1.0.0-alpha"
+__version__ = "1.0.1-alpha"
 
 
 def run(bot, settings):
@@ -132,7 +132,6 @@ def run(bot, settings):
                     if newPost is None:
                         break
 
-                    log.debug(f"Checking post [{newPost.id}]")
                     if newPost.id in postCache.keys() or newPost.id in ignoredPostIdCache:
                         continue
 
