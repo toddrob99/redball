@@ -49,7 +49,7 @@
             "key": "REPORT_TEXT",
             "description": "Text for reports submitted on duplicate posts in audit mode. '(title)' and '(link)' will be replaced with the title and link of the post of which the removed post is a duplicate.",
             "type": "str",
-            "val": "Duplicate of (link) / [(title)].",
+            "val": "Duplicate: (link)",
             "options": [],
             "subkeys": [],
             "parent_key": null

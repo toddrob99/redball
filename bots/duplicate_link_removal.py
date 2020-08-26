@@ -14,7 +14,7 @@ import praw
 import requests
 import sqlite3
 
-__version__ = "1.0.1-alpha"
+__version__ = "1.0.2-alpha"
 
 
 def run(bot, settings):
@@ -43,9 +43,17 @@ def run(bot, settings):
     audit = settings.get("Bot", {}).get("REPORT_ONLY", False)
     historicalPosts = int(settings.get("Bot", {}).get("HISTORICAL_POSTS", 100))
     pauseAfter = int(settings.get("Bot", {}).get("PAUSE_AFTER", 5))
-    ignoreDomains = [x.strip() for x in settings.get("Bot", {}).get("IGNORE_DOMAINS", "i.redd.it,v.redd.it").split(",")]
-    removalCommentText = settings.get("Bot", {}).get("REMOVAL_COMMENT_TEXT", "This post has been automatically removed as a duplicate of [[(title)]((link))]. If you believe this is a mistake, please send a message to the subreddit moderators.")
-    reportText = settings.get("Bot", {}).get("REPORT_TEXT", "Duplicate of (link) / [(title)].")
+    ignoreDomains = [
+        x.strip()
+        for x in settings.get("Bot", {})
+        .get("IGNORE_DOMAINS", "i.redd.it,v.redd.it")
+        .split(",")
+    ]
+    removalCommentText = settings.get("Bot", {}).get(
+        "REMOVAL_COMMENT_TEXT",
+        "This post has been automatically removed as a duplicate of [[(title)]((link))]. If you believe this is a mistake, please send a message to the subreddit moderators.",
+    )
+    reportText = settings.get("Bot", {}).get("REPORT_TEXT", "Duplicate: (link)")
 
     postCache = {}
     ignoredPostIdCache = []
@@ -113,11 +121,7 @@ def run(bot, settings):
             "dateCreated": pid[5],
             "dateRemoved": pid[6],
         }
-        postCache.update(
-            {
-                post["submissionId"]: post
-            }
-        )
+        postCache.update({post["submissionId"]: post})
 
     log.debug(f"Loaded {len(postCache)} post(s) from db.")
 
@@ -128,11 +132,16 @@ def run(bot, settings):
         ):  # Make sure the main thread hasn't sent a stop command
             try:
                 log.debug("Checking for new posts...")
-                for newPost in r.subreddit(sub).stream.submissions(pause_after=pauseAfter):
+                for newPost in r.subreddit(sub).stream.submissions(
+                    pause_after=pauseAfter
+                ):
                     if newPost is None:
                         break
 
-                    if newPost.id in postCache.keys() or newPost.id in ignoredPostIdCache:
+                    if (
+                        newPost.id in postCache.keys()
+                        or newPost.id in ignoredPostIdCache
+                    ):
                         continue
 
                     if newPost.is_self:
@@ -140,42 +149,93 @@ def run(bot, settings):
                         ignoredPostIdCache.append(newPost.id)
                         continue
                     elif next((True for y in ignoreDomains if y in newPost.url), False):
-                        log.debug(f"Post [{newPost.id}] has an ignored domain [{newPost.url}]--skipping.")
+                        log.debug(
+                            f"Post [{newPost.id}] has an ignored domain [{newPost.url}]--skipping."
+                        )
                         ignoredPostIdCache.append(newPost.id)
                         q = None
                     else:
-                        log.debug(f"Post [{newPost.id}] has a non-ignored domain link [{newPost.url}]...")
+                        log.debug(
+                            f"Post [{newPost.id}] has a non-ignored domain link [{newPost.url}]..."
+                        )
                         this = getUrls(newPost)
-                        if matchingSubmissionId := next((k for k, v in postCache.items() if k != newPost.id and (next((True for i in this["urls"] if i in v["urls"]), False) or this["contentHash"] == v["contentHash"])), None):
+                        if matchingSubmissionId := next(
+                            (
+                                k
+                                for k, v in postCache.items()
+                                if k != newPost.id
+                                and (
+                                    next(
+                                        (True for i in this["urls"] if i in v["urls"]),
+                                        False,
+                                    )
+                                    or this["contentHash"] == v["contentHash"]
+                                )
+                            ),
+                            None,
+                        ):
                             matchingSubmission = r.submission(matchingSubmissionId)
                             if newPost.id != matchingSubmissionId:
-                                log.info(f"Duplicate link for submission {newPost.id} found in submission {matchingSubmission.id}")
+                                log.info(
+                                    f"Duplicate link for submission {newPost.id} found in submission {matchingSubmission.id}"
+                                )
                                 if audit:
                                     # Report the post
                                     try:
-                                        parsedReportText = reportText.replace("(title)", matchingSubmission.title).replace("(link)", matchingSubmission.shortlink)
+                                        parsedReportText = reportText.replace(
+                                            "(title)", matchingSubmission.title
+                                        ).replace(
+                                            "(link)", matchingSubmission.shortlink
+                                        )
                                         newPost.report(parsedReportText)
                                     except Exception as e:
-                                        log.error(f"Error reporting submission [{newPost.id}]: {e}")
+                                        log.error(
+                                            f"Error reporting submission [{newPost.id}]: {e}"
+                                        )
                                 else:
                                     # Remove the post
                                     try:
-                                        newPost.mod.remove(mod_note=f"Removed as duplicate of [{matchingSubmission.id}]")
+                                        newPost.mod.remove(
+                                            mod_note=f"Removed as duplicate of [{matchingSubmission.id}]"
+                                        )
                                     except Exception as e:
-                                        log.error(f"Error removing submission [{newPost.id}]: {e}")
+                                        log.error(
+                                            f"Error removing submission [{newPost.id}]: {e}"
+                                        )
 
                                     # Reply to the post
                                     try:
-                                        parsedReplyText = removalCommentText.replace("(title)", matchingSubmission.title).replace("(link)", matchingSubmission.shortlink)
+                                        parsedReplyText = removalCommentText.replace(
+                                            "(title)", matchingSubmission.title
+                                        ).replace(
+                                            "(link)", matchingSubmission.shortlink
+                                        )
                                         removalReply = newPost.reply(parsedReplyText)
                                         removalReply.mod.distinguish(sticky=True)
                                     except Exception as e:
-                                        log.error(f"Error submitting reply to submission [{newPost.id}]: {e}")
+                                        log.error(
+                                            f"Error submitting reply to submission [{newPost.id}]: {e}"
+                                        )
                             q = f"INSERT OR IGNORE INTO {dbTable} (submissionId, url, canonical, contentHash, urls, dateCreated, dateRemoved) VALUES (?, ?, ?, ?, ?, ?, ?);"
-                            qa = (newPost.id, newPost.url, this["canonical"], this["contentHash"], serialize(this["urls"]), newPost.created_utc, time.time())
+                            qa = (
+                                newPost.id,
+                                newPost.url,
+                                this["canonical"],
+                                this["contentHash"],
+                                serialize(this["urls"]),
+                                newPost.created_utc,
+                                time.time(),
+                            )
                         else:
                             q = f"INSERT OR IGNORE INTO {dbTable} (submissionId, url, canonical, contentHash, urls, dateCreated) VALUES (?, ?, ?, ?, ?, ?);"
-                            qa = (newPost.id, newPost.url, this["canonical"], this["contentHash"], serialize(this["urls"]), newPost.created_utc)
+                            qa = (
+                                newPost.id,
+                                newPost.url,
+                                this["canonical"],
+                                this["contentHash"],
+                                serialize(this["urls"]),
+                                newPost.created_utc,
+                            )
 
                         if q:
                             try:
@@ -185,13 +245,11 @@ def run(bot, settings):
                             except Exception as e:
                                 log.error(f"Error inserting into database: {e}")
 
-                        postCache.update(
-                            {
-                                newPost.id: this,
-                            }
-                        )
+                        postCache.update({newPost.id: this})
             except Exception as e:
-                log.error(f"Sleeping for 10 seconds and then continuing after exception: {e}")
+                log.error(
+                    f"Sleeping for 10 seconds and then continuing after exception: {e}"
+                )
                 time.sleep(10)
         else:  # If main thread has said to stop, we stop!
             log.info(f"Bot {bot.name} (id={bot.id}) exiting...")
@@ -207,10 +265,14 @@ def deserialize(theString):
 
 
 def getUrls(submission):
-    log.debug(f"Getting URLs for submission id [{submission.id}] with URL [{submission.url}]...")
+    log.debug(
+        f"Getting URLs for submission id [{submission.id}] with URL [{submission.url}]..."
+    )
     req = requests.get(submission.url)
     if req.status_code != 200:
-        log.error(f"Request for {submission.url} returned status code {req.status_code}")
+        log.error(
+            f"Request for {submission.url} returned status code {req.status_code}"
+        )
         return {
             "submissionId": submission.id,
             "url": submission.url,
@@ -228,13 +290,23 @@ def getUrls(submission):
     soup = BeautifulSoup(src, features="html.parser")
 
     canonical = soup.find("link", {"rel": "canonical"})
-    log.debug(f"Canonical URL: {canonical['href']}" if canonical else "No canonical link found.")
+    log.debug(
+        f"Canonical URL: {canonical['href']}"
+        if canonical
+        else "No canonical link found."
+    )
 
     redir = soup.find("meta", {"http-equiv": "refresh"})
     if redir:
         redirContentParts = redir["content"].split(";")
-        redirUrl = next((x.split("=")[1] for x in redirContentParts if "url=" in x.lower()), None)
-        log.debug(f"Meta redirect URL detected: {redirUrl}" if redirUrl else "Unable to extract redirect URL from meta refresh tag.")
+        redirUrl = next(
+            (x.split("=")[1] for x in redirContentParts if "url=" in x.lower()), None
+        )
+        log.debug(
+            f"Meta redirect URL detected: {redirUrl}"
+            if redirUrl
+            else "Unable to extract redirect URL from meta refresh tag."
+        )
     else:
         redirUrl = None
         log.debug("No meta redirect found.")
@@ -250,7 +322,11 @@ def getUrls(submission):
         urls.append(redirUrl)
 
     for x in urls:
-        alt = x.replace("https://", "http://") if "https://" in x else x.replace("http://", "https://")
+        alt = (
+            x.replace("https://", "http://")
+            if "https://" in x
+            else x.replace("http://", "https://")
+        )
         if alt not in urls:
             urls.append(alt)
 
@@ -259,7 +335,7 @@ def getUrls(submission):
     urlInfo = {
         "submissionId": submission.id,
         "url": submission.url,
-        "canonical": canonical['href'] if canonical else None,
+        "canonical": canonical["href"] if canonical else None,
         "redir": redirUrl,
         "contentHash": contentHash,
         "urls": list(set(urls)),
