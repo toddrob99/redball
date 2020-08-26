@@ -14,7 +14,7 @@ import praw
 import requests
 import sqlite3
 
-__version__ = "1.0.3-alpha"
+__version__ = "1.0.4-alpha"
 
 
 def run(bot, settings):
@@ -290,33 +290,46 @@ def getUrls(submission):
 
     log.debug(f"Request redirect history: {[h.url for h in req.history]}")
 
-    src = req.text
-    soup = BeautifulSoup(src, features="html.parser")
-
-    canonical = soup.find("link", {"rel": "canonical"})
-    log.debug(
-        f"Canonical URL: {canonical['href']}"
-        if canonical
-        else "No canonical link found."
-    )
-
-    redir = soup.find("meta", {"http-equiv": "refresh"})
-    if redir:
-        redirContentParts = redir["content"].split(";")
-        redirUrl = next(
-            (x.split("=")[1] for x in redirContentParts if "url=" in x.lower()), None
-        )
+    if (
+        not req.headers.get("content-type")
+        or "text/html" not in req.headers["content-type"]
+    ):
+        # Target is not an html page, might be a video or image
         log.debug(
-            f"Meta redirect URL detected: {redirUrl}"
-            if redirUrl
-            else "Unable to extract redirect URL from meta refresh tag."
+            "Target is not an html page, so not parsing canonical link, looking for meta redirect, or calculating content hash."
         )
-    else:
+        canonical = None
         redirUrl = None
-        log.debug("No meta redirect found.")
+        contentHash = None
+    else:
+        src = req.text
+        soup = BeautifulSoup(src, features="html.parser")
 
-    contentHash = hashlib.md5(src.encode("utf-8")).hexdigest()
-    log.debug(f"Content hash: {contentHash}")
+        canonical = soup.find("link", {"rel": "canonical"})
+        log.debug(
+            f"Canonical URL: {canonical['href']}"
+            if canonical
+            else "No canonical link found."
+        )
+
+        redir = soup.find("meta", {"http-equiv": "refresh"})
+        if redir:
+            redirContentParts = redir["content"].split(";")
+            redirUrl = next(
+                (x.split("=")[1] for x in redirContentParts if "url=" in x.lower()),
+                None,
+            )
+            log.debug(
+                f"Meta redirect URL detected: {redirUrl}"
+                if redirUrl
+                else "Unable to extract redirect URL from meta refresh tag."
+            )
+        else:
+            redirUrl = None
+            log.debug("No meta redirect found.")
+
+        contentHash = hashlib.md5(src.encode("utf-8")).hexdigest()
+        log.debug(f"Content hash: {contentHash}")
 
     urls = [submission.url]
     if canonical:
