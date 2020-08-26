@@ -13,7 +13,7 @@
             "key": "IGNORE_DOMAINS",
             "description": "Comma-separated list of domains to ignore.",
             "type": "str",
-            "val": "i.redd.it,v.redd.it",
+            "val": "i.redd.it,v.redd.it,reddit.com/gallery",
             "options": [],
             "subkeys": [],
             "parent_key": null

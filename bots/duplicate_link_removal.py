@@ -14,7 +14,7 @@ import praw
 import requests
 import sqlite3
 
-__version__ = "1.0.2-alpha"
+__version__ = "1.0.3-alpha"
 
 
 def run(bot, settings):
@@ -169,7 +169,11 @@ def run(bot, settings):
                                         (True for i in this["urls"] if i in v["urls"]),
                                         False,
                                     )
-                                    or this["contentHash"] == v["contentHash"]
+                                    or (
+                                        this["contentHash"] == v["contentHash"]
+                                        and v["contentHash"]
+                                        is not None  # url GET likely failed if None
+                                    )
                                 )
                             ),
                             None,
