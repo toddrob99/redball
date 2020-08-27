@@ -14,13 +14,14 @@ import praw
 import sqlite3
 import time
 
-__version__ = "0.0.1"
+__version__ = "1.0.0"
+
+tl = threading.local()
 
 
 def run(bot, settings):
-    global log  # Make logger available to the whole module
     # Start logging
-    log = logger.init_logger(
+    tl.log = logger.init_logger(
         logger_name="redball.bots." + threading.current_thread().name,
         log_to_console=settings.get("Logging", {}).get("LOG_TO_CONSOLE", True),
         log_to_file=settings.get("Logging", {}).get("LOG_TO_FILE", True),
@@ -32,7 +33,7 @@ def run(bot, settings):
         clear_first=True,
         propagate=settings.get("Logging", {}).get("PROPAGATE", False),
     )
-    log.debug("Bot received settings: {}".format(settings))
+    tl.log.debug("Bot received settings: {}".format(settings))
 
     # Initialize vars and do one-time setup steps
     dbTable = settings.get("Database").get("dbTablePrefix", "") + "comments"
@@ -48,7 +49,7 @@ def run(bot, settings):
     )
     comments = {}
 
-    log.info("Initializing Reddit API...")
+    tl.log.info("Initializing Reddit API...")
     try:
         r = praw.Reddit(
             client_id=settings["Reddit Auth"]["reddit_clientId"],
@@ -59,7 +60,7 @@ def run(bot, settings):
             ),
         )
     except Exception as e:
-        log.error(
+        tl.log.error(
             "Error authenticating with Reddit. Ensure the bot has a valid Reddit Auth selected (with Refresh Token) and try again. Error message: {}".format(
                 e
             )
@@ -68,16 +69,16 @@ def run(bot, settings):
 
     try:
         if "identity" in r.auth.scopes():
-            log.info("Authorized Reddit user: {}".format(r.user.me()))
+            tl.log.info("Authorized Reddit user: {}".format(r.user.me()))
         elif str(reqName).lower() == "true":
-            log.error(
+            tl.log.error(
                 "Reddit auth does not have `identity` scope authorized; cannot identify bot name in comments as required."
             )
             raise Exception(
                 "Reddit auth does not have `identity` scope authorized; cannot identify bot name in comments as required."
             )
     except Exception as e:
-        log.error(
+        tl.log.error(
             "Reddit authentication failure. Ensure the bot has a valid Reddit Auth selected (with Refresh Token and relevant scopes selected) and try again. Error message: {}".format(
                 e
             )
@@ -95,7 +96,7 @@ def run(bot, settings):
         db.execute("PRAGMA journal_mode = off;")
         # db.set_trace_callback(print)
     except sqlite3.Error as e:
-        log.error("Error connecting to database: {}".format(e))
+        tl.log.error("Error connecting to database: {}".format(e))
         raise
 
     dbc = db.cursor()
@@ -134,21 +135,21 @@ def run(bot, settings):
             }
         )
 
-    log.debug("Loaded {} comments from db.".format(len(comments)))
+    tl.log.debug("Loaded {} comments from db.".format(len(comments)))
 
-    log.info("Monitoring comments in the following subreddit(s): {}...".format(sub))
+    tl.log.info("Monitoring comments in the following subreddit(s): {}...".format(sub))
     while True:  # This loop keeps the bot running
         if (
             redball.SIGNAL is None and not bot.STOP
         ):  # Make sure the main thread hasn't sent a stop command
             for comment in r.subreddit(sub).stream.comments(pause_after=pauseAfter):
                 if bot and bot.STOP:
-                    log.info("Received stop signal! Closing DB connection...")
+                    tl.log.info("Received stop signal! Closing DB connection...")
                     # Close DB connection before exiting
                     try:
                         db.close()
                     except sqlite3.Error as e:
-                        log.error("Error closing database connection: {}".format(e))
+                        tl.log.error("Error closing database connection: {}".format(e))
                     return
 
                 if not comment:
@@ -164,13 +165,13 @@ def run(bot, settings):
                     and comment.author != r.user.me()
                 ):
                     if comment.id in comments.keys():
-                        log.debug("Already processed comment {}".format(comment.id))
+                        tl.log.debug("Already processed comment {}".format(comment.id))
                         continue
                     elif (
                         comment.created_utc
                         <= time.time() - 60 * 60 * 24 * historicalDays - 3600
                     ):  # Add 1 hour buffer to ensure recent comments are processed
-                        log.debug(
+                        tl.log.debug(
                             "Stream returned comment {} which is older than the HISTORICAL_DAYS setting ({}), ignoring...".format(
                                 comment.id, historicalDays
                             )
@@ -213,7 +214,7 @@ def run(bot, settings):
                             str(comment.created_utc),
                         ),
                     )
-                    log.debug(
+                    tl.log.debug(
                         "({}) {} - {}: {}".format(
                             comment.subreddit, comment.id, comment.author, comment.body
                         )
@@ -235,7 +236,7 @@ def run(bot, settings):
                             )
                             comments[comment.id].update({"reply": latest_reply})
                             latest_reply.disable_inbox_replies()
-                            log.info(
+                            tl.log.info(
                                 "Replied with comment id {} and disabled inbox replies.".format(
                                     latest_reply
                                 )
@@ -251,7 +252,7 @@ def run(bot, settings):
                                 ),
                             )
                         except Exception as e:
-                            log.error(
+                            tl.log.error(
                                 "Error replying to comment or disabling inbox replies: {}".format(
                                     e
                                 )
@@ -272,7 +273,7 @@ def run(bot, settings):
 
                     db.commit()
 
-            log.debug(
+            tl.log.debug(
                 "Checking for downvotes on {} replies...".format(
                     sum(
                         1
@@ -312,7 +313,7 @@ def run(bot, settings):
 
                 if not comments[x].get("removed"):
                     if comments[x]["reply"].score <= delThreshold:
-                        log.info(
+                        tl.log.info(
                             "Deleting comment {} with score ({}) at or below threshold ({})...".format(
                                 comments[x]["reply"],
                                 comments[x]["reply"].score,
@@ -330,28 +331,30 @@ def run(bot, settings):
                             )
                             db.commit()
                         except Exception as e:
-                            log.error("Error deleting downvoted comment: {}".format(e))
+                            tl.log.error(
+                                "Error deleting downvoted comment: {}".format(e)
+                            )
                             comments[x]["errors"].append(
                                 "Error deleting downvoted comment: {}".format(e)
                             )
 
             limits = r.auth.limits
             if limits.get("remaining") < 60:
-                log.warning(
+                tl.log.warning(
                     "Approaching Reddit API rate limit, sleeping for a minute... {}".format(
                         limits
                     )
                 )
                 time.sleep(60)
             else:
-                log.debug("Reddit API limits: {}".format(limits))
+                tl.log.debug("Reddit API limits: {}".format(limits))
         else:  # If main thread has said to stop, we stop!
-            log.info("Bot {} (id={}) exiting...".format(bot.name, bot.id))
+            tl.log.info("Bot {} (id={}) exiting...".format(bot.name, bot.id))
             break  # Exit the infinite loop to stop the bot
 
     # Close DB connection before exiting
     try:
-        log.info("Closing DB connection.")
+        tl.log.info("Closing DB connection.")
         db.close()
     except sqlite3.Error as e:
-        log.error("Error closing database connection: {}".format(e))
+        tl.log.error("Error closing database connection: {}".format(e))

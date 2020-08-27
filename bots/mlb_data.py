@@ -16,12 +16,15 @@ import time
 import redball
 from redball import logger
 
-__version__ = "0.0.1"
+__version__ = "1.0.0"
+
+tl = threading.local()
 
 
 class StatBot:
     def __init__(self, settings):
-        log.info("StatBot starting up...")
+        self.log = tl.log
+        self.log.info("StatBot starting up...")
 
         self.sub = settings.get("Reddit", {}).get("SUBREDDIT")
         self.replyFooter = settings.get("Bot", {}).get(
@@ -43,7 +46,7 @@ class StatBot:
         reddit_refreshToken = settings.get("Reddit Auth", {}).get("reddit_refreshToken")
         self.comments = {}
 
-        log.info("Initializing Reddit API...")
+        self.log.info("Initializing Reddit API...")
         try:
             self.r = praw.Reddit(
                 client_id=reddit_clientId,
@@ -54,20 +57,22 @@ class StatBot:
                 ),
             )
         except Exception as e:
-            log.error("Error authenticating with Reddit. Error message: {}".format(e))
+            self.log.error(
+                "Error authenticating with Reddit. Error message: {}".format(e)
+            )
 
         try:
             if "identity" in self.r.auth.scopes():
-                log.info("Authorized Reddit user: {}".format(self.r.user.me()))
+                self.log.info("Authorized Reddit user: {}".format(self.r.user.me()))
         except Exception as e:
-            log.error("Reddit authentication failure. Error message: {}".format(e))
+            self.log.error("Reddit authentication failure. Error message: {}".format(e))
             raise
 
         try:
             self.db = sqlite3.connect(os.path.join(self.dbPath, self.dbFile))
             """Local sqlite database to store info about processed comments"""
         except sqlite3.Error as e:
-            log.error("Error connecting to database: {}".format(e))
+            self.log.error("Error connecting to database: {}".format(e))
             raise
 
         self.dbc = self.db.cursor()
@@ -90,14 +95,14 @@ class StatBot:
 
     def __del__(self):
         try:
-            log.info("Closing DB connection.")
+            self.log.info("Closing DB connection.")
             self.db.close()
         except sqlite3.Error as e:
-            log.error("Error closing database connection: {}".format(e))
+            self.log.error("Error closing database connection: {}".format(e))
 
     def run(self, bot=None):
         if not self.sub:
-            log.error("No subreddit specified!")
+            self.log.error("No subreddit specified!")
             bot.STOP = True
             return
 
@@ -120,13 +125,13 @@ class StatBot:
                 }
             )
 
-        log.debug("Loaded {} comments from db.".format(len(self.comments)))
-        log.info(
+        self.log.debug("Loaded {} comments from db.".format(len(self.comments)))
+        self.log.info(
             "Monitoring comments in the following subreddit(s): {}...".format(self.sub)
         )
         while True:
             if bot and bot.STOP:
-                log.info("Received stop signal...")
+                self.log.info("Received stop signal...")
                 return
 
             try:
@@ -134,7 +139,7 @@ class StatBot:
                     pause_after=self.pauseAfter
                 ):
                     if bot and bot.STOP:
-                        log.info("Received stop signal...")
+                        self.log.info("Received stop signal...")
                         return
 
                     if not comment:
@@ -146,13 +151,15 @@ class StatBot:
                         and comment.author != self.r.user.me()
                     ):
                         if comment.id in self.comments.keys():
-                            log.debug("Already processed comment {}".format(comment.id))
+                            self.log.debug(
+                                "Already processed comment {}".format(comment.id)
+                            )
                             continue
                         elif (
                             comment.created_utc
                             <= time.time() - 60 * 60 * 24 * self.historicalDays - 3600
                         ):  # Add 1 hour buffer to ensure recent comments are processed
-                            log.debug(
+                            self.log.debug(
                                 "Stream returned comment {} which is older than the HISTORICAL_DAYS setting ({}), ignoring...".format(
                                     comment.id, self.historicalDays
                                 )
@@ -195,7 +202,7 @@ class StatBot:
                                 str(comment.created_utc),
                             ),
                         )
-                        log.debug(
+                        self.log.debug(
                             "({}) {} - {}: {}".format(
                                 comment.subreddit,
                                 comment.id,
@@ -254,7 +261,7 @@ class StatBot:
 
                                 replyText += "\n    " + stats.replace("\n", "\n    ")
                             except Exception as e:
-                                log.error(
+                                self.log.error(
                                     "Error generating response for seasonstats: {}".format(
                                         e
                                     )
@@ -301,7 +308,7 @@ class StatBot:
 
                                 replyText += "\n    " + stats.replace("\n", "\n    ")
                             except Exception as e:
-                                log.error(
+                                self.log.error(
                                     "Error generating response for careerstats: {}".format(
                                         e
                                     )
@@ -328,7 +335,7 @@ class StatBot:
                                 game = statsapi.schedule(game_id=next)
                                 replyText += game[0]["summary"]
                             except Exception as e:
-                                log.error(
+                                self.log.error(
                                     "Error generating response for nextgame: {}".format(
                                         e
                                     )
@@ -355,7 +362,7 @@ class StatBot:
                                 game = statsapi.schedule(game_id=last)
                                 replyText += game[0]["summary"]
                             except Exception as e:
-                                log.error(
+                                self.log.error(
                                     "Error generating response for lastgame: {}".format(
                                         e
                                     )
@@ -401,7 +408,7 @@ class StatBot:
                                     + "%"
                                 )
                             except Exception as e:
-                                log.error(
+                                self.log.error(
                                     "Error generating response for winprob: {}".format(
                                         e
                                     )
@@ -474,7 +481,7 @@ class StatBot:
                                     game = statsapi.schedule(team=who)
                                     replyText += game[0]["summary"]
                             except Exception as e:
-                                log.error(
+                                self.log.error(
                                     "Error generating response for score: {}".format(e)
                                 )
                                 self.comments[comment.id]["errors"].append(
@@ -527,7 +534,7 @@ class StatBot:
                                     standings.replace("\n", "\n    ")
                                 )
                             except Exception as e:
-                                log.error(
+                                self.log.error(
                                     "Error generating response for standings: {}".format(
                                         e
                                     )
@@ -662,7 +669,7 @@ class StatBot:
                                     rundiff.replace("\n", "\n    ")
                                 )
                             except Exception as e:
-                                log.error(
+                                self.log.error(
                                     "Error generating response for rundiff: {}".format(
                                         e
                                     )
@@ -684,7 +691,7 @@ class StatBot:
                                     {"reply": latest_reply}
                                 )
                                 latest_reply.disable_inbox_replies()
-                                log.info(
+                                self.log.info(
                                     "Replied with comment id {} and disabled inbox replies.".format(
                                         latest_reply
                                     )
@@ -700,7 +707,7 @@ class StatBot:
                                     ),
                                 )
                             except Exception as e:
-                                log.error(
+                                self.log.error(
                                     "Error replying to comment or disabling inbox replies: {}".format(
                                         e
                                     )
@@ -724,10 +731,10 @@ class StatBot:
 
                         self.db.commit()
             except Exception as e:
-                log.exception("Caught exception: {}".format(e))
+                self.log.exception("Caught exception: {}".format(e))
                 raise
 
-            log.debug(
+            self.log.debug(
                 "Checking for downvotes on {} replies...".format(
                     sum(
                         1
@@ -769,7 +776,7 @@ class StatBot:
                     not self.comments[x].get("removed")
                     and self.comments[x]["reply"].score <= self.delThreshold
                 ):
-                    log.info(
+                    self.log.info(
                         "Deleting comment {} with score ({}) at or below threshold ({})...".format(
                             self.comments[x]["reply"],
                             self.comments[x]["reply"].score,
@@ -786,7 +793,7 @@ class StatBot:
                             (str(self.comments[x].get("removed")), str(x)),
                         )
                     except Exception as e:
-                        log.error("Error deleting downvoted comment: {}".format(e))
+                        self.log.error("Error deleting downvoted comment: {}".format(e))
                         self.comments[x]["errors"].append(
                             "Error deleting downvoted comment: {}".format(e)
                         )
@@ -795,14 +802,14 @@ class StatBot:
 
             limits = self.r.auth.limits
             if limits.get("remaining") < 60:
-                log.warning(
+                self.log.warning(
                     "Approaching Reddit API rate limit, sleeping for a minute... {}".format(
                         limits
                     )
                 )
                 time.sleep(60)
             else:
-                log.debug("Reddit API limits: {}".format(limits))
+                self.log.debug("Reddit API limits: {}".format(limits))
 
         return
 
@@ -821,7 +828,7 @@ class StatBot:
                 )
             )
             if r.status_code not in [200, 201]:
-                log.error(
+                self.log.error(
                     "Error looking up player from alternate MLB source. Status code: {}.".format(
                         r.status_code
                     )
@@ -838,8 +845,7 @@ class StatBot:
 
 
 def run(bot=None, settings=None):
-    global log
-    log = logger.init_logger(
+    tl.log = logger.init_logger(
         logger_name="redball.bots." + threading.current_thread().name,
         log_to_console=settings.get("Logging", {}).get("LOG_TO_CONSOLE", True),
         log_to_file=settings.get("Logging", {}).get("LOG_TO_FILE", True),

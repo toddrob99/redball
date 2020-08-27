@@ -16,18 +16,15 @@ import sqlite3
 
 __version__ = "1.0.4-alpha"
 
+tl = threading.local()
+
 
 def run(bot, settings):
-    global log  # Make logger available to the whole module
     # Start logging
-    log = logger.init_logger(
-        logger_name="redball.bots." + threading.current_thread().name,
-        log_to_console=str(
-            settings.get("Logging", {}).get("LOG_TO_CONSOLE", True)
-        ).lower()
-        == "true",
-        log_to_file=str(settings.get("Logging", {}).get("LOG_TO_FILE", True)).lower()
-        == "true",
+    tl.log = logger.init_logger(
+        logger_name=f"redball.bots.{threading.current_thread().name}",
+        log_to_console=settings.get("Logging", {}).get("LOG_TO_CONSOLE", True),
+        log_to_file=settings.get("Logging", {}).get("LOG_TO_FILE", True),
         log_path=redball.LOG_PATH,
         log_file=f"{threading.current_thread().name}.log",
         file_log_level=settings.get("Logging", {}).get("FILE_LOG_LEVEL"),
@@ -36,7 +33,7 @@ def run(bot, settings):
         clear_first=True,
         propagate=False,
     )
-    log.debug(f"Bot received settings: {settings}")
+    tl.log.debug(f"Bot received settings: {settings}")
     # Initialize vars and do one-time setup steps
     dbTable = settings.get("Database").get("dbTablePrefix", "") + "posts"
     sub = settings.get("Bot", {}).get("SUBREDDIT")
@@ -58,7 +55,7 @@ def run(bot, settings):
     postCache = {}
     ignoredPostIdCache = []
 
-    log.info("Initializing Reddit API...")
+    tl.log.info("Initializing Reddit API...")
     try:
         r = praw.Reddit(
             client_id=settings["Reddit Auth"]["reddit_clientId"],
@@ -67,16 +64,16 @@ def run(bot, settings):
             user_agent=f"redball Duplicate Link Removal Bot - https://github.com/toddrob99/redball/ v{__version__}",
         )
     except Exception as e:
-        log.error(
+        tl.log.error(
             f"Error authenticating with Reddit. Ensure the bot has a valid Reddit Auth selected (with Refresh Token) and try again. Error message: {e}"
         )
         raise
 
     try:
         if "identity" in r.auth.scopes():
-            log.info(f"Authorized Reddit user: {r.user.me()}")
+            tl.log.info(f"Authorized Reddit user: {r.user.me()}")
     except Exception as e:
-        log.error(
+        tl.log.error(
             f"Reddit authentication failure. Ensure the bot has a valid Reddit Auth selected (with Refresh Token and relevant scopes selected) and try again. Error message: {e}"
         )
         raise
@@ -91,7 +88,7 @@ def run(bot, settings):
         """Local sqlite database to store info about processed posts"""
         db.execute("PRAGMA journal_mode = off;")
     except sqlite3.Error as e:
-        log.error(f"Error connecting to database: {e}")
+        tl.log.error(f"Error connecting to database: {e}")
         raise
 
     dbc = db.cursor()
@@ -123,15 +120,15 @@ def run(bot, settings):
         }
         postCache.update({post["submissionId"]: post})
 
-    log.debug(f"Loaded {len(postCache)} post(s) from db.")
+    tl.log.debug(f"Loaded {len(postCache)} post(s) from db.")
 
-    log.info(f"Monitoring posts in the following subreddit(s): {sub}...")
+    tl.log.info(f"Monitoring posts in the following subreddit(s): {sub}...")
     while True:  # This loop keeps the bot running
         if (
             redball.SIGNAL is None and not bot.STOP
         ):  # Make sure the main thread hasn't sent a stop command
             try:
-                log.debug("Checking for new posts...")
+                tl.log.debug("Checking for new posts...")
                 for newPost in r.subreddit(sub).stream.submissions(
                     pause_after=pauseAfter
                 ):
@@ -145,17 +142,17 @@ def run(bot, settings):
                         continue
 
                     if newPost.is_self:
-                        log.debug(f"Post [{newPost.id}] is a self post--skipping.")
+                        tl.log.debug(f"Post [{newPost.id}] is a self post--skipping.")
                         ignoredPostIdCache.append(newPost.id)
                         continue
                     elif next((True for y in ignoreDomains if y in newPost.url), False):
-                        log.debug(
+                        tl.log.debug(
                             f"Post [{newPost.id}] has an ignored domain [{newPost.url}]--skipping."
                         )
                         ignoredPostIdCache.append(newPost.id)
                         q = None
                     else:
-                        log.debug(
+                        tl.log.debug(
                             f"Post [{newPost.id}] has a non-ignored domain link [{newPost.url}]..."
                         )
                         this = getUrls(newPost)
@@ -180,7 +177,7 @@ def run(bot, settings):
                         ):
                             matchingSubmission = r.submission(matchingSubmissionId)
                             if newPost.id != matchingSubmissionId:
-                                log.info(
+                                tl.log.info(
                                     f"Duplicate link for submission {newPost.id} found in submission {matchingSubmission.id}"
                                 )
                                 if audit:
@@ -193,7 +190,7 @@ def run(bot, settings):
                                         )
                                         newPost.report(parsedReportText)
                                     except Exception as e:
-                                        log.error(
+                                        tl.log.error(
                                             f"Error reporting submission [{newPost.id}]: {e}"
                                         )
                                 else:
@@ -203,7 +200,7 @@ def run(bot, settings):
                                             mod_note=f"Removed as duplicate of [{matchingSubmission.id}]"
                                         )
                                     except Exception as e:
-                                        log.error(
+                                        tl.log.error(
                                             f"Error removing submission [{newPost.id}]: {e}"
                                         )
 
@@ -217,7 +214,7 @@ def run(bot, settings):
                                         removalReply = newPost.reply(parsedReplyText)
                                         removalReply.mod.distinguish(sticky=True)
                                     except Exception as e:
-                                        log.error(
+                                        tl.log.error(
                                             f"Error submitting reply to submission [{newPost.id}]: {e}"
                                         )
                             q = f"INSERT OR IGNORE INTO {dbTable} (submissionId, url, canonical, contentHash, urls, dateCreated, dateRemoved) VALUES (?, ?, ?, ?, ?, ?, ?);"
@@ -245,18 +242,18 @@ def run(bot, settings):
                             try:
                                 dbc.execute(q, qa)
                                 db.commit()
-                                log.debug("Inserted record to db.")
+                                tl.log.debug("Inserted record to db.")
                             except Exception as e:
-                                log.error(f"Error inserting into database: {e}")
+                                tl.log.error(f"Error inserting into database: {e}")
 
                         postCache.update({newPost.id: this})
             except Exception as e:
-                log.error(
+                tl.log.error(
                     f"Sleeping for 10 seconds and then continuing after exception: {e}"
                 )
                 time.sleep(10)
         else:  # If main thread has said to stop, we stop!
-            log.info(f"Bot {bot.name} (id={bot.id}) exiting...")
+            tl.log.info(f"Bot {bot.name} (id={bot.id}) exiting...")
             break  # Exit the infinite loop to stop the bot
 
 
@@ -269,12 +266,12 @@ def deserialize(theString):
 
 
 def getUrls(submission):
-    log.debug(
+    tl.log.debug(
         f"Getting URLs for submission id [{submission.id}] with URL [{submission.url}]..."
     )
     req = requests.get(submission.url)
     if req.status_code != 200:
-        log.error(
+        tl.log.error(
             f"Request for {submission.url} returned status code {req.status_code}"
         )
         return {
@@ -288,14 +285,14 @@ def getUrls(submission):
             "dateRemoved": None,
         }
 
-    log.debug(f"Request redirect history: {[h.url for h in req.history]}")
+    tl.log.debug(f"Request redirect history: {[h.url for h in req.history]}")
 
     if (
         not req.headers.get("content-type")
         or "text/html" not in req.headers["content-type"]
     ):
         # Target is not an html page, might be a video or image
-        log.debug(
+        tl.log.debug(
             "Target is not an html page, so not parsing canonical link, looking for meta redirect, or calculating content hash."
         )
         canonical = None
@@ -306,7 +303,7 @@ def getUrls(submission):
         soup = BeautifulSoup(src, features="html.parser")
 
         canonical = soup.find("link", {"rel": "canonical"})
-        log.debug(
+        tl.log.debug(
             f"Canonical URL: {canonical['href']}"
             if canonical
             else "No canonical link found."
@@ -319,17 +316,17 @@ def getUrls(submission):
                 (x.split("=")[1] for x in redirContentParts if "url=" in x.lower()),
                 None,
             )
-            log.debug(
+            tl.log.debug(
                 f"Meta redirect URL detected: {redirUrl}"
                 if redirUrl
                 else "Unable to extract redirect URL from meta refresh tag."
             )
         else:
             redirUrl = None
-            log.debug("No meta redirect found.")
+            tl.log.debug("No meta redirect found.")
 
         contentHash = hashlib.md5(src.encode("utf-8")).hexdigest()
-        log.debug(f"Content hash: {contentHash}")
+        tl.log.debug(f"Content hash: {contentHash}")
 
     urls = [submission.url]
     if canonical:
@@ -347,7 +344,7 @@ def getUrls(submission):
         if alt not in urls:
             urls.append(alt)
 
-    log.debug(f"Urls: {urls}")
+    tl.log.debug(f"Urls: {urls}")
 
     urlInfo = {
         "submissionId": submission.id,
@@ -360,6 +357,6 @@ def getUrls(submission):
         "dateRemoved": None,
     }
 
-    log.debug(f"Resulting URL info: {urlInfo}")
+    tl.log.debug(f"Resulting URL info: {urlInfo}")
 
     return urlInfo
