@@ -14,7 +14,7 @@ import praw
 import requests
 import sqlite3
 
-__version__ = "1.0.4-alpha"
+__version__ = "1.0.5-alpha"
 
 tl = threading.local()
 
@@ -156,67 +156,111 @@ def run(bot, settings):
                             f"Post [{newPost.id}] has a non-ignored domain link [{newPost.url}]..."
                         )
                         this = getUrls(newPost)
-                        if matchingSubmissionId := next(
-                            (
-                                k
-                                for k, v in postCache.items()
-                                if k != newPost.id
-                                and (
-                                    next(
-                                        (True for i in this["urls"] if i in v["urls"]),
-                                        False,
-                                    )
-                                    or (
-                                        this["contentHash"] == v["contentHash"]
-                                        and v["contentHash"]
-                                        is not None  # url GET likely failed if None
-                                    )
+                        foundActiveDupeSubmissionId = None
+                        foundRemovedDupeSubmissionId = None
+                        matchingSubmissionGenerator = (
+                            k
+                            for k, v in postCache.items()
+                            if k != newPost.id
+                            and (
+                                next(
+                                    (True for i in this["urls"] if i in v["urls"]),
+                                    False,
                                 )
-                            ),
-                            None,
+                                or (
+                                    this["contentHash"] == v["contentHash"]
+                                    and v["contentHash"]
+                                    is not None  # url GET likely failed if None
+                                )
+                            )
+                        )
+                        while matchingSubmissionId := next(
+                            matchingSubmissionGenerator, None
                         ):
                             matchingSubmission = r.submission(matchingSubmissionId)
-                            if newPost.id != matchingSubmissionId:
+                            if not matchingSubmission.author:
+                                # Matching submission is deleted!
                                 tl.log.info(
-                                    f"Duplicate link for submission {newPost.id} found in submission {matchingSubmission.id}"
+                                    f"Matching prior submission [{matchingSubmission.id}] is deleted, ignoring."
                                 )
-                                if audit:
-                                    # Report the post
-                                    try:
-                                        parsedReportText = reportText.replace(
-                                            "(title)", matchingSubmission.title
-                                        ).replace(
-                                            "(link)", matchingSubmission.shortlink
-                                        )
-                                        newPost.report(parsedReportText)
-                                    except Exception as e:
-                                        tl.log.error(
-                                            f"Error reporting submission [{newPost.id}]: {e}"
-                                        )
-                                else:
-                                    # Remove the post
-                                    try:
-                                        newPost.mod.remove(
-                                            mod_note=f"Removed as duplicate of [{matchingSubmission.id}]"
-                                        )
-                                    except Exception as e:
-                                        tl.log.error(
-                                            f"Error removing submission [{newPost.id}]: {e}"
-                                        )
+                                continue
 
-                                    # Reply to the post
-                                    try:
-                                        parsedReplyText = removalCommentText.replace(
-                                            "(title)", matchingSubmission.title
-                                        ).replace(
-                                            "(link)", matchingSubmission.shortlink
-                                        )
-                                        removalReply = newPost.reply(parsedReplyText)
-                                        removalReply.mod.distinguish(sticky=True)
-                                    except Exception as e:
-                                        tl.log.error(
-                                            f"Error submitting reply to submission [{newPost.id}]: {e}"
-                                        )
+                            if not matchingSubmission.is_robot_indexable:
+                                # Matching submission is removed (not deleted since the last condition was not met)
+                                tl.log.info(
+                                    f"Matching prior submission [{matchingSubmission.id}] is removed, ignoring unless no other dupes are found."
+                                )
+                                foundRemovedDupeSubmissionId = matchingSubmissionId
+                                continue
+
+                            if newPost.id != matchingSubmissionId:
+                                # Matching submission found, not deleted or removed
+                                tl.log.info(
+                                    f"New submission [{newPost.id}] identified as duplicate of submission [{matchingSubmission.id}]"
+                                )
+                                foundActiveDupeSubmissionId = matchingSubmissionId
+                                break
+
+                        if foundActiveDupeSubmissionId or foundRemovedDupeSubmissionId:
+                            # Duplicate identified
+                            dupePost = r.submission(
+                                foundActiveDupeSubmissionId
+                                if foundActiveDupeSubmissionId
+                                else foundRemovedDupeSubmissionId
+                            )
+                            if audit or not foundActiveDupeSubmissionId:
+                                # Report the post
+                                if audit and not foundActiveDupeSubmissionId:
+                                    tl.log.info(
+                                        f"Reporting new submission [{newPost.id}] due to audit mode (and prior post [{dupePost.id}] is removed)..."
+                                    )
+                                elif audit:
+                                    tl.log.info(
+                                        f"Reporting new submission [{newPost.id}] due to audit mode..."
+                                    )
+                                elif foundRemovedDupeSubmissionId:
+                                    tl.log.info(
+                                        f"Reporting new submission [{newPost.id}] since prior post [{dupePost.id}] is removed..."
+                                    )
+
+                                try:
+                                    parsedReportText = reportText.replace(
+                                        "(title)", dupePost.title
+                                    ).replace("(link)", dupePost.shortlink)
+                                    if not foundActiveDupeSubmissionId:
+                                        parsedReportText += " (prior post is removed)"
+
+                                    newPost.report(parsedReportText)
+                                except Exception as e:
+                                    tl.log.error(
+                                        f"Error reporting submission [{newPost.id}]: {e}"
+                                    )
+                            else:
+                                # Remove the post
+                                tl.log.info(
+                                    f"Removing new post [{newPost.id}] as a duplicate of [{dupePost.id}]..."
+                                )
+                                try:
+                                    newPost.mod.remove(
+                                        mod_note=f"Removed as duplicate of [{dupePost.id}]"
+                                    )
+                                except Exception as e:
+                                    tl.log.error(
+                                        f"Error removing submission [{newPost.id}]: {e}"
+                                    )
+
+                                # Reply to the post
+                                try:
+                                    parsedReplyText = removalCommentText.replace(
+                                        "(title)", dupePost.title
+                                    ).replace("(link)", dupePost.shortlink)
+                                    removalReply = newPost.reply(parsedReplyText)
+                                    removalReply.mod.distinguish(sticky=True)
+                                except Exception as e:
+                                    tl.log.error(
+                                        f"Error submitting reply to submission [{newPost.id}]: {e}"
+                                    )
+
                             q = f"INSERT OR IGNORE INTO {dbTable} (submissionId, url, canonical, contentHash, urls, dateCreated, dateRemoved) VALUES (?, ?, ?, ?, ?, ?, ?);"
                             qa = (
                                 newPost.id,
@@ -228,6 +272,10 @@ def run(bot, settings):
                                 time.time(),
                             )
                         else:
+                            # No duplicate found
+                            tl.log.debug(
+                                f"No duplicates found for submission [{newPost.id}]"
+                            )
                             q = f"INSERT OR IGNORE INTO {dbTable} (submissionId, url, canonical, contentHash, urls, dateCreated) VALUES (?, ?, ?, ?, ?, ?);"
                             qa = (
                                 newPost.id,
