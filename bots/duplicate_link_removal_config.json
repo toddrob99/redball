@@ -49,7 +49,7 @@
             "key": "REPORT_TEXT",
             "description": "Text for reports submitted on duplicate posts in audit mode. '(title)' and '(link)' will be replaced with the title and link of the post of which the removed post is a duplicate.",
             "type": "str",
-            "val": "Duplicate: (link)",
+            "val": "Dupe: (link)",
             "options": [],
             "subkeys": [],
             "parent_key": null
@@ -60,6 +60,15 @@
             "type": "str",
             "val": "",
             "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "USE_CONTENT_HASH",
+            "description": "Enable to use content hash as a point of comparison. May result in false matches due to websites using templates with dynamic content.",
+            "type": "bool",
+            "val": false,
+            "options": [true, false],
             "subkeys": [],
             "parent_key": null
         }

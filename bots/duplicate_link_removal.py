@@ -14,7 +14,7 @@ import praw
 import requests
 import sqlite3
 
-__version__ = "1.0.5-alpha"
+__version__ = "1.0.6-alpha"
 
 tl = threading.local()
 
@@ -38,6 +38,7 @@ def run(bot, settings):
     dbTable = settings.get("Database").get("dbTablePrefix", "") + "posts"
     sub = settings.get("Bot", {}).get("SUBREDDIT")
     audit = settings.get("Bot", {}).get("REPORT_ONLY", False)
+    useContentHash = settings.get("Bot", {}).get("USE_CONTENT_HASH", False)
     historicalPosts = int(settings.get("Bot", {}).get("HISTORICAL_POSTS", 100))
     pauseAfter = int(settings.get("Bot", {}).get("PAUSE_AFTER", 5))
     ignoreDomains = [
@@ -168,9 +169,12 @@ def run(bot, settings):
                                     False,
                                 )
                                 or (
-                                    this["contentHash"] == v["contentHash"]
-                                    and v["contentHash"]
-                                    is not None  # url GET likely failed if None
+                                    useContentHash
+                                    and (
+                                        this["contentHash"] == v["contentHash"]
+                                        and v["contentHash"]
+                                        is not None  # url GET likely failed if None
+                                    )
                                 )
                             )
                         )
