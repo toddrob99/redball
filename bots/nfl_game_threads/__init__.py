@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.4-alpha"
+__version__ = "1.0.5-alpha"
 
 DATA_LOCK = threading.Lock()
 
@@ -326,7 +326,7 @@ class Bot(object):
                 ]
                 oppTeamId = oppTeam["id"]
                 self.log.debug(f"oppTeamId: {oppTeamId}")
-                # oppTeam = self.nfl.teamById(teamId=oppTeamId)  # Workaround for nflapi 500 error
+                oppTeam = self.nfl.teamById(teamId=oppTeamId)
                 self.log.debug(f"oppTeam: {oppTeam}")
                 gameTime = next(
                     (g["gameTime"] for g in todayGames if g["id"] == myTeamTodayGameId),
@@ -344,10 +344,10 @@ class Bot(object):
                 # Initialize var to hold game data throughout the day
                 self.allData.update(
                     {
-                        # "myTeam": self.nfl.teamById(  # Workaround for nflapi 500 error
-                        #    teamId=todayGames[myGameIndex][homeVisitor + "Team"]["id"]
-                        # ),
-                        "myTeam": todayGames[myGameIndex][homeVisitor + "Team"],
+                        "myTeam": self.nfl.teamById(
+                            teamId=todayGames[myGameIndex][homeVisitor + "Team"]["id"]
+                        ),
+                        # "myTeam": todayGames[myGameIndex][homeVisitor + "Team"],
                         "gameDetailId": gameDetailId,
                         "gameDetails": self.nfl.gameDetails(gameDetailId=gameDetailId)[
                             "data"
@@ -1768,18 +1768,18 @@ class Bot(object):
             )["data"]
             self.allData.update(
                 {
-                    # "myTeam": self.nfl.teamById(  # Workaround for nflapi 500 error
-                    #    teamId=todayGames[myGameIndex][
-                    #        self.allData["homeVisitor"] + "Team"
-                    #    ]["id"]
-                    # ),
-                    "myTeam": todayGames[myGameIndex][
-                        self.allData["homeVisitor"] + "Team"
-                    ],
-                    # "oppTeam": self.nfl.teamById(teamId=self.allData["oppTeam"]["id"]),  # Workaround for nflapi 500 error
-                    "oppTeam": todayGames[myGameIndex]["homeTeam"]
-                    if self.allData["homeVisitor"] == "visitor"
-                    else todayGames[myGameIndex]["visitorTeam"],
+                    "myTeam": self.nfl.teamById(
+                        teamId=todayGames[myGameIndex][
+                            self.allData["homeVisitor"] + "Team"
+                        ]["id"]
+                    ),
+                    # "myTeam": todayGames[myGameIndex][
+                    #    self.allData["homeVisitor"] + "Team"
+                    # ],
+                    "oppTeam": self.nfl.teamById(teamId=self.allData["oppTeam"]["id"]),
+                    # "oppTeam": todayGames[myGameIndex]["homeTeam"]
+                    # if self.allData["homeVisitor"] == "visitor"
+                    # else todayGames[myGameIndex]["visitorTeam"],
                     "gameDetails": gameDetails,
                     "gameInsights": gameInsights,
                     "gameStats": gameStats,

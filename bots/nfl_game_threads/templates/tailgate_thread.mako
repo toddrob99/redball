@@ -65,8 +65,8 @@ Venue: ${game["venue"]["name"]}
 
 <%include file="standings.mako" />
 
-## <%include file="inactives.mako" />
-## 
+<%include file="inactives.mako" />
+
 <%include file="division_scoreboard.mako" />
 
 ## Configurable footer text
