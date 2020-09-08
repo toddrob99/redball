@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.2.2"
+__version__ = "1.0.2.3"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -6613,7 +6613,7 @@ class Bot(object):
                                 else " skipped"
                                 if v["threads"]["game"].get("postTime", "") == ""
                                 and not v["threads"]["game"]["posted"]
-                                else " failed to post (check log for error)"
+                                else " not posted (check log for errors; this is normal if DH Game 2)"
                                 if not v["threads"]["game"]["posted"]
                                 and datetime.strptime(
                                     v["threads"]["game"]["postTime"],
@@ -6651,7 +6651,7 @@ class Bot(object):
                                 else " skipped"
                                 if v["threads"]["game"].get("postTime", "") == ""
                                 and not v["threads"]["game"]["posted"]
-                                else " failed to post (check log for error)"
+                                else " not posted (check log for errors; this is normal if DH Game 2)"
                                 if not v["threads"]["game"]["posted"]
                                 and datetime.strptime(
                                     v["threads"]["game"]["postTime"],
@@ -6689,7 +6689,7 @@ class Bot(object):
                                 else " skipped"
                                 if v["threads"]["game"].get("postTime", "") == ""
                                 and not v["threads"]["game"]["posted"]
-                                else " failed to post (check log for error)"
+                                else " not posted (check log for errors; this is normal if DH Game 2)"
                                 if not v["threads"]["game"]["posted"]
                                 and datetime.strptime(
                                     v["threads"]["game"]["postTime"],
