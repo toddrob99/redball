@@ -373,4 +373,20 @@ upgradeScripts = {
             time.time()
         ),
     ],
+    8: [
+        # Add settings to NFL game thread bots: Tailgate Thread > RESTRICT_SELF_POSTS
+        """INSERT OR IGNORE INTO rb_botConfig (botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system)
+        WITH RECURSIVE
+            bots(botId,category,key,description,type,val,options,subkeys,parent_key,read_only,system) AS (
+            VALUES(0,null,null,null,null,null,null,null,null,null,null)
+            UNION
+            SELECT b.id,'Tailgate Thread','RESTRICT_SELF_POSTS','Disable self posts in the subreddit when the tailgate thread is submitted.','bool','false','[true, false]','[]','','','False'
+                FROM rb_botTypes bt, bots INNER JOIN rb_bots b ON bt.id = b.botType AND bt.moduleName='nfl_game_threads'
+            )
+        SELECT * FROM bots;""",
+        # Update DB version to 8
+        "UPDATE rb_meta SET val='8', lastUpdate='{}' WHERE key='dbVersion';".format(
+            time.time()
+        ),
+    ],
 }

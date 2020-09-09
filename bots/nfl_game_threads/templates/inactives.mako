@@ -23,14 +23,14 @@
     oppInactives = [x for x in data["oppTeam"]["roster"]["data"] if x["activeRole"] == "PLAYER" and x["player"]["rosterStatus"] not in excludeRosterStatus]
 %>\
 % if len(myInactives):
-${'##'} ${data["myTeam"]["nickName"]} Inactives & Injury Status
+${'##'} ${data["myTeam"]["nickName"]} Inactives
 % for x in set(x["player"]["rosterStatus"] for x in myInactives):
 * ${f"{rosterStatusKey[x]}: {', '.join([p['player']['position']['abbr'] + ' ' + p['displayName'] for p in myInactives if p['player']['rosterStatus'] == x])}"}
 % endfor
 % endif
 
 % if len(oppInactives):
-${'##'} ${data["oppTeam"]["nickName"]} Inactives & Injury Status
+${'##'} ${data["oppTeam"]["nickName"]} Inactives
 % for x in set(x["player"]["rosterStatus"] for x in oppInactives):
 * ${f"{rosterStatusKey[x]}: {', '.join([p['player']['position']['abbr'] + ' ' + p['displayName'] for p in oppInactives if p['player']['rosterStatus'] == x])}"}
 % endfor

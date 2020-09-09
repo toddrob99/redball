@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.5.1-alpha"
+__version__ = "1.0.6-alpha"
 
 DATA_LOCK = threading.Lock()
 
@@ -1958,6 +1958,13 @@ class Bot(object):
             if thread == "post"
             else False
         )
+        restrictSelfPosts = (
+            False
+            if thread != "tailgate"
+            else self.settings.get("Tailgate Thread", {}).get(
+                "RESTRICT_SELF_POSTS", False
+            )
+        )
 
         # Check if post already exists
         theThread = None
@@ -2179,6 +2186,19 @@ class Bot(object):
                         )
                 else:
                     self.log.debug("I did not find a previous thread to lock.")
+
+            if restrictSelfPosts:
+                # Disable self posts now that the thread is submitted
+                self.log.debug(
+                    f"Attempting to disable self posts after submitting {thread} thread..."
+                )
+                try:
+                    self.subreddit.mod.update(link_type="link")
+                    self.log.debug("Self posts disabled.")
+                except Exception as e:
+                    self.log.warning(
+                        f"Failed to disable self posts after submitting {thread} thread: {e}"
+                    )
         else:
             self.log.warning("No thread object present. Something went wrong!")
 

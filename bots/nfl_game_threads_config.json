@@ -1,6 +1,18 @@
 {
     "Tailgate Thread": [
         {
+            "key": "RESTRICT_SELF_POSTS",
+            "description": "Disable self posts in the subreddit when the tailgate thread is submitted.",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
             "key": "ENABLED",
             "description": "Enable posting of tailgate threads.",
             "type": "bool",
