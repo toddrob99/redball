@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.7-alpha"
+__version__ = "1.0.7.1-alpha"
 
 DATA_LOCK = threading.Lock()
 
@@ -2768,8 +2768,12 @@ class Bot(object):
                     },
                 },
             }
-            botStatus["game"]["oppTeam"].pop("roster")
-            botStatus["game"]["oppTeam"].pop("injuries")
+            if botStatus["game"]["oppTeam"]:
+                if botStatus["game"]["oppTeam"].get("roster"):
+                    botStatus["game"]["oppTeam"].pop("roster")
+
+                if botStatus["game"]["oppTeam"].get("injuries"):
+                    botStatus["game"]["oppTeam"].pop("injuries")
 
             botStatus.update(
                 {
