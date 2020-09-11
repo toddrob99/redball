@@ -5,6 +5,7 @@ by Todd Roberts
 """
 
 from apscheduler.schedulers.background import BackgroundScheduler
+from copy import deepcopy
 from datetime import datetime, timedelta
 import json
 import pytz
@@ -30,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.6-alpha"
+__version__ = "1.0.7-alpha"
 
 DATA_LOCK = threading.Lock()
 
@@ -333,11 +334,6 @@ class Bot(object):
                     None,
                 )
                 self.log.debug(f"gameTime: {gameTime}")
-                gameStats = self.nfl.gameStats(
-                    gameId=myTeamTodayGameId,
-                    teamId=todayGames[myGameIndex][homeVisitor + "Team"]["id"],
-                )["data"]["viewer"]["stats"]["teamGameStats"]["edges"]
-                gameStats = gameStats[0]["node"] if len(gameStats) else {}
                 standings = self.nfl.standings(
                     season=currentWeek["season"], seasonType=currentWeek["seasonType"]
                 )["data"]
@@ -355,7 +351,6 @@ class Bot(object):
                         if gameDetailId
                         else {},
                         "gameInsights": gameInsights,
-                        "gameStats": gameStats,
                         "homeVisitor": homeVisitor,
                         "oppTeam": oppTeam,
                         "gameTime": {
@@ -1753,15 +1748,6 @@ class Bot(object):
                 None,
             )
             self.log.debug(f"gameTime: {gameTime}")
-            gameStats = self.nfl.gameStats(
-                gameId=self.allData["gameId"],
-                teamId=todayGames[myGameIndex][
-                    "visitorTeam"
-                    if self.allData["homeVisitor"] == "visitor"
-                    else "homeTeam"
-                ]["id"],
-            )["data"]["viewer"]["stats"]["teamGameStats"]["edges"]
-            gameStats = gameStats[0]["node"] if len(gameStats) else {}
             standings = self.nfl.standings(
                 season=self.allData["currentWeek"]["season"],
                 seasonType=self.allData["currentWeek"]["seasonType"],
@@ -1782,7 +1768,6 @@ class Bot(object):
                     # else todayGames[myGameIndex]["visitorTeam"],
                     "gameDetails": gameDetails,
                     "gameInsights": gameInsights,
-                    "gameStats": gameStats,
                     "currentWeekGames": currentWeekGames,
                     "todayGames": todayGames,
                     "gameTime": {
@@ -2102,8 +2087,8 @@ class Bot(object):
             else:
                 self.notify_prowl(
                     apiKey=prowlKey,
-                    event=f"{self.myTeam['teamName']} {thread.title()} Thread Posted",
-                    description=f"""{self.myTeam['teamName']} {thread} thread was posted to r/{self.settings["Reddit"]["SUBREDDIT"]} at {self.convert_timezone(datetime.utcfromtimestamp(theThread.created_utc),'local').strftime('%I:%M %p %Z')}\nThread title: {theThread.title}\nURL: {theThread.shortlink}""",
+                    event=f"{self.myTeam['nickName']} {thread.title()} Thread Posted",
+                    description=f"""{self.myTeam['nickName']} {thread} thread was posted to r/{self.settings["Reddit"]["SUBREDDIT"]} at {self.convert_timezone(datetime.utcfromtimestamp(theThread.created_utc),'local').strftime('%I:%M %p %Z')}\nThread title: {theThread.title}\nURL: {theThread.shortlink}""",
                     priority=prowlPriority,
                     url=theThread.shortlink,
                     appName=f"redball - {self.bot.name}",
@@ -2126,11 +2111,11 @@ class Bot(object):
                 self.log.debug("Twitter disabled or not configured")
             else:
                 if thread == "game":
-                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')}"""
+                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['nickName'].replace(' ','')}"""
                 elif thread == "tailgate":
-                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')}"""
+                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['nickName'].replace(' ','')}"""
                 elif thread == "post":
-                    message = f"""{theThread.title} - The discussion continues: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')}"""
+                    message = f"""{theThread.title} - The discussion continues: {theThread.shortlink} #{self.myTeam['nickName'].replace(' ','')}"""
                 else:
                     self.log.error(f"Can't tweet about unknown thread type [{thread}]!")
                     return (None, text)
@@ -2731,7 +2716,7 @@ class Bot(object):
                 "game": {
                     "gameId": self.allData.get("gameId"),
                     "status": self.allData.get("gameDetails", {}).get("phase"),
-                    "oppTeam": self.allData.get("oppTeam"),
+                    "oppTeam": deepcopy(self.allData.get("oppTeam")),
                     "homeVisitor": self.allData.get("homeVisitor"),
                     "gameTime": self.allData["gameTime"]["myTeam"].strftime(
                         "%I:%M %p %Z"
@@ -2783,6 +2768,8 @@ class Bot(object):
                     },
                 },
             }
+            botStatus["game"]["oppTeam"].pop("roster")
+            botStatus["game"]["oppTeam"].pop("injuries")
 
             botStatus.update(
                 {

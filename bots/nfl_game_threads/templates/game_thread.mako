@@ -57,22 +57,25 @@ Game Time: ${data["gameTime"]["myTeam"].strftime(settings.get("Tailgate Thread",
 
 Venue: ${game["venue"]["name"]}
 
+%if game["gameStatus"]["phase"] == "INGAME":
+${'##'} Game Status\
+${f" - {qtrDesc[data['gameDetails']['period']]}" if data["gameDetails"].get("period") else ""} - \
+${game["gameStatus"]["gameClock"]}
+
+% if game["gameStatus"].get("possessionTeam"):
+${game["gameStatus"].get("possessionTeam", {}).get("abbr")} &#127944; \
+${downDesc[game["gameStatus"]["down"]]} and ${"Goal" if game["gameStatus"].get("goalToGo") else game["gameStatus"]["yardsToGo"]} @ \
+${game["gameStatus"].get("yardLineSide", "")} ${game["gameStatus"].get("yardLineNumber", "")} yard line
+% endif
+%elif game["gameStatus"]["phase"] == "HALFTIME":
+${'##'} Game Status: HALFTIME
+%endif
+
 %if game["gameStatus"]["phase"] in ["INGAME", "HALFTIME", "FINAL", "FINAL_OVERTIME"]:
 ## Only include the line score if the game has already started
 <%include file="linescore.mako" />
 %endif
 
-%if game["gameStatus"]["phase"] == "INGAME":
-${'##'} Game Status\
-${f" - {qtrDesc[data['gameDetails']['period']]}" if data["gameDetails"].get("period") else ""}\
-${data["gameDetails"]["gameClock"]}
-
-${data["gameDetails"]["possessionTeam"]["nickName"]} \
-${downDesc[data["gameDetails"]["down"]]} and ${"Goal" if data["gameDetails"]["goalToGo"] else data["gameDetails"]["distance"]} @ \
-${game["gameStatus"]["yardLineSide"]} ${game["gameStatus"]["yardLineNumber"]}
-%elif game["gameStatus"]["phase"] == "HALFTIME":
-${'##'} Game Status: HALFTIME
-%endif
 %if game["gameStatus"]["phase"] != "PREGAME":
 
 <%include file="scoring_drives.mako" />

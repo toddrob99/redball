@@ -12,22 +12,22 @@
         x.get("standings", {}).get("data", {})[0]
         for x in data["standings"] 
         if x["abbr"] == data["myTeam"]["abbr"]
-    ), {})
+    ), None)
     myTeamRecord = (
         f" ({myTeamStandings['overallWins']}-{myTeamStandings['overallLosses']}{'-'+str(myTeamStandings['overallTies']) if myTeamStandings['overallTies'] > 0 else ''})"
         ##if data["currentWeek"]["weekType"] == "REG"
         ##else ""
-    )
+    ) if myTeamStandings else ""
     oppTeamStandings = next((
         x.get("standings", {}).get("data", {})[0]
         for x in data["standings"] 
         if x["abbr"] == data["oppTeam"]["abbr"]
-    ), {})
+    ), None)
     oppTeamRecord = (
         f" ({oppTeamStandings['overallWins']}-{oppTeamStandings['overallLosses']}{'-'+str(oppTeamStandings['overallTies']) if oppTeamStandings['overallTies'] > 0 else ''})"
         ##if data["currentWeek"]["weekType"] == "REG"
         ##else ""
-    )
+    ) if oppTeamStandings else ""
 %>\
 ## Week
 %if data["currentWeek"]["weekType"] == "HOF":

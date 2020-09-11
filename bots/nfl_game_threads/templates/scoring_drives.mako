@@ -1,11 +1,11 @@
 <%
     game = data["todayGames"][data["myGameIndex"]]
 %>\
-%if len(data["gameDetails"]["scoringSummaries"]) > 0:
-${'##'} Scoring Drives
+%if len(data["gameDetails"].get("scoringSummaries", [])) > 0:
+${'##'} Scoring Summary
 %for x in data["gameDetails"]["scoringSummaries"]:
 <%
-play = next((p for p in data["gameDetails"]["plays"] if p["playId"] == x["playId"]), None)
+play = next((p for p in data["gameDetails"]["plays"] if p["playId"] == x["playId"] and p["scoringPlay"]), None)
 %>\
 %if play:
 * Q${play["quarter"]} ${play["scoringTeam"]["abbreviation"]} ${play["shortDescription"]} - Score: ${max(x["visitorScore"], x["homeScore"])}-${min(x["visitorScore"], x["homeScore"])} \
