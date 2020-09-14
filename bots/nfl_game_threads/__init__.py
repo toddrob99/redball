@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.7.3-alpha"
+__version__ = "1.0.7.4"
 
 DATA_LOCK = threading.Lock()
 
@@ -187,6 +187,15 @@ class Bot(object):
                 break
             self.log.info("Configured team: {}".format(self.myTeam["fullName"]))
             self.log.debug(f"self.myTeam: {self.myTeam}")
+
+            # Get other teams in my team's division
+            self.otherDivisionTeams = [
+                x
+                for x in self.allTeams
+                if x["division"]["abbr"]
+                == self.myTeam["division"]["abbr"]
+                and x["id"] != self.myTeam["id"]
+            ]
 
             # Get current week and games
             if todayOverrideFlag:
@@ -912,8 +921,8 @@ class Bot(object):
                         and any(
                             (
                                 True
-                                for divTeamId in self.otherDivisionTeams
-                                if divTeamId["id"]
+                                for divTeam in self.otherDivisionTeams
+                                if divTeam["id"]
                                 in [x["visitorTeam"]["id"], x["homeTeam"]["id"]]
                             )
                         )
@@ -1294,8 +1303,8 @@ class Bot(object):
                         and any(
                             (
                                 True
-                                for divTeamId in self.otherDivisionTeams
-                                if divTeamId["id"]
+                                for divTeam in self.otherDivisionTeams
+                                if divTeam["id"]
                                 in [x["visitorTeam"]["id"], x["homeTeam"]["id"]]
                             )
                         )
@@ -1632,8 +1641,8 @@ class Bot(object):
                         and any(
                             (
                                 True
-                                for divTeamId in self.otherDivisionTeams
-                                if divTeamId["id"]
+                                for divTeam in self.otherDivisionTeams
+                                if divTeam["id"]
                                 in [x["visitorTeam"]["id"], x["homeTeam"]["id"]]
                             )
                         )

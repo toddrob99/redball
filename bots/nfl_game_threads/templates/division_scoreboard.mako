@@ -33,7 +33,7 @@ ${'##'} Division Scoreboard
 %>\
 |${qtrDesc[game["gameStatus"]["period"]] if game["gameStatus"]["period"] else ""} ${game["gameStatus"]["gameClock"] if game["gameStatus"]["phase"] == "INGAME" else gameStatusDesc[game["gameStatus"]["phase"]] if game["gameStatus"]["phase"] != "PREGAME" else formattedGameTime}||
 |:--|:--|
-|${game["visitorTeam"]["abbr"]}${" &#127944;" if game["gameStatus"]["possessionTeam"] and game["gameStatus"]["possessionTeam"]["id"] == game["visitorTeam"]["id"] else ""}|${game['visitorTeamScore'].get('pointsTotal', 0) if game["gameStatus"]["phase"] != "PREGAME" else ""}|
-|${game["homeTeam"]["abbr"]}${" &#127944;" if game["gameStatus"]["possessionTeam"] and game["gameStatus"]["possessionTeam"]["id"] == game["homeTeam"]["id"] else ""}|${game['homeTeamScore'].get('pointsTotal', 0) if game["gameStatus"]["phase"] != "PREGAME" else ""}|
+|${game["visitorTeam"]["abbr"]}${" &#127944;" if game["gameStatus"]["possessionTeam"] and game["gameStatus"]["possessionTeam"]["abbr"] == game["visitorTeam"]["abbr"] else ""}|${game['visitorTeamScore'].get('pointsTotal', 0) if game["gameStatus"]["phase"] != "PREGAME" else ""}|
+|${game["homeTeam"]["abbr"]}${" &#127944;" if game["gameStatus"]["possessionTeam"] and game["gameStatus"]["possessionTeam"]["abbr"] == game["homeTeam"]["abbr"] else ""}|${game['homeTeamScore'].get('pointsTotal', 0) if game["gameStatus"]["phase"] != "PREGAME" else ""}|
 % endfor
 % endif  # if len(divGames)
