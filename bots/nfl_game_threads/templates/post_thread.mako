@@ -83,7 +83,7 @@ ${data["oppTeam"]["nickName"]}
 %endif
 
 ## Date/Time
-Game Time: ${data["gameTime"]["myTeam"].strftime(settings.get("Tailgate Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y @ %I:%M %p %Z"))}
+Game Time: ${data["gameTime"]["myTeam"].strftime(settings.get("Post Game Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y @ %I:%M %p %Z"))}
 
 Venue: ${game["venue"]["name"]}
 

@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.7.4"
+__version__ = "1.0.7.5"
 
 DATA_LOCK = threading.Lock()
 
@@ -192,8 +192,7 @@ class Bot(object):
             self.otherDivisionTeams = [
                 x
                 for x in self.allTeams
-                if x["division"]["abbr"]
-                == self.myTeam["division"]["abbr"]
+                if x["division"]["abbr"] == self.myTeam["division"]["abbr"]
                 and x["id"] != self.myTeam["id"]
             ]
 
