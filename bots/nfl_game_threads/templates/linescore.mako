@@ -22,7 +22,7 @@
         visitorLine = f'|{visitorTeam["nickName"]}|'
         #homeLine = f'|{homeTeam["nickName"]}|{hs.get("pointsQ1", "")}|{hs.get("pointsQ2", "")}|{hs.get("pointsQ3", "")}|{hs.get("pointsQ4", "")}|'
         homeLine = f'|{homeTeam["nickName"]}|'
-        for qtr in [str(q) for q in range(1, (game["gameStatus"]["period"] if game["gameStatus"]["phase"] == "INGAME" else 2 if game["gameStatus"]["phase"] == "HALFTIME" else 4) + 1)]:
+        for qtr in [str(q) for q in range(1, (game["gameStatus"]["period"] if game["gameStatus"]["period"] and game["gameStatus"]["phase"] == "INGAME" else 2 if game["gameStatus"]["period"] and game["gameStatus"]["phase"] == "HALFTIME" else 1 if not game["gameStatus"]["period"] else 4) + 1)]:
             headerLine += f"Q{qtr}|"
             alignmentLine += ":--|"
             visitorLine += f"{vs.get('pointsQ'+qtr, '')}|"

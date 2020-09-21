@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.7.5"
+__version__ = "1.0.8"
 
 DATA_LOCK = threading.Lock()
 
@@ -1734,6 +1734,15 @@ class Bot(object):
                 ),
                 None,
             )
+            if not self.allData.get("gameDetailId"):
+                gameById = self.nfl.gameById(gameId=self.allData["gameId"])
+                self.allData.update(
+                    {
+                        "gameDetailId": gameById["data"]["viewer"]["game"][
+                            "gameDetailId"
+                        ],
+                    }
+                )
             self.log.debug(
                 f"self.allData['gameDetailId']: {self.allData['gameDetailId']}; self.allData['gameId']: {self.allData['gameId']}; "
             )

@@ -62,7 +62,7 @@ ${'##'} Game Status\
 ${f" - {qtrDesc[data['gameDetails']['period']]}" if data["gameDetails"].get("period") else ""} - \
 ${game["gameStatus"]["gameClock"]}
 
-% if game["gameStatus"].get("possessionTeam"):
+% if game["gameStatus"].get("possessionTeam") and game["gameStatus"].get("down"):
 ${game["gameStatus"].get("possessionTeam", {}).get("abbr")} &#127944; \
 ${downDesc[game["gameStatus"]["down"]]} and ${"Goal" if game["gameStatus"].get("goalToGo") else game["gameStatus"]["yardsToGo"]} @ \
 ${game["gameStatus"].get("yardLineSide", "")} ${game["gameStatus"].get("yardLineNumber", "")} yard line

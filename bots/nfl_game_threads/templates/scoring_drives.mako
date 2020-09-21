@@ -1,7 +1,7 @@
 <%
     game = data["todayGames"][data["myGameIndex"]]
 %>\
-%if len(data["gameDetails"].get("scoringSummaries", [])) > 0:
+%if len(data["gameDetails"].get("scoringSummaries", [])) > 0 and not (len(data["gameDetails"]["scoringSummaries"]) == 1 and data["gameDetails"]["scoringSummaries"][0]["playId"] == 0):
 ${'##'} Scoring Summary
 |Qtr|Team|Type|Description|Score|
 |:--|:--|:--|:--|:--|

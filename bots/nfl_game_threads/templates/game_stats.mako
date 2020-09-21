@@ -63,8 +63,8 @@
     # Pass yds
     pass_headerRow += "Yds Tot/Avg|"
     pass_alignmentRow += ":--|"
-    pass_visitorRow += f'{v["passingNetYards"]}/{v["passingAverageYards"]}|'
-    pass_homeRow += f'{h["passingNetYards"]}/{h["passingAverageYards"]}|'
+    pass_visitorRow += f'{v["passingNetYards"]}/{v["passingAverageYards"] if v["passingAverageYards"] else 0}|'
+    pass_homeRow += f'{h["passingNetYards"]}/{h["passingAverageYards"] if h["passingAverageYards"] else 0}|'
 
     # Pass 1st downs
     pass_headerRow += "1st Dn|"
@@ -105,8 +105,8 @@
     # Rushing yds
     rush_headerRow += "Yds Tot/Avg|"
     rush_alignmentRow += ":--|"
-    rush_visitorRow += f'{v["rushingYards"]}/{v["rushingAverageYards"]}|'
-    rush_homeRow += f'{h["rushingYards"]}/{h["rushingAverageYards"]}|'
+    rush_visitorRow += f'{v["rushingYards"]}/{v["rushingAverageYards"] if v["rushingAverageYards"] else 0}|'
+    rush_homeRow += f'{h["rushingYards"]}/{h["rushingAverageYards"] if h["rushingAverageYards"] else 0}|'
 
     # Rushing 1st downs
     rush_headerRow += "1st Dn|"

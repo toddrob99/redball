@@ -1,0 +1,78 @@
+{
+    "Bot": [
+        {
+            "key": "DISCORD_TOKEN",
+            "description": "Access token for Discord API.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "COMMAND_PREFIX",
+            "description": "Prefix for discord commands.",
+            "type": "str",
+            "val": "rb!",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        }
+    ],
+    "Logging": [
+        {
+            "key": "CONSOLE_LOG_LEVEL",
+            "description": "Console Log Level",
+            "type": "str",
+            "val": "DEBUG",
+            "options": ["DEBUG", "INFO", "WARNING", "ERROR"],
+            "subkeys": [],
+            "parent_key": "LOG_TO_CONSOLE"
+        },
+        {
+            "key": "FILE_LOG_LEVEL",
+            "description": "File Log Level",
+            "type": "str",
+            "val": "DEBUG",
+            "options": ["DEBUG", "INFO", "WARNING", "ERROR"],
+            "subkeys": [],
+            "parent_key": "LOG_TO_FILE"
+        },
+        {
+            "key": "LOG_TO_CONSOLE",
+            "description": "Log to Console",
+            "type": "bool",
+            "val": true,
+            "options": [true, false],
+            "subkeys": ["CONSOLE_LOG_LEVEL"],
+            "parent_key": ""
+        },
+        {
+            "key": "LOG_TO_FILE",
+            "description": "Log to File",
+            "type": "bool",
+            "val": true,
+            "options": [true, false],
+            "subkeys": ["FILE_LOG_LEVEL", "LOG_RETENTION"],
+            "parent_key": ""
+        },
+        {
+            "key": "LOG_RETENTION",
+            "description": "Log File Retention (Days)",
+            "type": "int",
+            "val": 7,
+            "options": [],
+            "subkeys": [],
+            "parent_key": "LOG_TO_FILE"
+        },
+        {
+            "key": "PROPAGATE",
+            "description": "Propagate Logs",
+            "type": "bool",
+            "val": false,
+            "options": [true, false],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ]
+}
