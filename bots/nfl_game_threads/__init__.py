@@ -25,13 +25,13 @@ import os
 from mako.lookup import TemplateLookup
 import mako.exceptions
 
-import nflapi
+from . import mynflapi
 import pyprowl
 import twitter
 
 import praw
 
-__version__ = "1.0.8"
+__version__ = "1.0.8.1"
 
 DATA_LOCK = threading.Lock()
 
@@ -151,8 +151,10 @@ class Bot(object):
             self.log.debug("Today is {}".format(self.today["Y-m-d"]))
 
             # (Re-)Initialize NFL API
-            self.log.debug(f"Initializing NFL API with nflapi v{nflapi.__version__}")
-            self.nfl = nflapi.APISession(self.getNflToken())
+            self.log.debug(
+                f"Initializing NFL API with mynflapi v{mynflapi.__version__}"
+            )
+            self.nfl = mynflapi.APISession(self.getNflToken())
             # Start a scheduled task to refresh NFL API token before it expires
             self.SCHEDULER.add_job(
                 self.getNflToken,
@@ -1712,7 +1714,7 @@ class Bot(object):
                 )
                 return False
             else:
-                self.log.debug(f"Collecting data with nflapi v{nflapi.__version__}")
+                self.log.debug(f"Collecting data with mynflapi v{mynflapi.__version__}")
 
             # Collect the data...
             currentWeekGames = self.nfl.gamesByWeek(
