@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.2.4"
+__version__ = "1.0.3"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -174,6 +174,7 @@ class Bot(object):
 
             # Get season state
             self.seasonState = self.get_seasonState(self.myTeam["id"])
+            self.log.debug("Season state: {}".format(self.seasonState))
 
             # Get today's games
             todayGamePks = self.get_gamePks(t=self.myTeam["id"], d=self.today["Y-m-d"])
@@ -181,8 +182,6 @@ class Bot(object):
             self.activeGames = {}  # Clear yesterday's flags
             self.commonData = {}  # Clear data dict every day to save memory
             self.collect_data(0)  # Collect generic data
-
-            self.log.debug("Season state: {}".format(self.seasonState))
 
             # Weekly thread
             if self.settings.get("Weekly Thread", {}).get("ENABLED", True):
@@ -3674,14 +3673,14 @@ class Bot(object):
             seasonInfo = self.api_call("seasons", {"season": season, "sportId": 1})[
                 "seasons"
             ]
-            if len(seasonInfo):
+            if len(seasonInfo) and seasonInfo[0].get("seasonStartDate"):
                 seasonInfo = seasonInfo[0]
                 start_date = (
-                    datetime.strptime(seasonInfo["preSeasonStartDate"], "%Y-%m-%d")
+                    datetime.strptime(seasonInfo["seasonStartDate"], "%Y-%m-%d")
                     - timedelta(days=3)
                 ).strftime("%Y-%m-%d")
                 end_date = (
-                    datetime.strptime(seasonInfo["preSeasonStartDate"], "%Y-%m-%d")
+                    datetime.strptime(seasonInfo["seasonStartDate"], "%Y-%m-%d")
                     + timedelta(days=7)
                 ).strftime("%Y-%m-%d")
             else:
