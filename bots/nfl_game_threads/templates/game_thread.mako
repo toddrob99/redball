@@ -19,6 +19,16 @@
         3: "3rd",
         4: "4th",
     }
+    oppHomeVisitor = "visitor" if data["homeVisitor"] == "home" else "home"
+    if game["gameStatus"]["phase"] in ["FINAL", "FINAL_OVERTIME"]:
+        result = (
+            "tie" if game[data["homeVisitor"] + "TeamScore"]["pointsTotal"] == game[oppHomeVisitor + "TeamScore"]["pointsTotal"]
+            else "win" if game[data["homeVisitor"] + "TeamScore"]["pointsTotal"] > game[oppHomeVisitor + "TeamScore"]["pointsTotal"]
+            else "loss" if game[data["homeVisitor"] + "TeamScore"]["pointsTotal"] < game[oppHomeVisitor + "TeamScore"]["pointsTotal"]
+            else ""
+        )
+    else:
+        result = None
 %>\
 ## Week
 %if data["currentWeek"]["weekType"] == "HOF":
@@ -55,7 +65,7 @@ ${game["homeTeam"]["fullName"]}
 ## Date/Time
 Game Time: ${data["gameTime"]["myTeam"].strftime(settings.get("Game Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y @ %I:%M %p %Z"))}
 
-Venue: ${game["venue"]["name"]}
+<%include file="venue_weather.mako" />
 
 %if game["gameStatus"]["phase"] == "INGAME":
 ${'##'} Game Status\
@@ -69,6 +79,18 @@ ${game["gameStatus"].get("yardLineSide", "")} ${game["gameStatus"].get("yardLine
 % endif
 %elif game["gameStatus"]["phase"] == "HALFTIME":
 ${'##'} Game Status: HALFTIME
+%elif result:
+${'##'} Final Score${f" (Overtime)" if game["gameStatus"]["phase"] == "FINAL_OVERTIME" else ""}: \
+${max(int(game[data["homeVisitor"] + "TeamScore"]["pointsTotal"]), int(game[oppHomeVisitor + "TeamScore"]["pointsTotal"]))}\
+-\
+${min(int(game[data["homeVisitor"] + "TeamScore"]["pointsTotal"]), int(game[oppHomeVisitor + "TeamScore"]["pointsTotal"]))} \
+%if result == "tie":
+TIE
+%elif result == "win":
+${data["myTeam"]["nickName"]}
+%elif result == "loss":
+${data["oppTeam"]["nickName"]}
+%endif
 %endif
 
 %if game["gameStatus"]["phase"] in ["INGAME", "HALFTIME", "FINAL", "FINAL_OVERTIME"]:
@@ -79,6 +101,8 @@ ${'##'} Game Status: HALFTIME
 %if game["gameStatus"]["phase"] != "PREGAME":
 
 <%include file="scoring_drives.mako" />
+##
+##<%include file="drive_summary.mako" />
 
 <%include file="game_stats.mako" />
 %endif

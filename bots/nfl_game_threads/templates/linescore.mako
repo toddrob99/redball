@@ -23,7 +23,7 @@
         #homeLine = f'|{homeTeam["nickName"]}|{hs.get("pointsQ1", "")}|{hs.get("pointsQ2", "")}|{hs.get("pointsQ3", "")}|{hs.get("pointsQ4", "")}|'
         homeLine = f'|{homeTeam["nickName"]}|'
         for qtr in [str(q) for q in range(1, (
-                game["gameStatus"]["period"] if game["gameStatus"]["period"] and game["gameStatus"]["phase"] == "INGAME"
+                game["gameStatus"]["period"] if isinstance(game["gameStatus"]["period"], int) and game["gameStatus"]["period"] <= 4
                 else 2 if game["gameStatus"]["phase"] == "HALFTIME"
                 else 4
             ) + 1)]:
@@ -31,18 +31,18 @@
             alignmentLine += ":--|"
             visitorLine += f"{vs.get('pointsQ'+qtr, '')}|"
             homeLine += f"{hs.get('pointsQ'+qtr, '')}|"
-        if game["gameStatus"]["phase"] == "FINAL_OVERTIME" or vs.get("pointsOvertime", {}).get("pointsOvertimeTotal", 0) > 0 or hs.get("pointsOvertime", {}).get("pointsOvertimeTotal", 0) > 0:
+        if game["gameStatus"]["phase"] == "FINAL_OVERTIME" or (isinstance(game["gameStatus"]["period"], int) and game["gameStatus"]["period"] > 4):
             for i, x in [(i, x) for i, x in enumerate(vs.get("pointsOvertime", {}).get("data", []))]:
                 if len(vs.get("pointsOvertime", {}).get("data", [])) > 1:
                     headerLine += f"OT{i+1}|"
                     alignmentLine += ":--|"
                     visitorLine += f"{x}|"
-                    homeLine += f'{hs.get("pointsOvertime", {}).get("data", [])[i]}|'
+                    homeLine += f'{hs.get("pointsOvertime", {}).get("data", [0])[i]}|'
                 else:
                     headerLine += f"OT|"
                     alignmentLine += ":--|"
                     visitorLine += f"{x}|"
-                    homeLine += f'{hs.get("pointsOvertime", {}).get("data", [])[i]}|'
+                    homeLine += f'{hs.get("pointsOvertime", {}).get("data", [0])[i]}|'
         headerLine += "|TOTAL|"
         alignmentLine += ":--|:--|"
         visitorLine += f"|{vs['pointsTotal']}|"
