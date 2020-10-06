@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.9"
+__version__ = "1.0.9.1"
 
 DATA_LOCK = threading.Lock()
 
