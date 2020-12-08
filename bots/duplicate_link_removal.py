@@ -14,7 +14,7 @@ import praw
 import requests
 import sqlite3
 
-__version__ = "1.0.7-alpha"
+__version__ = "1.0.8"
 
 tl = threading.local()
 
@@ -154,6 +154,12 @@ def run(bot, settings):
                         tl.log.debug(f"Post [{newPost.id}] is a self post--skipping.")
                         ignoredPostIdCache.append(newPost.id)
                         continue
+                    elif newPost.is_reddit_media_domain:
+                        tl.log.debug(
+                            f"Post [{newPost.id}] is a reddit media domain--skipping."
+                        )
+                        ignoredPostIdCache.append(newPost.id)
+                        continue
                     elif next(
                         (
                             True
@@ -168,6 +174,16 @@ def run(bot, settings):
                         ignoredPostIdCache.append(newPost.id)
                         q = None
                     else:
+                        try:
+                            if newPost.is_gallery:
+                                tl.log.debug(
+                                    f"Post [{newPost.id}] is a gallery--skipping."
+                                )
+                                ignoredPostIdCache.append(newPost.id)
+                                continue
+                        except AttributeError:
+                            pass
+
                         tl.log.debug(
                             f"Post [{newPost.id}] has a non-ignored domain link [{newPost.url}]..."
                         )
