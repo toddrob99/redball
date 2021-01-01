@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.3"
+__version__ = "1.0.3.1"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -3573,21 +3573,31 @@ class Bot(object):
         self.log.debug(
             f"myteam league seasondateinfo: {self.myTeam['league']['seasonDateInfo']}"
         )
-        if (
-            datetime.strptime(
-                self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
-                "%Y-%m-%d",
-            )
-            <= datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d")
+        if self.myTeam["league"]["seasonDateInfo"].get(
+            "preSeasonStartDate"
+        ) and datetime.strptime(
+            self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"], "%Y-%m-%d",
+        ) <= datetime.strptime(
+            self.today["Y-m-d"], "%Y-%m-%d"
+        ) < datetime.strptime(
+            self.myTeam["league"]["seasonDateInfo"]["regularSeasonStartDate"],
+            "%Y-%m-%d",
+        ):
+            # Preseason (includes day or two in between pre and regular season)
+            return "pre"
+        elif (
+            not self.myTeam["league"]["seasonDateInfo"].get("preSeasonStartDate")
+            and datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d")
             < datetime.strptime(
                 self.myTeam["league"]["seasonDateInfo"]["regularSeasonStartDate"],
                 "%Y-%m-%d",
             )
-        ):
-            # Preseason (includes day or two in between pre and regular season)
-            return "pre"
-        elif datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d") < datetime.strptime(
-            self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"], "%Y-%m-%d"
+        ) or (
+            datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d")
+            < datetime.strptime(
+                self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
+                "%Y-%m-%d",
+            )
         ):
             # Offseason (prior to season)
             return "off:before"
@@ -3648,20 +3658,23 @@ class Bot(object):
 
         if seasonState == "off:before":
             season = int(self.today["Y"])
-            start_date = (
+            the_date = (
                 datetime.strptime(
                     self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
                     "%Y-%m-%d",
                 )
-                - timedelta(days=3)
-            ).strftime("%Y-%m-%d")
-            end_date = (
-                datetime.strptime(
-                    self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
-                    "%Y-%m-%d",
+                if self.myTeam["league"]["seasonDateInfo"].get("preSeasonStartDate")
+                else (
+                    datetime.strptime(
+                        self.myTeam["league"]["seasonDateInfo"][
+                            "regularSeasonStartDate"
+                        ],
+                        "%Y-%m-%d",
+                    )
                 )
-                + timedelta(days=7)
-            ).strftime("%Y-%m-%d")
+            )
+            start_date = (the_date - timedelta(days=3)).strftime("%Y-%m-%d")
+            end_date = (the_date + timedelta(days=7)).strftime("%Y-%m-%d")
         elif seasonState in ["pre", "regular", "post:in"]:
             season = int(self.today["Y"])
             start_date = self.today["Y-m-d"]
