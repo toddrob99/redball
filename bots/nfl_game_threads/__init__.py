@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.9.2"
+__version__ = "1.0.9.3"
 
 DATA_LOCK = threading.Lock()
 
@@ -148,7 +148,14 @@ class Bot(object):
                 "Ymd": todayObj.strftime("%Y%m%d"),
                 "Y": todayObj.strftime("%Y"),
             }
-            self.log.debug("Today is {}".format(self.today["Y-m-d"]))
+            self.today.update({
+                "season": (
+                    int(self.today["Y"]) - 1
+                    if int(self.today["Y-m-d"].split("-")[1]) < 4
+                    else self.today["Y"]
+                )
+            })
+            self.log.debug(f"Today is {self.today['Y-m-d']}. Season: {self.today['season']}.")
 
             # (Re-)Initialize NFL API
             self.log.debug(
@@ -170,7 +177,7 @@ class Bot(object):
                 self.bot.STOP = True
                 break
 
-            self.allTeams = self.nfl.teams(season=self.today["Y"])["data"]
+            self.allTeams = self.nfl.teams(season=self.today["season"])["data"]
 
             self.myTeam = next(
                 (
@@ -205,7 +212,7 @@ class Bot(object):
                 )
                 currentWeekGames = self.nfl.gamesByWeek(
                     season=self.settings.get("NFL", {}).get(
-                        "SEASON_OVERRIDE", self.today["Y"]
+                        "SEASON_OVERRIDE", self.today["season"]
                     ),
                     week=self.settings.get("NFL", {}).get("WEEK_OVERRIDE", 0),
                     seasonType=self.settings.get("NFL", {}).get(
@@ -219,7 +226,7 @@ class Bot(object):
                         "id": "unknown",
                         "season": int(
                             self.settings.get("NFL", {}).get(
-                                "SEASON_OVERRIDE", self.today["Y"]
+                                "SEASON_OVERRIDE", self.today["season"]
                             )
                         ),
                         "seasonType": self.settings.get("NFL", {}).get(
