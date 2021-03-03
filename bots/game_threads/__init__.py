@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.3.1"
+__version__ = "1.0.3.2"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -2720,7 +2720,7 @@ class Bot(object):
             for atBat in (
                 a
                 for a in self.commonData[pk]["gumbo"]["liveData"]["plays"]["allPlays"]
-                if a["atBatIndex"]
+                if a.get("atBatIndex") and a["atBatIndex"]
                 >= max([int(k) for k in processedAtBats.keys()], default=0)
             ):
                 if redball.SIGNAL is not None or self.bot.STOP:
