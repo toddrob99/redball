@@ -573,7 +573,7 @@ def create_redditAuth(**kwargs):
                     kwargs["description"], insert_id
                 )
             )
-            redball.REDDIT_AUTH_LOCKS.update({insert_id: Lock()})
+            redball.REDDIT_AUTH_LOCKS.update({str(insert_id): Lock()})
         else:
             insert_id = "ERROR: Failed to insert record."
 
