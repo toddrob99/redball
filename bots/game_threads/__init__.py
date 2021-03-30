@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.1"
+__version__ = "1.1.0.1"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -6041,7 +6041,7 @@ class Bot(object):
 
     def init_reddit(self):
         self.log.debug(f"Initiating Reddit API with praw v{praw.__version__}...")
-        with redball.REDDIT_AUTH_LOCKS[self.bot.redditAuth]:
+        with redball.REDDIT_AUTH_LOCKS[str(self.bot.redditAuth)]:
             try:
                 self.reddit = praw.Reddit(
                     client_id=self.settings["Reddit Auth"]["reddit_clientId"],

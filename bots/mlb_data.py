@@ -16,7 +16,7 @@ import time
 import redball
 from redball import logger
 
-__version__ = "1.1"
+__version__ = "1.1.0.1"
 
 tl = threading.local()
 
@@ -47,7 +47,7 @@ class StatBot:
         self.comments = {}
 
         self.log.info("Initializing Reddit API...")
-        with redball.REDDIT_AUTH_LOCKS[self.bot.redditAuth]:
+        with redball.REDDIT_AUTH_LOCKS[str(self.bot.redditAuth)]:
             try:
                 self.r = praw.Reddit(
                     client_id=reddit_clientId,

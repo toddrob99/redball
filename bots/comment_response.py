@@ -14,7 +14,7 @@ import praw
 import sqlite3
 import time
 
-__version__ = "1.1"
+__version__ = "1.1.0.1"
 
 tl = threading.local()
 
@@ -50,7 +50,7 @@ def run(bot, settings):
     comments = {}
 
     tl.log.info("Initializing Reddit API...")
-    with redball.REDDIT_AUTH_LOCKS[bot.redditAuth]:
+    with redball.REDDIT_AUTH_LOCKS[str(bot.redditAuth)]:
         try:
             r = praw.Reddit(
                 client_id=settings["Reddit Auth"]["reddit_clientId"],
