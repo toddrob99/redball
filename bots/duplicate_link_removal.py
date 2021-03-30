@@ -14,7 +14,7 @@ import praw
 import requests
 import sqlite3
 
-__version__ = "1.0.8"
+__version__ = "1.1"
 
 tl = threading.local()
 
@@ -57,27 +57,28 @@ def run(bot, settings):
     ignoredPostIdCache = []
 
     tl.log.info("Initializing Reddit API...")
-    try:
-        r = praw.Reddit(
-            client_id=settings["Reddit Auth"]["reddit_clientId"],
-            client_secret=settings["Reddit Auth"]["reddit_clientSecret"],
-            refresh_token=settings["Reddit Auth"]["reddit_refreshToken"],
-            user_agent=f"redball Duplicate Link Removal Bot - https://github.com/toddrob99/redball/ v{__version__}",
-        )
-    except Exception as e:
-        tl.log.error(
-            f"Error authenticating with Reddit. Ensure the bot has a valid Reddit Auth selected (with Refresh Token) and try again. Error message: {e}"
-        )
-        raise
+    with redball.REDDIT_AUTH_LOCKS[bot.redditAuth]:
+        try:
+            r = praw.Reddit(
+                client_id=settings["Reddit Auth"]["reddit_clientId"],
+                client_secret=settings["Reddit Auth"]["reddit_clientSecret"],
+                token_manager=bot.reddit_auth_token_manager,
+                user_agent=f"redball Duplicate Link Removal Bot - https://github.com/toddrob99/redball/ v{__version__}",
+            )
+        except Exception as e:
+            tl.log.error(
+                f"Error authenticating with Reddit. Ensure the bot has a valid Reddit Auth selected (with Refresh Token) and try again. Error message: {e}"
+            )
+            raise
 
-    try:
-        if "identity" in r.auth.scopes():
-            tl.log.info(f"Authorized Reddit user: {r.user.me()}")
-    except Exception as e:
-        tl.log.error(
-            f"Reddit authentication failure. Ensure the bot has a valid Reddit Auth selected (with Refresh Token and relevant scopes selected) and try again. Error message: {e}"
-        )
-        raise
+        try:
+            if "identity" in r.auth.scopes():
+                tl.log.info(f"Authorized Reddit user: {r.user.me()}")
+        except Exception as e:
+            tl.log.error(
+                f"Reddit authentication failure. Ensure the bot has a valid Reddit Auth selected (with Refresh Token and relevant scopes selected) and try again. Error message: {e}"
+            )
+            raise
 
     try:
         db = sqlite3.connect(

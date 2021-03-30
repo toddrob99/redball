@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.9.3"
+__version__ = "1.1"
 
 DATA_LOCK = threading.Lock()
 
@@ -148,14 +148,18 @@ class Bot(object):
                 "Ymd": todayObj.strftime("%Y%m%d"),
                 "Y": todayObj.strftime("%Y"),
             }
-            self.today.update({
-                "season": (
-                    int(self.today["Y"]) - 1
-                    if int(self.today["Y-m-d"].split("-")[1]) < 4
-                    else self.today["Y"]
-                )
-            })
-            self.log.debug(f"Today is {self.today['Y-m-d']}. Season: {self.today['season']}.")
+            self.today.update(
+                {
+                    "season": (
+                        int(self.today["Y"]) - 1
+                        if int(self.today["Y-m-d"].split("-")[1]) < 4
+                        else self.today["Y"]
+                    )
+                }
+            )
+            self.log.debug(
+                f"Today is {self.today['Y-m-d']}. Season: {self.today['season']}."
+            )
 
             # (Re-)Initialize NFL API
             self.log.debug(
@@ -2543,44 +2547,45 @@ class Bot(object):
 
     def init_reddit(self):
         self.log.debug(f"Initializing Reddit API with praw v{praw.__version__}...")
-        try:
-            self.reddit = praw.Reddit(
-                client_id=self.settings["Reddit Auth"]["reddit_clientId"],
-                client_secret=self.settings["Reddit Auth"]["reddit_clientSecret"],
-                refresh_token=self.settings["Reddit Auth"]["reddit_refreshToken"],
-                user_agent="redball Football Game Thread Bot - https://github.com/toddrob99/redball/ - r/{}".format(
-                    self.settings["Reddit"].get("SUBREDDIT", "")
-                ),
-            )
-        except Exception as e:
-            self.log.error(
-                "Error encountered attempting to initialize Reddit: {}".format(e)
-            )
-            self.error_notification("Error initializing Reddit")
-            raise
-
-        scopes = [
-            "identity",
-            "submit",
-            "edit",
-            "read",
-            "modposts",
-            "privatemessages",
-            "flair",
-            "modflair",
-        ]
-        try:
-            praw_scopes = self.reddit.auth.scopes()
-        except Exception as e:
-            self.log.error(
-                "Error encountered attempting to look up authorized Reddit scopes: {}".format(
-                    e
+        with redball.REDDIT_AUTH_LOCKS[self.bot.redditAuth]:
+            try:
+                self.reddit = praw.Reddit(
+                    client_id=self.settings["Reddit Auth"]["reddit_clientId"],
+                    client_secret=self.settings["Reddit Auth"]["reddit_clientSecret"],
+                    token_manager=self.bot.reddit_auth_token_manager,
+                    user_agent="redball Football Game Thread Bot - https://github.com/toddrob99/redball/ - r/{}".format(
+                        self.settings["Reddit"].get("SUBREDDIT", "")
+                    ),
                 )
-            )
-            self.error_notification(
-                "Error encountered attempting to look up authorized Reddit scopes"
-            )
-            raise
+            except Exception as e:
+                self.log.error(
+                    "Error encountered attempting to initialize Reddit: {}".format(e)
+                )
+                self.error_notification("Error initializing Reddit")
+                raise
+
+            scopes = [
+                "identity",
+                "submit",
+                "edit",
+                "read",
+                "modposts",
+                "privatemessages",
+                "flair",
+                "modflair",
+            ]
+            try:
+                praw_scopes = self.reddit.auth.scopes()
+            except Exception as e:
+                self.log.error(
+                    "Error encountered attempting to look up authorized Reddit scopes: {}".format(
+                        e
+                    )
+                )
+                self.error_notification(
+                    "Error encountered attempting to look up authorized Reddit scopes"
+                )
+                raise
 
         missing_scopes = []
         self.log.debug("Reddit authorized scopes: {}".format(praw_scopes))

@@ -77,6 +77,9 @@ class Bot(object):
 
             log.info("Starting bot {} (id={}).".format(self.name, self.id))
             botArgs = self.get_config()
+            self.reddit_auth_token_manager = config.RedditAuthDBTokenManager(
+                self.redditAuth
+            )
             self.thread = threading.Thread(
                 target=self.botMod.run,
                 args=(self, botArgs),
@@ -226,8 +229,12 @@ class Bot(object):
             config.add_default_bot_config(insert_id, con, cur)
 
             botTypeInfo = config.get_botTypes(botType)
-            defaultSettingsFile = os.path.join(redball.BOT_PATH, f"{botTypeInfo['moduleName']}_config.json")
-            log.debug(f"Default settings file for botType {botTypeInfo['name']}: {defaultSettingsFile}")
+            defaultSettingsFile = os.path.join(
+                redball.BOT_PATH, f"{botTypeInfo['moduleName']}_config.json"
+            )
+            log.debug(
+                f"Default settings file for botType {botTypeInfo['name']}: {defaultSettingsFile}"
+            )
             if os.path.isfile(defaultSettingsFile):
                 try:
                     with open(defaultSettingsFile) as f:
@@ -239,7 +246,9 @@ class Bot(object):
                     defaultSettings = {}
 
                 if len(defaultSettings):
-                    log.debug(f"Loaded default settings for botType {botTypeInfo['name']}: {defaultSettings}. Adding to bot {insert_id}...")
+                    log.debug(
+                        f"Loaded default settings for botType {botTypeInfo['name']}: {defaultSettings}. Adding to bot {insert_id}..."
+                    )
                     result = config.add_bot_config(
                         botId=insert_id,
                         multi=defaultSettings,
@@ -250,9 +259,13 @@ class Bot(object):
                         closeAfter=False,
                     )
                 else:
-                    log.debug(f"No default settings found in the json file for botType {botTypeInfo['name']}.")
+                    log.debug(
+                        f"No default settings found in the json file for botType {botTypeInfo['name']}."
+                    )
             else:
-                log.warning(f"No default settings json file found for [{botTypeInfo['description']}] bot type.")
+                log.warning(
+                    f"No default settings json file found for [{botTypeInfo['description']}] bot type."
+                )
 
             # Create privileges and grant to creator
             q = """INSERT INTO rb_privileges ('privilege', 'description')
@@ -281,7 +294,6 @@ class Bot(object):
             "Reddit Auth": {
                 "reddit_clientId": redditInfo["reddit_appId"],
                 "reddit_clientSecret": redditInfo["reddit_appSecret"],
-                "reddit_refreshToken": redditInfo["reddit_refreshToken"],
             },
         }
         for x in (x for x in config.get_bot_config(self.id)):

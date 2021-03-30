@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.3.2"
+__version__ = "1.1"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -2720,7 +2720,8 @@ class Bot(object):
             for atBat in (
                 a
                 for a in self.commonData[pk]["gumbo"]["liveData"]["plays"]["allPlays"]
-                if a.get("atBatIndex") and a["atBatIndex"]
+                if a.get("atBatIndex")
+                and a["atBatIndex"]
                 >= max([int(k) for k in processedAtBats.keys()], default=0)
             ):
                 if redball.SIGNAL is not None or self.bot.STOP:
@@ -6040,44 +6041,45 @@ class Bot(object):
 
     def init_reddit(self):
         self.log.debug(f"Initiating Reddit API with praw v{praw.__version__}...")
-        try:
-            self.reddit = praw.Reddit(
-                client_id=self.settings["Reddit Auth"]["reddit_clientId"],
-                client_secret=self.settings["Reddit Auth"]["reddit_clientSecret"],
-                refresh_token=self.settings["Reddit Auth"]["reddit_refreshToken"],
-                user_agent="redball Baseball Game Thread Bot - https://github.com/toddrob99/redball/ - r/{}".format(
-                    self.settings["Reddit"].get("SUBREDDIT", "")
-                ),
-            )
-        except Exception as e:
-            self.log.error(
-                "Error encountered attempting to initialize Reddit: {}".format(e)
-            )
-            self.error_notification("Error initializing Reddit")
-            raise
-
-        scopes = [
-            "identity",
-            "submit",
-            "edit",
-            "read",
-            "modposts",
-            "privatemessages",
-            "flair",
-            "modflair",
-        ]
-        try:
-            praw_scopes = self.reddit.auth.scopes()
-        except Exception as e:
-            self.log.error(
-                "Error encountered attempting to look up authorized Reddit scopes: {}".format(
-                    e
+        with redball.REDDIT_AUTH_LOCKS[self.bot.redditAuth]:
+            try:
+                self.reddit = praw.Reddit(
+                    client_id=self.settings["Reddit Auth"]["reddit_clientId"],
+                    client_secret=self.settings["Reddit Auth"]["reddit_clientSecret"],
+                    token_manager=self.bot.reddit_auth_token_manager,
+                    user_agent="redball Baseball Game Thread Bot - https://github.com/toddrob99/redball/ - r/{}".format(
+                        self.settings["Reddit"].get("SUBREDDIT", "")
+                    ),
                 )
-            )
-            self.error_notification(
-                "Error encountered attempting to look up authorized Reddit scopes"
-            )
-            raise
+            except Exception as e:
+                self.log.error(
+                    "Error encountered attempting to initialize Reddit: {}".format(e)
+                )
+                self.error_notification("Error initializing Reddit")
+                raise
+
+            scopes = [
+                "identity",
+                "submit",
+                "edit",
+                "read",
+                "modposts",
+                "privatemessages",
+                "flair",
+                "modflair",
+            ]
+            try:
+                praw_scopes = self.reddit.auth.scopes()
+            except Exception as e:
+                self.log.error(
+                    "Error encountered attempting to look up authorized Reddit scopes: {}".format(
+                        e
+                    )
+                )
+                self.error_notification(
+                    "Error encountered attempting to look up authorized Reddit scopes"
+                )
+                raise
 
         missing_scopes = []
         self.log.debug("Reddit authorized scopes: {}".format(praw_scopes))

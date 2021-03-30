@@ -2,6 +2,7 @@
 
 import json
 import praw
+from threading import Lock
 import uuid
 
 import redball
@@ -572,6 +573,7 @@ def create_redditAuth(**kwargs):
                     kwargs["description"], insert_id
                 )
             )
+            redball.REDDIT_AUTH_LOCKS.update({insert_id: Lock()})
         else:
             insert_id = "ERROR: Failed to insert record."
 
@@ -710,6 +712,24 @@ def callBack_redditAuth(state, code):
         return True
     else:
         return False
+
+
+class RedditAuthDBTokenManager(praw.util.token_manager.BaseTokenManager):
+    def __init__(self, redditAuthId):
+        super().__init__()
+        self._reddit_auth_id = redditAuthId
+
+    def post_refresh_callback(self, authorizer):
+        log.debug(f"Storing refresh token: {authorizer.refresh_token}")
+        update_redditAuth(
+            self._reddit_auth_id, reddit_refreshToken=authorizer.refresh_token
+        )
+
+    def pre_refresh_callback(self, authorizer):
+        redditAuthInfo = get_redditAuths(self._reddit_auth_id)
+        freshToken = redditAuthInfo.get("reddit_refreshToken")
+        log.debug(f"Redeeming Reddit refresh token: {freshToken}")
+        authorizer.refresh_token = freshToken
 
 
 def get_redditScopes(id=None, name=None):
