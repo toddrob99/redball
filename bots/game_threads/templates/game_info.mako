@@ -98,8 +98,12 @@ ${tv}
 ${radio}
 * [MLB Gameday](https://www.mlb.com/gameday/${gamePk}/)
 ##* Game Notes: [${data[gamePk]['schedule']['teams']['away']['team']['teamName']}](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=${data[gamePk]['schedule']['teams']['away']['team']['fileCode']}), [${data[gamePk]['schedule']['teams']['home']['team']['teamName']}](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=${data[gamePk]['schedule']['teams']['home']['team']['fileCode']})
-
-% if 1==1 or (data[gamePk]['schedule']['status']['abstractGameCode'] == 'L' and data[gamePk]['schedule']['status']['statusCode'] != 'PW') or data[gamePk]['schedule']['status']['abstractGameCode'] == 'F':
+% if (data[gamePk]['schedule']['status']['abstractGameCode'] == 'L' and data[gamePk]['schedule']['status']['statusCode'] != 'PW') or data[gamePk]['schedule']['status']['abstractGameCode'] == 'F':
 ##* ${'[Strikezone Map](http://www.brooksbaseball.net/pfxVB/zoneTrack.php?month={}&day={}&year={}&game=gid_{})'.format(data[gamePk]['gameTime']['homeTeam'].strftime('%m'), data[gamePk]['gameTime']['homeTeam'].strftime('%d'), data[gamePk]['gameTime']['homeTeam'].strftime('%Y'), data[gamePk]['gumbo']['gameData']['game']['id'].replace('/','_').replace('-','_'))}
 * ${'[Game Graphs](http://www.fangraphs.com/livewins.aspx?date={}&team={}&dh={}&season={})'.format( data[gamePk]['gameTime']['homeTeam'].strftime("%Y-%m-%d"), data[gamePk]['schedule']['teams']['home']['team']['teamName'].replace(' ','%20'), data[gamePk]['schedule']['gameNumber'] if data[gamePk]['schedule']['doubleHeader']!='N' else 0, data[gamePk]['gameTime']['homeTeam'].strftime('%Y'))}
+% endif
+% if data[gamePk]['schedule']['status']['abstractGameCode'] == 'P' or data[gamePk]['schedule']['status']['statusCode'] == 'PW':
+* ${f"[Statcast Game Preview](https://baseballsavant.mlb.com/preview?game_pk={gamePk})"}
+% else:
+* ${f"[Savant Gamefeed](https://baseballsavant.mlb.com/gamefeed?gamePk={gamePk})"}
 % endif
