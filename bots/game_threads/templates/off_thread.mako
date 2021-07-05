@@ -15,6 +15,8 @@ ${'###Around the League' if len(data[0]['leagueSchedule']) else 'Around the Leag
 ## no-no/perfecto watch
 <%include file="no-no_watch.mako" />
 
+% if data[0]['myTeam']['seasonState'] not in ['post:out']:
 <%include file="next_game.mako" />
+% endif
 
 ${settings.get('Off Day Thread',{}).get('FOOTER','')}

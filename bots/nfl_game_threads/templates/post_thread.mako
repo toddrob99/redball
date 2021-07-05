@@ -69,7 +69,7 @@ ${game["visitorTeam"]["fullName"]}${myTeamRecord if data["homeVisitor"] == "visi
 ${game["homeTeam"]["fullName"]}${myTeamRecord if data["homeVisitor"] == "home" else oppTeamRecord}
 
 %if result != "":
-${'##'} Final Score: \
+${'##'} Final Score${f" (Overtime)" if game["gameStatus"]["phase"] == "FINAL_OVERTIME" else ""}: \
 ${max(int(game[data["homeVisitor"] + "TeamScore"]["pointsTotal"]), int(game[oppHomeVisitor + "TeamScore"]["pointsTotal"]))}\
 -\
 ${min(int(game[data["homeVisitor"] + "TeamScore"]["pointsTotal"]), int(game[oppHomeVisitor + "TeamScore"]["pointsTotal"]))} \
@@ -90,6 +90,8 @@ Venue: ${game["venue"]["name"]}
 <%include file="linescore.mako" />
 
 <%include file="scoring_drives.mako" />
+##
+##<%include file="drive_summary.mako" />
 
 <%include file="game_stats.mako" />
 

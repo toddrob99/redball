@@ -389,4 +389,17 @@ upgradeScripts = {
             time.time()
         ),
     ],
+    9: [
+        # Add Discord Bot Template bot type
+        """INSERT OR IGNORE INTO rb_botTypes (name, description, moduleName)
+            VALUES
+            ('discord-bot-template', 'Discord Bot Template', 'discord_bot_template')
+        ;""",
+        # Update Washington Football Team name in NFL Game Thread bot settings
+        """UPDATE rb_botConfig set val=REPLACE(val, 'Redskins', 'Football Team'), options=REPLACE(options, 'Redskins', 'Football Team') WHERE category='NFL' and key='TEAM';""",
+        # Update DB version to 9
+        "UPDATE rb_meta SET val='9', lastUpdate='{}' WHERE key='dbVersion';".format(
+            time.time()
+        ),
+    ],
 }

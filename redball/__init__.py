@@ -112,6 +112,7 @@ LOGGED_IN_USERS = {}
 SIGNAL = None
 DEV = False
 BOTS = {}
+REDDIT_AUTH_LOCKS = {}
 
 
 def startup(suppress_bots=False, dev=False, data_path=None, log_path=None):
@@ -198,6 +199,10 @@ def startup(suppress_bots=False, dev=False, data_path=None, log_path=None):
         console_log_level=logSettings["CONSOLE_LOG_LEVEL"],
         clear_first=True,
     )
+
+    # Create locks for reddit authorization refresh token updates
+    for a in config.get_redditAuths():
+        REDDIT_AUTH_LOCKS.update({str(a["id"]): threading.Lock()})
 
     # Load bot settings
     for b in database.db_qry(

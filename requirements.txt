@@ -9,5 +9,5 @@ pyOpenSSL
 mako
 pyprowl
 python-twitter
-nflapi
 bs4
+discord

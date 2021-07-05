@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.2.3"
+__version__ = "1.1.0.2"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -174,6 +174,7 @@ class Bot(object):
 
             # Get season state
             self.seasonState = self.get_seasonState(self.myTeam["id"])
+            self.log.debug("Season state: {}".format(self.seasonState))
 
             # Get today's games
             todayGamePks = self.get_gamePks(t=self.myTeam["id"], d=self.today["Y-m-d"])
@@ -181,8 +182,6 @@ class Bot(object):
             self.activeGames = {}  # Clear yesterday's flags
             self.commonData = {}  # Clear data dict every day to save memory
             self.collect_data(0)  # Collect generic data
-
-            self.log.debug("Season state: {}".format(self.seasonState))
 
             # Weekly thread
             if self.settings.get("Weekly Thread", {}).get("ENABLED", True):
@@ -2721,7 +2720,8 @@ class Bot(object):
             for atBat in (
                 a
                 for a in self.commonData[pk]["gumbo"]["liveData"]["plays"]["allPlays"]
-                if a["atBatIndex"]
+                if a.get("atBatIndex")
+                and a["atBatIndex"]
                 >= max([int(k) for k in processedAtBats.keys()], default=0)
             ):
                 if redball.SIGNAL is not None or self.bot.STOP:
@@ -3574,21 +3574,31 @@ class Bot(object):
         self.log.debug(
             f"myteam league seasondateinfo: {self.myTeam['league']['seasonDateInfo']}"
         )
-        if (
-            datetime.strptime(
-                self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
-                "%Y-%m-%d",
-            )
-            <= datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d")
+        if self.myTeam["league"]["seasonDateInfo"].get(
+            "preSeasonStartDate"
+        ) and datetime.strptime(
+            self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"], "%Y-%m-%d",
+        ) <= datetime.strptime(
+            self.today["Y-m-d"], "%Y-%m-%d"
+        ) < datetime.strptime(
+            self.myTeam["league"]["seasonDateInfo"]["regularSeasonStartDate"],
+            "%Y-%m-%d",
+        ):
+            # Preseason (includes day or two in between pre and regular season)
+            return "pre"
+        elif (
+            not self.myTeam["league"]["seasonDateInfo"].get("preSeasonStartDate")
+            and datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d")
             < datetime.strptime(
                 self.myTeam["league"]["seasonDateInfo"]["regularSeasonStartDate"],
                 "%Y-%m-%d",
             )
-        ):
-            # Preseason (includes day or two in between pre and regular season)
-            return "pre"
-        elif datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d") < datetime.strptime(
-            self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"], "%Y-%m-%d"
+        ) or (
+            datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d")
+            < datetime.strptime(
+                self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
+                "%Y-%m-%d",
+            )
         ):
             # Offseason (prior to season)
             return "off:before"
@@ -3649,20 +3659,23 @@ class Bot(object):
 
         if seasonState == "off:before":
             season = int(self.today["Y"])
-            start_date = (
+            the_date = (
                 datetime.strptime(
                     self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
                     "%Y-%m-%d",
                 )
-                - timedelta(days=3)
-            ).strftime("%Y-%m-%d")
-            end_date = (
-                datetime.strptime(
-                    self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
-                    "%Y-%m-%d",
+                if self.myTeam["league"]["seasonDateInfo"].get("preSeasonStartDate")
+                else (
+                    datetime.strptime(
+                        self.myTeam["league"]["seasonDateInfo"][
+                            "regularSeasonStartDate"
+                        ],
+                        "%Y-%m-%d",
+                    )
                 )
-                + timedelta(days=7)
-            ).strftime("%Y-%m-%d")
+            )
+            start_date = (the_date - timedelta(days=3)).strftime("%Y-%m-%d")
+            end_date = (the_date + timedelta(days=7)).strftime("%Y-%m-%d")
         elif seasonState in ["pre", "regular", "post:in"]:
             season = int(self.today["Y"])
             start_date = self.today["Y-m-d"]
@@ -3674,14 +3687,14 @@ class Bot(object):
             seasonInfo = self.api_call("seasons", {"season": season, "sportId": 1})[
                 "seasons"
             ]
-            if len(seasonInfo):
+            if len(seasonInfo) and seasonInfo[0].get("seasonStartDate"):
                 seasonInfo = seasonInfo[0]
                 start_date = (
-                    datetime.strptime(seasonInfo["preSeasonStartDate"], "%Y-%m-%d")
+                    datetime.strptime(seasonInfo["seasonStartDate"], "%Y-%m-%d")
                     - timedelta(days=3)
                 ).strftime("%Y-%m-%d")
                 end_date = (
-                    datetime.strptime(seasonInfo["preSeasonStartDate"], "%Y-%m-%d")
+                    datetime.strptime(seasonInfo["seasonStartDate"], "%Y-%m-%d")
                     + timedelta(days=7)
                 ).strftime("%Y-%m-%d")
             else:
@@ -6028,44 +6041,45 @@ class Bot(object):
 
     def init_reddit(self):
         self.log.debug(f"Initiating Reddit API with praw v{praw.__version__}...")
-        try:
-            self.reddit = praw.Reddit(
-                client_id=self.settings["Reddit Auth"]["reddit_clientId"],
-                client_secret=self.settings["Reddit Auth"]["reddit_clientSecret"],
-                refresh_token=self.settings["Reddit Auth"]["reddit_refreshToken"],
-                user_agent="redball Baseball Game Thread Bot - https://github.com/toddrob99/redball/ - r/{}".format(
-                    self.settings["Reddit"].get("SUBREDDIT", "")
-                ),
-            )
-        except Exception as e:
-            self.log.error(
-                "Error encountered attempting to initialize Reddit: {}".format(e)
-            )
-            self.error_notification("Error initializing Reddit")
-            raise
-
-        scopes = [
-            "identity",
-            "submit",
-            "edit",
-            "read",
-            "modposts",
-            "privatemessages",
-            "flair",
-            "modflair",
-        ]
-        try:
-            praw_scopes = self.reddit.auth.scopes()
-        except Exception as e:
-            self.log.error(
-                "Error encountered attempting to look up authorized Reddit scopes: {}".format(
-                    e
+        with redball.REDDIT_AUTH_LOCKS[str(self.bot.redditAuth)]:
+            try:
+                self.reddit = praw.Reddit(
+                    client_id=self.settings["Reddit Auth"]["reddit_clientId"],
+                    client_secret=self.settings["Reddit Auth"]["reddit_clientSecret"],
+                    token_manager=self.bot.reddit_auth_token_manager,
+                    user_agent="redball Baseball Game Thread Bot - https://github.com/toddrob99/redball/ - r/{}".format(
+                        self.settings["Reddit"].get("SUBREDDIT", "")
+                    ),
                 )
-            )
-            self.error_notification(
-                "Error encountered attempting to look up authorized Reddit scopes"
-            )
-            raise
+            except Exception as e:
+                self.log.error(
+                    "Error encountered attempting to initialize Reddit: {}".format(e)
+                )
+                self.error_notification("Error initializing Reddit")
+                raise
+
+            scopes = [
+                "identity",
+                "submit",
+                "edit",
+                "read",
+                "modposts",
+                "privatemessages",
+                "flair",
+                "modflair",
+            ]
+            try:
+                praw_scopes = self.reddit.auth.scopes()
+            except Exception as e:
+                self.log.error(
+                    "Error encountered attempting to look up authorized Reddit scopes: {}".format(
+                        e
+                    )
+                )
+                self.error_notification(
+                    "Error encountered attempting to look up authorized Reddit scopes"
+                )
+                raise
 
         missing_scopes = []
         self.log.debug("Reddit authorized scopes: {}".format(praw_scopes))

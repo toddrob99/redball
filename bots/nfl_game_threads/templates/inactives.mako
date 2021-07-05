@@ -40,7 +40,7 @@ ${'##'} ${data["myTeam"]["nickName"]} Injury Status
 % endif
 % if len(data["myTeam"]["injuries"]["data"]):
 % for x in set(x["injuryStatus"] for x in data["myTeam"]["injuries"]["data"]):
-* ${f"{injuryStatusKey.get(x, x)}: {', '.join([p['person']['player']['position']['abbr'] + ' ' + p['person']['displayName'] for p in data['myTeam']['injuries']['data'] if p['injuryStatus'] == x])}"}
+* ${f"{injuryStatusKey.get(x, x)}: {', '.join([p['person']['player']['position']['abbr'] + ' ' + p['person']['displayName'] for p in data['myTeam']['injuries']['data'] if p['injuryStatus'] == x and not next((y for y in myInactives if y['id'] == p['person']['id']), None)])}"}
 % endfor
 % endif
 % endif
@@ -60,7 +60,7 @@ ${'##'} ${data["oppTeam"]["nickName"]} Injury Status
 % endif
 % if len(data["oppTeam"]["injuries"]["data"]):
 % for x in set(x["injuryStatus"] for x in data["oppTeam"]["injuries"]["data"]):
-* ${f"{injuryStatusKey.get(x, x)}: {', '.join([p['person']['player']['position']['abbr'] + ' ' + p['person']['displayName'] for p in data['oppTeam']['injuries']['data']  if p['injuryStatus'] == x])}"}
+* ${f"{injuryStatusKey.get(x, x)}: {', '.join([p['person']['player']['position']['abbr'] + ' ' + p['person']['displayName'] for p in data['oppTeam']['injuries']['data'] if p['injuryStatus'] == x and not next((y for y in oppInactives if y['id'] == p['person']['id']), None)])}"}
 % endfor
 % endif
 % endif

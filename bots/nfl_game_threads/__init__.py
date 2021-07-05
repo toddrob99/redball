@@ -25,13 +25,13 @@ import os
 from mako.lookup import TemplateLookup
 import mako.exceptions
 
-import nflapi
+from . import mynflapi
 import pyprowl
 import twitter
 
 import praw
 
-__version__ = "1.0.7.5"
+__version__ = "1.1.0.1"
 
 DATA_LOCK = threading.Lock()
 
@@ -148,11 +148,24 @@ class Bot(object):
                 "Ymd": todayObj.strftime("%Y%m%d"),
                 "Y": todayObj.strftime("%Y"),
             }
-            self.log.debug("Today is {}".format(self.today["Y-m-d"]))
+            self.today.update(
+                {
+                    "season": (
+                        int(self.today["Y"]) - 1
+                        if int(self.today["Y-m-d"].split("-")[1]) < 4
+                        else self.today["Y"]
+                    )
+                }
+            )
+            self.log.debug(
+                f"Today is {self.today['Y-m-d']}. Season: {self.today['season']}."
+            )
 
             # (Re-)Initialize NFL API
-            self.log.debug(f"Initializing NFL API with nflapi v{nflapi.__version__}")
-            self.nfl = nflapi.APISession(self.getNflToken())
+            self.log.debug(
+                f"Initializing NFL API with mynflapi v{mynflapi.__version__}"
+            )
+            self.nfl = mynflapi.APISession(self.getNflToken())
             # Start a scheduled task to refresh NFL API token before it expires
             self.SCHEDULER.add_job(
                 self.getNflToken,
@@ -168,7 +181,7 @@ class Bot(object):
                 self.bot.STOP = True
                 break
 
-            self.allTeams = self.nfl.teams(season=self.today["Y"])["data"]
+            self.allTeams = self.nfl.teams(season=self.today["season"])["data"]
 
             self.myTeam = next(
                 (
@@ -203,7 +216,7 @@ class Bot(object):
                 )
                 currentWeekGames = self.nfl.gamesByWeek(
                     season=self.settings.get("NFL", {}).get(
-                        "SEASON_OVERRIDE", self.today["Y"]
+                        "SEASON_OVERRIDE", self.today["season"]
                     ),
                     week=self.settings.get("NFL", {}).get("WEEK_OVERRIDE", 0),
                     seasonType=self.settings.get("NFL", {}).get(
@@ -217,7 +230,7 @@ class Bot(object):
                         "id": "unknown",
                         "season": int(
                             self.settings.get("NFL", {}).get(
-                                "SEASON_OVERRIDE", self.today["Y"]
+                                "SEASON_OVERRIDE", self.today["season"]
                             )
                         ),
                         "seasonType": self.settings.get("NFL", {}).get(
@@ -1712,7 +1725,7 @@ class Bot(object):
                 )
                 return False
             else:
-                self.log.debug(f"Collecting data with nflapi v{nflapi.__version__}")
+                self.log.debug(f"Collecting data with mynflapi v{mynflapi.__version__}")
 
             # Collect the data...
             currentWeekGames = self.nfl.gamesByWeek(
@@ -1734,6 +1747,15 @@ class Bot(object):
                 ),
                 None,
             )
+            if not self.allData.get("gameDetailId"):
+                gameById = self.nfl.gameById(gameId=self.allData["gameId"])
+                self.allData.update(
+                    {
+                        "gameDetailId": gameById["data"]["viewer"]["game"][
+                            "gameDetailId"
+                        ],
+                    }
+                )
             self.log.debug(
                 f"self.allData['gameDetailId']: {self.allData['gameDetailId']}; self.allData['gameId']: {self.allData['gameId']}; "
             )
@@ -2525,44 +2547,45 @@ class Bot(object):
 
     def init_reddit(self):
         self.log.debug(f"Initializing Reddit API with praw v{praw.__version__}...")
-        try:
-            self.reddit = praw.Reddit(
-                client_id=self.settings["Reddit Auth"]["reddit_clientId"],
-                client_secret=self.settings["Reddit Auth"]["reddit_clientSecret"],
-                refresh_token=self.settings["Reddit Auth"]["reddit_refreshToken"],
-                user_agent="redball Football Game Thread Bot - https://github.com/toddrob99/redball/ - r/{}".format(
-                    self.settings["Reddit"].get("SUBREDDIT", "")
-                ),
-            )
-        except Exception as e:
-            self.log.error(
-                "Error encountered attempting to initialize Reddit: {}".format(e)
-            )
-            self.error_notification("Error initializing Reddit")
-            raise
-
-        scopes = [
-            "identity",
-            "submit",
-            "edit",
-            "read",
-            "modposts",
-            "privatemessages",
-            "flair",
-            "modflair",
-        ]
-        try:
-            praw_scopes = self.reddit.auth.scopes()
-        except Exception as e:
-            self.log.error(
-                "Error encountered attempting to look up authorized Reddit scopes: {}".format(
-                    e
+        with redball.REDDIT_AUTH_LOCKS[str(self.bot.redditAuth)]:
+            try:
+                self.reddit = praw.Reddit(
+                    client_id=self.settings["Reddit Auth"]["reddit_clientId"],
+                    client_secret=self.settings["Reddit Auth"]["reddit_clientSecret"],
+                    token_manager=self.bot.reddit_auth_token_manager,
+                    user_agent="redball Football Game Thread Bot - https://github.com/toddrob99/redball/ - r/{}".format(
+                        self.settings["Reddit"].get("SUBREDDIT", "")
+                    ),
                 )
-            )
-            self.error_notification(
-                "Error encountered attempting to look up authorized Reddit scopes"
-            )
-            raise
+            except Exception as e:
+                self.log.error(
+                    "Error encountered attempting to initialize Reddit: {}".format(e)
+                )
+                self.error_notification("Error initializing Reddit")
+                raise
+
+            scopes = [
+                "identity",
+                "submit",
+                "edit",
+                "read",
+                "modposts",
+                "privatemessages",
+                "flair",
+                "modflair",
+            ]
+            try:
+                praw_scopes = self.reddit.auth.scopes()
+            except Exception as e:
+                self.log.error(
+                    "Error encountered attempting to look up authorized Reddit scopes: {}".format(
+                        e
+                    )
+                )
+                self.error_notification(
+                    "Error encountered attempting to look up authorized Reddit scopes"
+                )
+                raise
 
         missing_scopes = []
         self.log.debug("Reddit authorized scopes: {}".format(praw_scopes))

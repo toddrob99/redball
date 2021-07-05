@@ -14,7 +14,7 @@ import praw
 import requests
 import sqlite3
 
-__version__ = "1.0.6-alpha"
+__version__ = "1.1.0.1"
 
 tl = threading.local()
 
@@ -57,27 +57,28 @@ def run(bot, settings):
     ignoredPostIdCache = []
 
     tl.log.info("Initializing Reddit API...")
-    try:
-        r = praw.Reddit(
-            client_id=settings["Reddit Auth"]["reddit_clientId"],
-            client_secret=settings["Reddit Auth"]["reddit_clientSecret"],
-            refresh_token=settings["Reddit Auth"]["reddit_refreshToken"],
-            user_agent=f"redball Duplicate Link Removal Bot - https://github.com/toddrob99/redball/ v{__version__}",
-        )
-    except Exception as e:
-        tl.log.error(
-            f"Error authenticating with Reddit. Ensure the bot has a valid Reddit Auth selected (with Refresh Token) and try again. Error message: {e}"
-        )
-        raise
+    with redball.REDDIT_AUTH_LOCKS[str(bot.redditAuth)]:
+        try:
+            r = praw.Reddit(
+                client_id=settings["Reddit Auth"]["reddit_clientId"],
+                client_secret=settings["Reddit Auth"]["reddit_clientSecret"],
+                token_manager=bot.reddit_auth_token_manager,
+                user_agent=f"redball Duplicate Link Removal Bot - https://github.com/toddrob99/redball/ v{__version__}",
+            )
+        except Exception as e:
+            tl.log.error(
+                f"Error authenticating with Reddit. Ensure the bot has a valid Reddit Auth selected (with Refresh Token) and try again. Error message: {e}"
+            )
+            raise
 
-    try:
-        if "identity" in r.auth.scopes():
-            tl.log.info(f"Authorized Reddit user: {r.user.me()}")
-    except Exception as e:
-        tl.log.error(
-            f"Reddit authentication failure. Ensure the bot has a valid Reddit Auth selected (with Refresh Token and relevant scopes selected) and try again. Error message: {e}"
-        )
-        raise
+        try:
+            if "identity" in r.auth.scopes():
+                tl.log.info(f"Authorized Reddit user: {r.user.me()}")
+        except Exception as e:
+            tl.log.error(
+                f"Reddit authentication failure. Ensure the bot has a valid Reddit Auth selected (with Refresh Token and relevant scopes selected) and try again. Error message: {e}"
+            )
+            raise
 
     try:
         db = sqlite3.connect(
@@ -142,17 +143,48 @@ def run(bot, settings):
                     ):
                         continue
 
+                    if not newPost.is_self and (newPost.url.startswith("/")):
+                        checkUrl = f"https://reddit.com{newPost.url}"
+                        tl.log.debug(
+                            f"Detected relative URL, checking URL for ignored domains with https://reddit.com prepended: [{checkUrl}]"
+                        )
+                    else:
+                        checkUrl = None
+
                     if newPost.is_self:
                         tl.log.debug(f"Post [{newPost.id}] is a self post--skipping.")
                         ignoredPostIdCache.append(newPost.id)
                         continue
-                    elif next((True for y in ignoreDomains if y in newPost.url), False):
+                    elif newPost.is_reddit_media_domain:
+                        tl.log.debug(
+                            f"Post [{newPost.id}] is a reddit media domain--skipping."
+                        )
+                        ignoredPostIdCache.append(newPost.id)
+                        continue
+                    elif next(
+                        (
+                            True
+                            for y in ignoreDomains
+                            if y in (checkUrl if checkUrl else newPost.url)
+                        ),
+                        False,
+                    ):
                         tl.log.debug(
                             f"Post [{newPost.id}] has an ignored domain [{newPost.url}]--skipping."
                         )
                         ignoredPostIdCache.append(newPost.id)
                         q = None
                     else:
+                        try:
+                            if newPost.is_gallery:
+                                tl.log.debug(
+                                    f"Post [{newPost.id}] is a gallery--skipping."
+                                )
+                                ignoredPostIdCache.append(newPost.id)
+                                continue
+                        except AttributeError:
+                            pass
+
                         tl.log.debug(
                             f"Post [{newPost.id}] has a non-ignored domain link [{newPost.url}]..."
                         )
@@ -318,21 +350,25 @@ def deserialize(theString):
 
 
 def getUrls(submission):
+    if submission.url.startswith("/"):
+        checkUrl = f"https://reddit.com{submission.url}"
+        tl.log.debug(f"Prepended https://reddit.com to relative url: [{checkUrl}]")
+    else:
+        checkUrl = submission.url
+
     tl.log.debug(
-        f"Getting URLs for submission id [{submission.id}] with URL [{submission.url}]..."
+        f"Getting URLs for submission id [{submission.id}] with URL [{checkUrl}]..."
     )
-    req = requests.get(submission.url)
+    req = requests.get(checkUrl)
     if req.status_code != 200:
-        tl.log.error(
-            f"Request for {submission.url} returned status code {req.status_code}"
-        )
+        tl.log.error(f"Request for {checkUrl} returned status code {req.status_code}")
         return {
             "submissionId": submission.id,
-            "url": submission.url,
+            "url": checkUrl,
             "canonical": None,
             "redir": None,
             "contentHash": None,
-            "urls": [submission.url],
+            "urls": [checkUrl],
             "dateCreated": submission.created_utc,
             "dateRemoved": None,
         }
@@ -380,7 +416,9 @@ def getUrls(submission):
         contentHash = hashlib.md5(src.encode("utf-8")).hexdigest()
         tl.log.debug(f"Content hash: {contentHash}")
 
-    urls = [submission.url]
+    urls = [checkUrl]
+    if checkUrl != submission.url:
+        urls.append(submission.url)
     if canonical:
         urls.append(canonical["href"])
     urls.extend([x.url for x in req.history])
@@ -400,7 +438,7 @@ def getUrls(submission):
 
     urlInfo = {
         "submissionId": submission.id,
-        "url": submission.url,
+        "url": checkUrl,
         "canonical": canonical["href"] if canonical else None,
         "redir": redirUrl,
         "contentHash": contentHash,

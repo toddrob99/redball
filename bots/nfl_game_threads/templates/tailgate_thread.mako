@@ -61,7 +61,7 @@ ${game["homeTeam"]["fullName"]}${myTeamRecord if data["homeVisitor"] == "home" e
 ## Date/Time
 Game Time: ${data["gameTime"]["myTeam"].strftime(settings.get("Tailgate Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y @ %I:%M %p %Z"))}
 
-Venue: ${game["venue"]["name"]}
+<%include file="venue_weather.mako" />
 
 <%include file="standings.mako" />
 

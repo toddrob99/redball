@@ -157,7 +157,7 @@ $(window).resize(function() {
 	 | <a href="https://discord.gg/j5N8g4a" target="_blank">Discord</a>
 	 | <a href="https://github.com/toddrob99/redball/blob/master/LICENSE" target="_blank">License</a>
 	 | <span title="This website uses cookies for session management and to enhance your experience. By continuing to use this website, you agree to the use of cookies." class="ui-icon ui-icon-notice"></span>
-	 | &copy; 2019-2020 Todd Roberts
+	 | &copy; 2019-2021 Todd Roberts
 </div>
 
 </body>

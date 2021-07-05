@@ -16,13 +16,14 @@ import time
 import redball
 from redball import logger
 
-__version__ = "1.0.0"
+__version__ = "1.1.0.1"
 
 tl = threading.local()
 
 
 class StatBot:
-    def __init__(self, settings):
+    def __init__(self, settings, bot):
+        self.bot = bot
         self.log = tl.log
         self.log.info("StatBot starting up...")
 
@@ -43,30 +44,32 @@ class StatBot:
         )
         reddit_clientId = settings.get("Reddit Auth", {}).get("reddit_clientId")
         reddit_clientSecret = settings.get("Reddit Auth", {}).get("reddit_clientSecret")
-        reddit_refreshToken = settings.get("Reddit Auth", {}).get("reddit_refreshToken")
         self.comments = {}
 
         self.log.info("Initializing Reddit API...")
-        try:
-            self.r = praw.Reddit(
-                client_id=reddit_clientId,
-                client_secret=reddit_clientSecret,
-                refresh_token=reddit_refreshToken,
-                user_agent="redball Baseball Stat Bot - https://github.com/toddrob99/redball/ v{}".format(
-                    __version__
-                ),
-            )
-        except Exception as e:
-            self.log.error(
-                "Error authenticating with Reddit. Error message: {}".format(e)
-            )
+        with redball.REDDIT_AUTH_LOCKS[str(self.bot.redditAuth)]:
+            try:
+                self.r = praw.Reddit(
+                    client_id=reddit_clientId,
+                    client_secret=reddit_clientSecret,
+                    token_manager=self.bot.reddit_auth_token_manager,
+                    user_agent="redball Baseball Stat Bot - https://github.com/toddrob99/redball/ v{}".format(
+                        __version__
+                    ),
+                )
+            except Exception as e:
+                self.log.error(
+                    "Error authenticating with Reddit. Error message: {}".format(e)
+                )
 
-        try:
-            if "identity" in self.r.auth.scopes():
-                self.log.info("Authorized Reddit user: {}".format(self.r.user.me()))
-        except Exception as e:
-            self.log.error("Reddit authentication failure. Error message: {}".format(e))
-            raise
+            try:
+                if "identity" in self.r.auth.scopes():
+                    self.log.info("Authorized Reddit user: {}".format(self.r.user.me()))
+            except Exception as e:
+                self.log.error(
+                    "Reddit authentication failure. Error message: {}".format(e)
+                )
+                raise
 
         try:
             self.db = sqlite3.connect(os.path.join(self.dbPath, self.dbFile))
@@ -100,10 +103,10 @@ class StatBot:
         except sqlite3.Error as e:
             self.log.error("Error closing database connection: {}".format(e))
 
-    def run(self, bot=None):
+    def run(self):
         if not self.sub:
             self.log.error("No subreddit specified!")
-            bot.STOP = True
+            self.bot.STOP = True
             return
 
         self.dbc.execute(
@@ -130,7 +133,7 @@ class StatBot:
             "Monitoring comments in the following subreddit(s): {}...".format(self.sub)
         )
         while True:
-            if bot and bot.STOP:
+            if self.bot and self.bot.STOP:
                 self.log.info("Received stop signal...")
                 return
 
@@ -138,7 +141,7 @@ class StatBot:
                 for comment in self.r.subreddit(self.sub).stream.comments(
                     pause_after=self.pauseAfter
                 ):
-                    if bot and bot.STOP:
+                    if self.bot and self.bot.STOP:
                         self.log.info("Received stop signal...")
                         return
 
@@ -858,5 +861,5 @@ def run(bot=None, settings=None):
         propagate=settings.get("Logging", {}).get("PROPAGATE", False),
     )
 
-    mlbbot = StatBot(settings)
-    mlbbot.run(bot)
+    mlbbot = StatBot(settings, bot)
+    mlbbot.run()
