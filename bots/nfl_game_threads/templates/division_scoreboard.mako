@@ -27,7 +27,7 @@
 ${'##'} Division Scoreboard
 % for game in divGames:
 <%
-    dt = datetime.fromisoformat(game["gameTime"])
+    dt = datetime.strptime(game["gameTime"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=pytz.utc)
     toTz = pytz.timezone(settings.get("Bot", {}).get("TEAM_TIMEZONE", "America/New_York"))
     formattedGameTime = dt.astimezone(toTz).strftime("%I:%M %p")
 %>\
