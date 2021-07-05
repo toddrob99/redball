@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.1.0.1"
+__version__ = "1.1.0.2"
 
 DATA_LOCK = threading.Lock()
 
@@ -273,7 +273,12 @@ class Bot(object):
             todayGames = [
                 g
                 for g in currentWeekGames
-                if datetime.fromisoformat(g["gameTime"]).strftime("%Y-%m-%d")
+                if self.convert_timezone(
+                    datetime.strptime(g["gameTime"], "%Y-%m-%dT%H:%M:%S.%fZ"),
+                    self.settings.get("Bot", {}).get(
+                        "TEAM_TIMEZONE", "America/New_York"
+                    ),
+                ).strftime("%Y-%m-%d")
                 == self.today["Y-m-d"]
             ]
             self.log.debug(f"Today's games: {todayGames}")
@@ -351,7 +356,18 @@ class Bot(object):
                 oppTeam = self.nfl.teamById(teamId=oppTeamId)
                 self.log.debug(f"oppTeam: {oppTeam}")
                 gameTime = next(
-                    (g["gameTime"] for g in todayGames if g["id"] == myTeamTodayGameId),
+                    (
+                        self.convert_timezone(  # Convert Zulu to my team TZ
+                            datetime.strptime(g["gameTime"], "%Y-%m-%dT%H:%M:%S.%fZ"),
+                            self.settings.get("Bot", {}).get(
+                                "TEAM_TIMEZONE", "America/New_York"
+                            ),
+                        )
+                        .replace(tzinfo=None)
+                        .isoformat()  # Convert back to tz-naive
+                        for g in todayGames
+                        if g["id"] == myTeamTodayGameId
+                    ),
                     None,
                 )
                 self.log.debug(f"gameTime: {gameTime}")
@@ -375,16 +391,11 @@ class Bot(object):
                         "homeVisitor": homeVisitor,
                         "oppTeam": oppTeam,
                         "gameTime": {
-                            "homeTeam": datetime.fromisoformat(gameTime),
+                            # "homeTeam": datetime.fromisoformat(gameTime),
                             "bot": self.convert_timezone(
                                 datetime.fromisoformat(gameTime), "local",
                             ),
-                            "myTeam": self.convert_timezone(
-                                datetime.fromisoformat(gameTime),
-                                self.settings.get("Bot", {}).get(
-                                    "TEAM_TIMEZONE", "America/New_York"
-                                ),
-                            ),
+                            "myTeam": datetime.fromisoformat(gameTime),
                         },
                         "myGameIndex": myGameIndex,
                         "standings": standings,
@@ -1736,7 +1747,12 @@ class Bot(object):
             todayGames = [
                 g
                 for g in currentWeekGames
-                if datetime.fromisoformat(g["gameTime"]).strftime("%Y-%m-%d")
+                if self.convert_timezone(
+                    datetime.strptime(g["gameTime"], "%Y-%m-%dT%H:%M:%S.%fZ"),
+                    self.settings.get("Bot", {}).get(
+                        "TEAM_TIMEZONE", "America/New_York"
+                    ),
+                ).strftime("%Y-%m-%d")
                 == self.today["Y-m-d"]
             ]
             myGameIndex = next(
@@ -1771,7 +1787,14 @@ class Bot(object):
             ]["gameInsight"]["insightsByGames"]
             gameTime = next(
                 (
-                    g["gameTime"]
+                    self.convert_timezone(  # Convert Zulu to my team TZ
+                        datetime.strptime(g["gameTime"], "%Y-%m-%dT%H:%M:%S.%fZ"),
+                        self.settings.get("Bot", {}).get(
+                            "TEAM_TIMEZONE", "America/New_York"
+                        ),
+                    )
+                    .replace(tzinfo=None)
+                    .isoformat()  # Convert back to tz-naive
                     for g in todayGames
                     if g["id"] == self.allData["gameId"]
                 ),
@@ -1801,16 +1824,11 @@ class Bot(object):
                     "currentWeekGames": currentWeekGames,
                     "todayGames": todayGames,
                     "gameTime": {
-                        "homeTeam": datetime.fromisoformat(gameTime),
+                        # "homeTeam": datetime.fromisoformat(gameTime),
                         "bot": self.convert_timezone(
                             datetime.fromisoformat(gameTime), "local",
                         ),
-                        "myTeam": self.convert_timezone(
-                            datetime.fromisoformat(gameTime),
-                            self.settings.get("Bot", {}).get(
-                                "TEAM_TIMEZONE", "America/New_York"
-                            ),
-                        ),
+                        "myTeam": datetime.fromisoformat(gameTime),
                     },
                     "myGameIndex": myGameIndex,
                     "standings": standings,
