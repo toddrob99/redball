@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.1.0.2"
+__version__ = "1.1.0.3"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -99,12 +99,24 @@ class Bot(object):
         }  # Initialize detailed state to a wait message
 
         # Start a scheduled task to update self.bot.detailedState every minute
-        self.SCHEDULER.add_job(
-            self.bot_state,
-            "interval",
-            name=f"bot-{self.bot.id}-statusUpdateTask",
-            minutes=1,
-        )
+        if not next(
+            (
+                x
+                for x in self.SCHEDULER.get_jobs()
+                if x.name == f"bot-{self.bot.id}-statusUpdateTask"
+            ),
+            None,
+        ):
+            self.SCHEDULER.add_job(
+                self.bot_state,
+                "interval",
+                name=f"bot-{self.bot.id}-statusUpdateTask",
+                minutes=1,
+            )
+        else:
+            self.log.debug(
+                f"The bot-{self.bot.id}-statusUpdateTask scheduled job already exists."
+            )
 
         settings_date = datetime.today().strftime("%Y-%m-%d")
         if self.settings.get("MLB", {}).get("GAME_DATE_OVERRIDE", "") != "":
