@@ -107,6 +107,7 @@ ${ondeck} is on deck\
 <%include file="linescore.mako" />
 % endif
 
+% if data[0]['myTeam'].get('division'):  # will skip for All Star teams
 % if data[0]['myTeam']['seasonState'] != 'post:in':
 ## division scoreboard
 ${'###Around the Division' if any(x for x in data[0]['leagueSchedule'] if data[0]['myTeam']['division']['id'] in [x['teams']['away']['team'].get('division',{}).get('id'), x['teams']['home']['team'].get('division',{}).get('id')] and x['gamePk'] != gamePk) else 'Around the Division: There are no other division teams playing!'}
@@ -115,6 +116,7 @@ ${'###Around the Division' if any(x for x in data[0]['leagueSchedule'] if data[0
 ## league scoreboard
 ${'###Around the League' if any(x for x in data[0]['leagueSchedule'] if x['gamePk'] != gamePk) else 'Around the League: There are no other games!'}
 <%include file="league_scoreboard.mako" args="gamePk=gamePk" />
+% endif
 % endif
 
 ## no-no/perfecto watch

@@ -2,7 +2,7 @@
 % for pk in (x for x in data.keys() if x!=0):
 % if data[pk]['schedule'].get('seriesDescription') and data[pk]['schedule'].get('gameType') not in ['R','I','S','E']:
 ${'#' + data[pk]['schedule']['seriesDescription'] + ' '}\
-${'Game ' + str(data[pk]['schedule']['seriesGameNumber']) + ' - ' if data[pk]['schedule'].get('seriesGameNumber') and data[pk]['schedule'].get('gamesInSeries',1) > 1 else ''}\
+${'Game ' + str(data[pk]['schedule']['seriesGameNumber']) + ' - ' if data[pk]['schedule'].get('seriesGameNumber') and data[pk]['schedule'].get('gamesInSeries',1) > 1 else '- '}\
 % else:
 ${'###'}\
 % endif\
@@ -30,6 +30,7 @@ due to ${data[pk]['schedule']['status']['reason']} \
 <%include file="standings.mako" />
 % endif
 
+% if data[0]['myTeam'].get('division'):  # will skip for All Star teams
 % if data[0]['myTeam']['seasonState'] != 'post:in':
 ## division scoreboard
 ${'###Around the Division' if any(x for x in data[0]['leagueSchedule'] if data[0]['myTeam']['division']['id'] in [x['teams']['away']['team'].get('division',{}).get('id'), x['teams']['home']['team'].get('division',{}).get('id')] and x['gamePk'] not in data.keys()) else 'Around the Division: There are no other division teams playing!'}
@@ -39,7 +40,7 @@ ${'###Around the Division' if any(x for x in data[0]['leagueSchedule'] if data[0
 ${'###Around the League' if any(x for x in data[0]['leagueSchedule'] if x['gamePk'] not in data.keys()) else 'Around the League: There are no other games!'}
 <%include file="league_scoreboard.mako" args="gamePk=list(data.keys())" />
 % endif
-
+% endif
 
 ## Configurable footer text
 ${settings.get('Game Day Thread',{}).get('FOOTER','')}
