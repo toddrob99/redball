@@ -48,9 +48,9 @@ def get_sys_config(category=None, key=None, includeChildren=False):
     elif isinstance(config, dict):
         config.update(
             {
-                "val": deserialize_key(c["val"], c["type"]),
-                "options": deserialize_key(c["options"]),
-                "subkeys": deserialize_key(c["subkeys"]),
+                "val": deserialize_key(config["val"], config["type"]),
+                "options": deserialize_key(config["options"]),
+                "subkeys": deserialize_key(config["subkeys"]),
             }
         )
 
@@ -443,7 +443,7 @@ def create_botType(**kwargs):
         """INSERT INTO rb_botTypes
                 (name, description, moduleName)
                 VALUES
-                (?,?,?,?)
+                (?,?,?)
             ;""",
         (
             kwargs["description"].lower().strip().replace(" ", "-"),
