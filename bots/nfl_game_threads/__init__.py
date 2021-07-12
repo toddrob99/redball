@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.1.0.2"
+__version__ = "1.1.0.3"
 
 DATA_LOCK = threading.Lock()
 
@@ -99,12 +99,24 @@ class Bot(object):
         }  # Initialize detailed state to a wait message
 
         # Start a scheduled task to update self.bot.detailedState every minute
-        self.SCHEDULER.add_job(
-            self.bot_state,
-            "interval",
-            name=f"bot-{self.bot.id}-statusUpdateTask",
-            minutes=1,
-        )
+        if not next(
+            (
+                x
+                for x in self.SCHEDULER.get_jobs()
+                if x.name == f"bot-{self.bot.id}-statusUpdateTask"
+            ),
+            None,
+        ):
+            self.SCHEDULER.add_job(
+                self.bot_state,
+                "interval",
+                name=f"bot-{self.bot.id}-statusUpdateTask",
+                minutes=1,
+            )
+        else:
+            self.log.debug(
+                f"The bot-{self.bot.id}-statusUpdateTask scheduled job already exists."
+            )
 
         settings_date = datetime.today().strftime("%Y-%m-%d")
         if self.settings.get("NFL", {}).get("GAME_DATE_OVERRIDE", "") != "":
@@ -167,13 +179,20 @@ class Bot(object):
             )
             self.nfl = mynflapi.APISession(self.getNflToken())
             # Start a scheduled task to refresh NFL API token before it expires
-            self.SCHEDULER.add_job(
-                self.getNflToken,
-                "interval",
-                name="getNflToken",
-                kwargs={"nflSession": self.nfl},
-                minutes=58,
-            )
+            if not next(
+                (x for x in self.SCHEDULER.get_jobs() if x.name == "getNflToken"), None
+            ):
+                self.log.debug("Scheduling getNflToken job...")
+                # First check if job exists
+                self.SCHEDULER.add_job(
+                    self.getNflToken,
+                    "interval",
+                    name="getNflToken",
+                    kwargs={"nflSession": self.nfl},
+                    minutes=58,
+                )
+            else:
+                self.log.debug("The getNflToken scheduled job already exists.")
 
             # Get info about configured team
             if self.settings.get("NFL", {}).get("TEAM", "") == "":
@@ -1738,6 +1757,9 @@ class Bot(object):
             else:
                 self.log.debug(f"Collecting data with mynflapi v{mynflapi.__version__}")
 
+            # Check NFL API Token
+            self.checkNflToken(self.nfl)
+
             # Collect the data...
             currentWeekGames = self.nfl.gamesByWeek(
                 season=self.allData["currentWeek"]["season"],
@@ -3013,3 +3035,15 @@ class Bot(object):
             nflSession.token = content
 
         return content
+
+    def checkNflToken(self, nfl):
+        try:
+            nfl.currentWeek()
+        except requests.exceptions.HTTPError as e:
+            if "401" in str(e):
+                self.log.warning(
+                    f"Invalid NFL API token detected. Requesting a new one. Error message: {e}"
+                )
+                self.getNflToken(nfl)
+            else:
+                raise
