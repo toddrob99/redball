@@ -20,7 +20,7 @@
     team_abbrev = next((b['team']['abbreviation'] for a,b in data[gamePk]['schedule']['teams'].items() if b['team']['id']==team_id),'')
     hdLink = next((v.get('url') for v in p.get('playbacks',{}) if v.get('name')=='mp4Avc'),'')
 %>\
-|[${team_abbrev}](${data[0]['teamSubs'][team_id]})\
+|[${team_abbrev}](${data[0]['teamSubs'].get(team_id, '')})\
 |[${p['headline']} (${p.get('duration', '?:??')})](${hdLink})|
 ##|[${p['description']} (${p['duration']})](${hdLink})|
 % endfor
