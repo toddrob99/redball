@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.1.0.4"
+__version__ = "1.2"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -561,24 +561,13 @@ class Bot(object):
                                         "Not starting comment process because game thread is already done updating."
                                     )
                                     pass
-                                elif self.commonData.get(pk, {}).get(
-                                    "schedule", {}
-                                ).get("status", {}).get(
-                                    "abstractGameCode"
-                                ) == "F" or self.commonData.get(
-                                    pk, {}
-                                ).get(
-                                    "schedule", {}
-                                ).get(
-                                    "status", {}
-                                ).get(
-                                    "codedGameState"
-                                ) in [
-                                    "C",
-                                    "D",
-                                    "U",
-                                    "T",
-                                ]:
+                                elif (
+                                    self.commonData.get(pk, {})
+                                    .get("schedule", {})
+                                    .get("status", {})
+                                    .get("abstractGameCode")
+                                    == "F"
+                                ):
                                     # Game is over, so don't add any comments
                                     self.log.debug(
                                         "Not starting comment process because game is over."
@@ -1633,12 +1622,7 @@ class Bot(object):
                     (
                         True
                         for k, v in self.commonData.items()
-                        if k != 0
-                        and (
-                            v["schedule"]["status"]["abstractGameCode"] == "F"
-                            or v["schedule"]["status"]["codedGameState"]
-                            in ["C", "D", "U", "T"]
-                        )
+                        if k != 0 and v["schedule"]["status"]["abstractGameCode"] == "F"
                     ),
                     False,
                 ):
@@ -1653,10 +1637,7 @@ class Bot(object):
                     (
                         True
                         for k, v in self.commonData.items()
-                        if k != 0
-                        and v["schedule"]["status"]["abstractGameCode"] != "F"
-                        and v["schedule"]["status"]["codedGameState"]
-                        not in ["C", "D", "U", "T"]
+                        if k != 0 and v["schedule"]["status"]["abstractGameCode"] != "F"
                     ),
                     False,
                 ):
@@ -1874,17 +1855,7 @@ class Bot(object):
                 with GAME_DATA_LOCK:
                     self.get_gameStatus(pk, self.today["Y-m-d"])
 
-                if self.commonData[pk]["schedule"]["status"][
-                    "abstractGameCode"
-                ] == "F" or self.commonData[pk]["schedule"]["status"][
-                    "codedGameState"
-                ] in [
-                    "C",
-                    "D",
-                    "U",
-                    "T",
-                ]:
-                    # codedGameState - Suspended: U, T; Cancelled: C, Postponed: D
+                if self.commonData[pk]["schedule"]["status"]["abstractGameCode"] == "F":
                     if not self.settings.get("Post Game Thread", {}).get(
                         "ENABLED", True
                     ):
@@ -1927,10 +1898,6 @@ class Bot(object):
                             "status"
                         ]["abstractGameCode"]
                         == "F"
-                        or self.commonData[otherGame["schedule"]["gamePk"]]["schedule"][
-                            "status"
-                        ]["codedGameState"]
-                        in ["C", "D", "U", "T"]
                     )
                 ):
                     # Straight doubleheader game 2 - post time doesn't matter, submit post after game 1 is final
@@ -1962,10 +1929,6 @@ class Bot(object):
                             "status"
                         ]["abstractGameCode"]
                         == "F"
-                        or self.commonData[otherGame["schedule"]["gamePk"]]["schedule"][
-                            "status"
-                        ]["codedGameState"]
-                        in ["C", "D", "U", "T"]
                     )
                 ):
                     # Split doubleheader game 2 - honor post time, but only after game 1 is final
@@ -2107,11 +2070,7 @@ class Bot(object):
         if (
             self.settings.get("Comments", {}).get("ENABLED", True)
             and self.activeGames[pk].get("gameThread")
-            and not (
-                self.commonData[pk]["schedule"]["status"]["abstractGameCode"] == "F"
-                or self.commonData[pk]["schedule"]["status"]["codedGameState"]
-                in ["C", "D", "U", "T"]
-            )
+            and self.commonData[pk]["schedule"]["status"]["abstractGameCode"] != "F"
         ):
             if self.THREADS[pk].get("COMMENT_THREAD") and isinstance(
                 self.THREADS[pk]["COMMENT_THREAD"], threading.Thread
@@ -2145,14 +2104,7 @@ class Bot(object):
                         pk
                     )
                 )
-            elif self.commonData[pk]["schedule"]["status"][
-                "abstractGameCode"
-            ] == "F" or self.commonData[pk]["schedule"]["status"]["codedGameState"] in [
-                "C",
-                "D",
-                "U",
-                "T",
-            ]:
+            elif self.commonData[pk]["schedule"]["status"]["abstractGameCode"] == "F":
                 self.log.info(
                     "Game is over, so not starting comment process! [pk: {}]".format(pk)
                 )
@@ -2252,8 +2204,6 @@ class Bot(object):
                         and x > 0
                         and self.commonData[x]["schedule"]["status"]["abstractGameCode"]
                         != "F"
-                        and self.commonData[x]["schedule"]["status"]["codedGameState"]
-                        not in ["C", "D", "U", "T"]
                     ),
                     False,
                 ):
@@ -2266,13 +2216,6 @@ class Bot(object):
             elif update_game_thread_until == "All division games are final":
                 if (  # This game is final
                     self.commonData[pk]["schedule"]["status"]["abstractGameCode"] == "F"
-                    or self.commonData[pk]["schedule"]["status"]["codedGameState"]
-                    in [
-                        "C",
-                        "D",
-                        "U",
-                        "T",
-                    ]  # Suspended: U, T; Cancelled: C, Postponed: D
                 ) and not next(  # And all division games are final
                     (
                         True
@@ -2296,13 +2239,6 @@ class Bot(object):
             elif update_game_thread_until == "All MLB games are final":
                 if (  # This game is final
                     self.commonData[pk]["schedule"]["status"]["abstractGameCode"] == "F"
-                    or self.commonData[pk]["schedule"]["status"]["codedGameState"]
-                    in [
-                        "C",
-                        "D",
-                        "U",
-                        "T",
-                    ]  # Suspended: U, T; Cancelled: C, Postponed: D
                 ) and not next(  # And all MLB games are final
                     (
                         True
@@ -2399,15 +2335,7 @@ class Bot(object):
         )
 
         while redball.SIGNAL is None and not self.bot.STOP:
-            if self.commonData[pk]["schedule"]["status"][
-                "abstractGameCode"
-            ] == "F" or self.commonData[pk]["schedule"]["status"]["codedGameState"] in [
-                "C",
-                "D",
-                "U",
-                "T",
-            ]:
-                # Suspended: U, T; Cancelled: C, Postponed: D
+            if self.commonData[pk]["schedule"]["status"]["abstractGameCode"] == "F":
                 # Game is over
                 self.log.info(
                     "Game {} is over (abstractGameCode: {}, codedGameState: {}). Proceeding with post game thread...".format(
