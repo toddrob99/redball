@@ -2261,14 +2261,19 @@ class Bot(object):
                 )
             )  # debug - need this to tell if logic is working
 
-            if self.commonData[pk]["schedule"]["status"]["detailedState"].startswith(
-                "Delayed"
-            ) and self.commonData[pk]["schedule"]["status"]["abstractGameCode"] not in [
-                "I",
-                "IZ",
-                "IH",
-            ]:
+            if (
+                self.commonData[pk]["schedule"]["status"]["detailedState"].startswith(
+                    "Delayed"
+                )
+                and self.commonData[pk]["schedule"]["status"]["statusCode"]
+                not in ["I", "IZ", "IH"]
+            ) or (
+                self.commonData[pk]["schedule"]["status"]["codedGameState"]
+                in ["U", "T"]  # Suspended
+                and self.commonData[pk]["schedule"]["status"]["statusCode"] != "UZ"
+            ):
                 # I: In Progress, IZ: Delayed: About to Resume, IH: Instant Replay
+                # UZ: Suspended: About to Resume
                 # Update interval is in minutes (seconds only when game is live)
                 gtnlWait = self.settings.get("Game Thread", {}).get(
                     "UPDATE_INTERVAL_NOT_LIVE", 1
@@ -2276,7 +2281,7 @@ class Bot(object):
                 if gtnlWait < 1:
                     gtnlWait = 1
                 self.log.info(
-                    "Game {} is delayed (abstractGameCode: {}, codedGameState: {}), sleeping for {} minutes...".format(
+                    "Game {} is delayed/suspended (abstractGameCode: {}, codedGameState: {}), sleeping for {} minute(s)...".format(
                         pk,
                         self.commonData[pk]["schedule"]["status"]["abstractGameCode"],
                         self.commonData[pk]["schedule"]["status"]["codedGameState"],
@@ -3047,14 +3052,19 @@ class Bot(object):
             elif self.activeGames[pk]["STOP_FLAG"]:
                 self.log.info("Game {} thread stop flag is set.".format(pk))
                 break
-            elif self.commonData[pk]["schedule"]["status"]["detailedState"].startswith(
-                "Delayed"
-            ) and self.commonData[pk]["schedule"]["status"]["abstractGameCode"] not in [
-                "I",
-                "IZ",
-                "IH",
-            ]:
+            elif (
+                self.commonData[pk]["schedule"]["status"]["detailedState"].startswith(
+                    "Delayed"
+                )
+                and self.commonData[pk]["schedule"]["status"]["statusCode"]
+                not in ["I", "IZ", "IH"]
+            ) or (
+                self.commonData[pk]["schedule"]["status"]["codedGameState"]
+                in ["U", "T"]  # Suspended
+                and self.commonData[pk]["schedule"]["status"]["statusCode"] != "UZ"
+            ):
                 # I: In Progress, IZ: Delayed: About to Resume, IH: Instant Replay
+                # UZ: Suspended: About to Resume
                 # Update interval is in minutes (seconds only when game is live)
                 gtnlWait = self.settings.get("Game Thread", {}).get(
                     "UPDATE_INTERVAL_NOT_LIVE", 1
@@ -3062,7 +3072,7 @@ class Bot(object):
                 if gtnlWait < 1:
                     gtnlWait = 1
                 self.log.info(
-                    "Game {} is delayed (abstractGameCode: {}, codedGameState: {}), sleeping for {} minutes...".format(
+                    "Game {} is delayed/suspended (abstractGameCode: {}, codedGameState: {}), sleeping for {} minutes...".format(
                         pk,
                         self.commonData[pk]["schedule"]["status"]["abstractGameCode"],
                         self.commonData[pk]["schedule"]["status"]["codedGameState"],
