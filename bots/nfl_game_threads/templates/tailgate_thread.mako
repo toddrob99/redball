@@ -2,29 +2,25 @@
     from datetime import datetime
     game = data["todayGames"][data["myGameIndex"]]
     myTeamStandings = next((
-        x.get("standings", {}).get("data", {})[0]
-        for x in data["standings"] 
-        if x["abbr"] == data["myTeam"]["abbr"]
-    ), {})
+        x
+        for x in data["standings"]
+        if x["team"]["id"] == data["myTeam"]["id"]
+    ), None)
     myTeamRecord = (
-        f" ({myTeamStandings['overallWins']}-{myTeamStandings['overallLosses']}{'-'+str(myTeamStandings['overallTies']) if myTeamStandings['overallTies'] > 0 else ''})"
-        if len(myTeamStandings)
-        else ""
+        f" ({myTeamStandings['overall']['wins']}-{myTeamStandings['overall']['losses']}{'-'+str(myTeamStandings['overall']['ties']) if myTeamStandings['overall']['ties'] > 0 else ''})"
         ##if data["currentWeek"]["weekType"] == "REG"
         ##else ""
-    )
+    ) if myTeamStandings else ""
     oppTeamStandings = next((
-        x.get("standings", {}).get("data", {})[0]
+        x
         for x in data["standings"] 
-        if x["abbr"] == data["oppTeam"]["abbr"]
-    ), {})
+        if x["team"]["id"] == data["oppTeam"]["id"]
+    ), None)
     oppTeamRecord = (
-        f" ({oppTeamStandings['overallWins']}-{oppTeamStandings['overallLosses']}{'-'+str(oppTeamStandings['overallTies']) if oppTeamStandings['overallTies'] > 0 else ''})"
-        if len(oppTeamStandings)
-        else ""
+        f" ({oppTeamStandings['overall']['wins']}-{oppTeamStandings['overall']['losses']}{'-'+str(oppTeamStandings['overall']['ties']) if oppTeamStandings['overall']['ties'] > 0 else ''})"
         ##if data["currentWeek"]["weekType"] == "REG"
         ##else ""
-    )
+    ) if oppTeamStandings else ""
 %>\
 ## Week
 %if data["currentWeek"]["weekType"] == "HOF":
@@ -53,10 +49,10 @@
 
 %endif
 ## Visiting Team
-${game["visitorTeam"]["fullName"]}${myTeamRecord if data["homeVisitor"] == "visitor" else oppTeamRecord} \
+${game["awayTeam"]["fullName"]}${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
 @ \
 ## Home Team
-${game["homeTeam"]["fullName"]}${myTeamRecord if data["homeVisitor"] == "home" else oppTeamRecord}
+${game["homeTeam"]["fullName"]}${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
 
 ## Date/Time
 Game Time: ${data["gameTime"]["myTeam"].strftime(settings.get("Tailgate Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y @ %I:%M %p %Z"))}
@@ -66,8 +62,8 @@ Game Time: ${data["gameTime"]["myTeam"].strftime(settings.get("Tailgate Thread",
 <%include file="standings.mako" />
 
 <%include file="inactives.mako" />
-
-<%include file="division_scoreboard.mako" />
+##
+##<%include file="division_scoreboard.mako" />  ## Not working due to game status data not in v2 endpoint
 
 ## Configurable footer text
 ${settings.get('Tailgate Thread',{}).get('FOOTER','')}

@@ -1,6 +1,7 @@
 <%
     from datetime import datetime
     game = data["todayGames"][data["myGameIndex"]]
+    gameDetails = data["gameDetails"]
     qtrDesc = {
         1: "1st Quarter",
         2: "2nd Quarter",
@@ -19,12 +20,18 @@
         3: "3rd",
         4: "4th",
     }
-    oppHomeVisitor = "visitor" if data["homeVisitor"] == "home" else "home"
-    if game["gameStatus"]["phase"] in ["FINAL", "FINAL_OVERTIME"]:
+    ##oppHomeAway = "away" if data["homeAway"] == "home" else "home"
+    if gameDetails.get("phase", "SCHEDULED") in ["FINAL", "FINAL_OVERTIME"]:
         result = (
-            "tie" if game[data["homeVisitor"] + "TeamScore"]["pointsTotal"] == game[oppHomeVisitor + "TeamScore"]["pointsTotal"]
-            else "win" if game[data["homeVisitor"] + "TeamScore"]["pointsTotal"] > game[oppHomeVisitor + "TeamScore"]["pointsTotal"]
-            else "loss" if game[data["homeVisitor"] + "TeamScore"]["pointsTotal"] < game[oppHomeVisitor + "TeamScore"]["pointsTotal"]
+            "tie" if gameDetails["homePointsTotal"] == gameDetails["visitorPointsTotal"]
+            else "win" if (
+                data["homeAway"] == "home" and gameDetails["homePointsTotal"] > gameDetails["visitorPointsTotal"]
+                or data["homeAway"] == "away" and gameDetails["visitorPointsTotal"] > gameDetails["homePointsTotal"]
+            )
+            else "loss" if (
+                data["homeAway"] == "home" and gameDetails["homePointsTotal"] < gameDetails["visitorPointsTotal"]
+                or data["homeAway"] == "away" and gameDetails["visitorPointsTotal"] < gameDetails["homePointsTotal"]
+            )
             else ""
         )
     else:
@@ -57,7 +64,7 @@
 
 %endif
 ## Visiting Team
-${game["visitorTeam"]["fullName"]} \
+${game["awayTeam"]["fullName"]} \
 @ \
 ## Home Team
 ${game["homeTeam"]["fullName"]}
@@ -67,23 +74,23 @@ Game Time: ${data["gameTime"]["myTeam"].strftime(settings.get("Game Thread", {})
 
 <%include file="venue_weather.mako" />
 
-%if game["gameStatus"]["phase"] == "INGAME":
+%if gameDetails.get("phase", "SCHEDULED") == "INGAME":
 ${'##'} Game Status\
-${f" - {qtrDesc[data['gameDetails']['period']]}" if data["gameDetails"].get("period") else ""} - \
-${game["gameStatus"]["gameClock"]}
+${f" - {qtrDesc[gameDetails['period']]}" if gameDetails.get("period") else ""} - \
+${gameDetails["gameClock"]}
 
-% if game["gameStatus"].get("possessionTeam") and game["gameStatus"].get("down"):
-${game["gameStatus"].get("possessionTeam", {}).get("abbr")} &#127944; \
-${downDesc[game["gameStatus"]["down"]]} and ${"Goal" if game["gameStatus"].get("goalToGo") else game["gameStatus"]["yardsToGo"]} @ \
-${game["gameStatus"].get("yardLineSide", "")} ${game["gameStatus"].get("yardLineNumber", "")} yard line
+% if gameDetails.get("possessionTeam") and gameDetails.get("down"):
+${gameDetails.get("possessionTeam", {}).get("abbreviation")} &#127944; \
+${downDesc[gameDetails["down"]]} and ${"Goal" if gameDetails.get("goalToGo") else gameDetails["yardsToGo"]} @ \
+${gameDetails.get("yardLine", "")} yard line
 % endif
-%elif game["gameStatus"]["phase"] == "HALFTIME":
+%elif gameDetails.get("phase", "SCHEDULED") == "HALFTIME":
 ${'##'} Game Status: HALFTIME
 %elif result:
-${'##'} Final Score${f" (Overtime)" if game["gameStatus"]["phase"] == "FINAL_OVERTIME" else ""}: \
-${max(int(game[data["homeVisitor"] + "TeamScore"]["pointsTotal"]), int(game[oppHomeVisitor + "TeamScore"]["pointsTotal"]))}\
+${'##'} Final Score${f" (Overtime)" if gameDetails.get("phase", "SCHEDULED") == "FINAL_OVERTIME" else ""}: \
+${max(int(gameDetails["homePointsTotal"]), int(gameDetails["visitorPointsTotal"]))}\
 -\
-${min(int(game[data["homeVisitor"] + "TeamScore"]["pointsTotal"]), int(game[oppHomeVisitor + "TeamScore"]["pointsTotal"]))} \
+${min(int(gameDetails["homePointsTotal"]), int(gameDetails["visitorPointsTotal"]))} \
 %if result == "tie":
 TIE
 %elif result == "win":
@@ -93,12 +100,12 @@ ${data["oppTeam"]["nickName"]}
 %endif
 %endif
 
-%if game["gameStatus"]["phase"] in ["INGAME", "HALFTIME", "FINAL", "FINAL_OVERTIME"]:
+%if gameDetails.get("phase", "SCHEDULED") in ["INGAME", "HALFTIME", "FINAL", "FINAL_OVERTIME"]:
 ## Only include the line score if the game has already started
 <%include file="linescore.mako" />
 %endif
 
-%if game["gameStatus"]["phase"] != "PREGAME":
+%if gameDetails.get("phase", "SCHEDULED") != "PREGAME":
 
 <%include file="scoring_drives.mako" />
 ##
@@ -106,8 +113,8 @@ ${data["oppTeam"]["nickName"]}
 
 <%include file="game_stats.mako" />
 %endif
-
-<%include file="division_scoreboard.mako" />
+##
+##<%include file="division_scoreboard.mako" />  ## This is not working because game status is not available in v2 game endpoint
 
 ## Configurable footer text
 ${settings.get('Game Thread',{}).get('FOOTER','')}

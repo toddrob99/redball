@@ -2,13 +2,21 @@
     from datetime import datetime
     prefix = settings.get("Post Game Thread", {}).get("TITLE_PREFIX","Post Game Thread:")
     game = data["todayGames"][data["myGameIndex"]]
-    oppHomeVisitor = "visitor" if data["homeVisitor"] == "home" else "home"
+    gameDetails = data["gameDetails"]
     result = (
-        "tie" if game[data["homeVisitor"] + "TeamScore"]["pointsTotal"] == game[oppHomeVisitor + "TeamScore"]["pointsTotal"]
-        else "win" if game[data["homeVisitor"] + "TeamScore"]["pointsTotal"] > game[oppHomeVisitor + "TeamScore"]["pointsTotal"]
-        else "loss" if game[data["homeVisitor"] + "TeamScore"]["pointsTotal"] < game[oppHomeVisitor + "TeamScore"]["pointsTotal"]
+        "tie" if gameDetails["homePointsTotal"] == gameDetails["visitorPointsTotal"]
+        else "win" if (
+            data["homeAway"] == "home" and gameDetails["homePointsTotal"] > gameDetails["visitorPointsTotal"]
+            or data["homeAway"] == "away" and gameDetails["visitorPointsTotal"] > gameDetails["homePointsTotal"]
+        )
+        else "loss" if (
+            data["homeAway"] == "home" and gameDetails["homePointsTotal"] < gameDetails["visitorPointsTotal"]
+            or data["homeAway"] == "away" and gameDetails["visitorPointsTotal"] < gameDetails["homePointsTotal"]
+        )
         else ""
     )
+    maxScore = max(int(gameDetails["homePointsTotal"]), int(gameDetails["visitorPointsTotal"]))
+    minScore = min(int(gameDetails["homePointsTotal"]), int(gameDetails["visitorPointsTotal"]))
 %>\
 ## Prefix
 ${prefix + (" " if len(prefix) and not prefix.endswith(" ") else "")}\
@@ -52,12 +60,9 @@ ${data["oppTeam"]["nickName"]} \
 %if result == "tie":
 ## TIE
 with ${game["homeTeamScore"]["pointsTotal"]} points each \
-%elif result == "win":
-## WIN
-by a score of ${game[data["homeVisitor"] + "TeamScore"]["pointsTotal"]} to ${game[oppHomeVisitor + "TeamScore"]["pointsTotal"]} \
-%elif result == "loss":
-## LOSS
-by a score of ${game[oppHomeVisitor + "TeamScore"]["pointsTotal"]} to ${game[data["homeVisitor"] + "TeamScore"]["pointsTotal"]} \
+%elif result in ["win", "loss"]:
+## WIN / LOSS
+by a score of ${maxScore} to ${minScore} \
 %else:
 ## EXCEPTION
 %endif

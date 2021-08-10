@@ -1,54 +1,42 @@
 <%
     game = data["todayGames"][data["myGameIndex"]]
-    visitorTeam = (
-        data["myTeam"] if data["homeVisitor"] == "visitor"
+    gameDetails = data["gameDetails"]
+    awayTeam = (
+        data["myTeam"] if data["homeAway"] == "away"
         else data["oppTeam"]
     )
     homeTeam = (
-        data["myTeam"] if data["homeVisitor"] == "home"
+        data["myTeam"] if data["homeAway"] == "home"
         else data["oppTeam"]
     )
     if (
-        game.get("homeTeamScore", {}).get("pointsTotal") is not None
-        and game.get("visitorTeamScore", {}).get("pointsTotal") is not None
+        gameDetails.get("homePointsTotal") is not None
+        and gameDetails.get("visitorPointsTotal") is not None
     ):
-        vs = game["visitorTeamScore"]
-        hs = game["homeTeamScore"]
-        #headerLine = "||1|2|3|4|"
         headerLine = "||"
-        #alignmentLine = "|:--|:--|:--|:--|:--|"
         alignmentLine = "|:--|"
-        #visitorLine = f'|{visitorTeam["nickName"]}|{vs.get("pointsQ1", "")}|{vs.get("pointsQ2", "")}|{vs.get("pointsQ3", "")}|{vs.get("pointsQ4", "")}|'
-        visitorLine = f'|{visitorTeam["nickName"]}|'
-        #homeLine = f'|{homeTeam["nickName"]}|{hs.get("pointsQ1", "")}|{hs.get("pointsQ2", "")}|{hs.get("pointsQ3", "")}|{hs.get("pointsQ4", "")}|'
+        awayLine = f'|{awayTeam["nickName"]}|'
         homeLine = f'|{homeTeam["nickName"]}|'
         for qtr in [str(q) for q in range(1, (
-                game["gameStatus"]["period"] if isinstance(game["gameStatus"]["period"], int) and game["gameStatus"]["period"] <= 4
-                else 2 if game["gameStatus"]["phase"] == "HALFTIME"
+                gameDetails["period"] if isinstance(gameDetails["period"], int) and gameDetails["period"] <= 4
+                else 2 if gameDetails["phase"] == "HALFTIME"
                 else 4
             ) + 1)]:
             headerLine += f"Q{qtr}|"
             alignmentLine += ":--|"
-            visitorLine += f"{vs.get('pointsQ'+qtr, '')}|"
-            homeLine += f"{hs.get('pointsQ'+qtr, '')}|"
-        if game["gameStatus"]["phase"] == "FINAL_OVERTIME" or (isinstance(game["gameStatus"]["period"], int) and game["gameStatus"]["period"] > 4):
-            for i, x in [(i, x) for i, x in enumerate(vs.get("pointsOvertime", {}).get("data", []))]:
-                if len(vs.get("pointsOvertime", {}).get("data", [])) > 1:
-                    headerLine += f"OT{i+1}|"
-                    alignmentLine += ":--|"
-                    visitorLine += f"{x}|"
-                    homeLine += f'{hs.get("pointsOvertime", {}).get("data", [0])[i]}|'
-                else:
-                    headerLine += f"OT|"
-                    alignmentLine += ":--|"
-                    visitorLine += f"{x}|"
-                    homeLine += f'{hs.get("pointsOvertime", {}).get("data", [0])[i]}|'
+            awayLine += f"{gameDetails.get('visitorPointsQ'+qtr, '')}|"
+            homeLine += f"{gameDetails.get('homePointsQ'+qtr, '')}|"
+        if "OVERTIME" in gameDetails["phase"] or (isinstance(gameDetails["period"], int) and gameDetails["period"] > 4):
+            headerLine += "OT|"
+            alignmentLine += ":--|"
+            awayLine += f"{gameDetails.get('visitorPointsOvertime', '')}|"
+            homeLine += f"{gameDetails.get('homePointsOvertime', '')}|"
         headerLine += "|TOTAL|"
         alignmentLine += ":--|:--|"
-        visitorLine += f"|{vs['pointsTotal']}|"
-        homeLine += f"|{hs['pointsTotal']}|"
+        awayLine += f"|{gameDetails['visitorPointsTotal']}|"
+        homeLine += f"|{gameDetails['homePointsTotal']}|"
 %>\
 ${headerLine}
 ${alignmentLine}
-${visitorLine}
+${awayLine}
 ${homeLine}

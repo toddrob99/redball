@@ -1,31 +1,26 @@
 <%
-    from datetime import datetime
     prefix = settings.get("Game Thread", {}).get("TITLE_PREFIX","Game Thread:")
     game = data["todayGames"][data["myGameIndex"]]
     myTeamStandings = next((
-        x.get("standings", {}).get("data", {})[0]
-        for x in data["standings"] 
-        if x["abbr"] == data["myTeam"]["abbr"]
-    ), {})
+        x
+        for x in data["standings"]
+        if x["team"]["id"] == data["myTeam"]["id"]
+    ), None)
     myTeamRecord = (
-        f" ({myTeamStandings['overallWins']}-{myTeamStandings['overallLosses']}{'-'+str(myTeamStandings['overallTies']) if myTeamStandings['overallTies'] > 0 else ''})"
-        if len(myTeamStandings)
-        else " (0-0)"
-        ##if data["currentWeek"]["weekType"] != "REG"
-        ##else ""
-    )
-    oppTeamStandings = next((
-        x.get("standings", {}).get("data", {})[0]
-        for x in data["standings"] 
-        if x["abbr"] == data["oppTeam"]["abbr"]
-    ), {})
-    oppTeamRecord = (
-        f" ({oppTeamStandings['overallWins']}-{oppTeamStandings['overallLosses']}{'-'+str(oppTeamStandings['overallTies']) if oppTeamStandings['overallTies'] > 0 else ''})"
-        if len(oppTeamStandings)
-        else " (0-0)"
+        f" ({myTeamStandings['overall']['wins']}-{myTeamStandings['overall']['losses']}{'-'+str(myTeamStandings['overall']['ties']) if myTeamStandings['overall']['ties'] > 0 else ''})"
         ##if data["currentWeek"]["weekType"] == "REG"
         ##else ""
-    )
+    ) if myTeamStandings else ""
+    oppTeamStandings = next((
+        x
+        for x in data["standings"] 
+        if x["team"]["id"] == data["oppTeam"]["id"]
+    ), None)
+    oppTeamRecord = (
+        f" ({oppTeamStandings['overall']['wins']}-{oppTeamStandings['overall']['losses']}{'-'+str(oppTeamStandings['overall']['ties']) if oppTeamStandings['overall']['ties'] > 0 else ''})"
+        ##if data["currentWeek"]["weekType"] == "REG"
+        ##else ""
+    ) if oppTeamStandings else ""
 %>\
 ## Prefix
 ${prefix + (" " if len(prefix) and not prefix.endswith(" ") else "")}\
@@ -48,10 +43,10 @@ Pro Bowl -
 SUPER BOWL - 
 %endif
 ## Visiting Team
-${game["visitorTeam"]["fullName"]}${myTeamRecord if data["homeVisitor"] == "visitor" else oppTeamRecord} \
+${game["awayTeam"]["fullName"]}${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
 @ \
 ## Home Team
-${game["homeTeam"]["fullName"]}${myTeamRecord if data["homeVisitor"] == "home" else oppTeamRecord} \
+${game["homeTeam"]["fullName"]}${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord} \
 - \
 ## Date/Time
 ${data["gameTime"]["myTeam"].strftime(settings.get("Game Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y @ %I:%M %p %Z"))}
