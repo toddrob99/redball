@@ -18,7 +18,6 @@ method of obtaining an access token, this API wrapper will be useless.
 from datetime import datetime
 import logging
 import requests
-import time
 
 from . import version
 
@@ -179,9 +178,7 @@ class APISession(object):
     def __init__(self, token):
         self.token = token
 
-    def api_call(
-        self, endpoint, query="", headers={}, data={}, method="GET"
-    ):  # , wait=True):
+    def api_call(self, endpoint, query="", headers={}, data={}, method="GET"):
         headers.update({"Authorization": f"Bearer {self.token['access_token']}"})
         if method == "GET":
             r = requests.get(API_BASE_URL + endpoint + query, headers=headers)
@@ -191,17 +188,23 @@ class APISession(object):
             )
         if r.status_code not in [200, 201]:
             r.raise_for_status()
-        #  elif r.status_code == 429:  # Find status code for too many requests/wait
-        #      # if wait:
-        #      #     wait(r.json.get("wait_time"))  # Find the wait time in the response
         else:
             return r.json()
 
-    def shieldQuery(self, query, variables=None):
-        return self.api_call(
-            ENDPOINTS["shield"],
-            query=f"?query={query}&variables={variables or 'null'}",
-        )
+    def shieldQuery(self, query, variables=None, attempts=1):
+        success = False
+        while not success and attempts >= 1:
+            result = self.api_call(
+                ENDPOINTS["shield"],
+                query=f"?query={query}&variables={variables or 'null'}",
+            )
+            logger.debug(f"Shield query result: {result}")
+            if not result.get("code"):
+                success = True
+            else:
+                attempts -= 1
+
+        return result
 
     def currentWeek(self, query=None):
         return self.shieldQuery(query or QUERIES["shield"]["currentWeek"])
@@ -296,7 +299,3 @@ class APISession(object):
         return self.api_call(
             ENDPOINTS["shield"], query=f"?query={query}&variables=null",
         )
-
-
-def wait(seconds):
-    time.sleep(seconds)

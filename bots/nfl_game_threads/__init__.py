@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "2.0"
+__version__ = "2.0.1"
 
 DATA_LOCK = threading.Lock()
 
@@ -271,13 +271,15 @@ class Bot(object):
                         ),
                     }
             else:
-                currentWeek_raw = self.nfl.currentWeek()
-                currentWeek = {
-                    "season": currentWeek_raw[0]["seasonValue"],
-                    "seasonType": currentWeek_raw[0]["seasonType"],
-                    "week": currentWeek_raw[0]["weekValue"],
-                    "weekType": currentWeek_raw[0]["weekType"],
-                }
+                currentWeek = self.nfl.currentWeek()["data"]["viewer"]["league"][
+                    "current"
+                ]["week"]
+                currentWeek.update(
+                    {
+                        "season": currentWeek["seasonValue"],
+                        "week": currentWeek["weekValue"],
+                    }
+                )
                 currentWeekGames = self.nfl.gamesByWeek(
                     season=currentWeek["season"],
                     week=currentWeek["week"],
