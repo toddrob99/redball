@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.1.0.4"
+__version__ = "1.2"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -83,12 +83,19 @@ class Bot(object):
         self.init_reddit()
 
         # Initialize scheduler
-        self.SCHEDULER = BackgroundScheduler(
+        if "SCHEDULER" in vars(self.bot):
+            # Scheduler is already running, maybe bot crashed and restarted
+            self.log.warning(
+                f"Found scheduler already running on startup with the following job(s): {self.bot.SCHEDULER.get_jobs()}"
+            )
+            self.bot.SCHEDULER.shutdown(wait=False)
+
+        self.bot.SCHEDULER = BackgroundScheduler(
             timezone=tzlocal.get_localzone()
             if str(tzlocal.get_localzone()) != "local"
             else "America/New_York"
         )
-        self.SCHEDULER.start()
+        self.bot.SCHEDULER.start()
 
         self.bot.detailedState = {
             "summary": {
@@ -102,12 +109,12 @@ class Bot(object):
         if not next(
             (
                 x
-                for x in self.SCHEDULER.get_jobs()
+                for x in self.bot.SCHEDULER.get_jobs()
                 if x.name == f"bot-{self.bot.id}-statusUpdateTask"
             ),
             None,
         ):
-            self.SCHEDULER.add_job(
+            self.bot.SCHEDULER.add_job(
                 self.bot_state,
                 "interval",
                 name=f"bot-{self.bot.id}-statusUpdateTask",
@@ -730,7 +737,7 @@ class Bot(object):
             self.log.info("All done for today! Going into end of day loop...")
             self.eod_loop(self.today["Y-m-d"])
 
-        self.SCHEDULER.shutdown()
+        self.bot.SCHEDULER.shutdown()
         self.log.info("Bot {} (id={}) exiting...".format(self.bot.name, self.bot.id))
         self.bot.detailedState = {
             "lastUpdated": datetime.today().strftime("%m/%d/%Y %I:%M:%S %p"),
