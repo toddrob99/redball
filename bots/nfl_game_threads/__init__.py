@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "2.1"
+__version__ = "2.1.1"
 
 DATA_LOCK = threading.Lock()
 
@@ -394,7 +394,18 @@ class Bot(object):
                     ),
                     None,
                 )
-                self.log.debug(f"gameTime: {gameTime}")
+                gameTime_local = next(
+                    (
+                        self.convert_timezone(  # Convert Zulu to my team TZ
+                            datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"),
+                            "local",
+                        )
+                        for g in todayGames
+                        if g["id"] == myTeamTodayGameId
+                    ),
+                    None,
+                )
+                self.log.debug(f"gameTime (my team TZ): {gameTime}; gameTime_local: {gameTime_local}")
                 standings = self.nfl.standings(
                     season=currentWeek["season"],
                     seasonType=currentWeek["seasonType"],
@@ -421,9 +432,7 @@ class Bot(object):
                         ]["clubs"]["currentClubRoster"],
                         "gameTime": {
                             # "homeTeam": datetime.fromisoformat(gameTime),
-                            "bot": self.convert_timezone(
-                                datetime.fromisoformat(gameTime), "local",
-                            ),
+                            "bot": gameTime_local,
                             "myTeam": datetime.fromisoformat(gameTime),
                         },
                         "myGameIndex": myGameIndex,
@@ -1844,7 +1853,18 @@ class Bot(object):
                 ),
                 None,
             )
-            self.log.debug(f"gameTime: {gameTime}")
+            gameTime_local = next(
+                (
+                    self.convert_timezone(  # Convert Zulu to my team TZ
+                        datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"),
+                        "local",
+                    )
+                    for g in todayGames
+                    if g["id"] == self.allData["gameId"]
+                ),
+                None,
+            )
+            self.log.debug(f"gameTime (my team TZ): {gameTime}; gameTime_local: {gameTime_local}")
             standings = self.nfl.standings(
                 season=self.allData["currentWeek"]["season"],
                 seasonType=self.allData["currentWeek"]["seasonType"],
@@ -1872,9 +1892,7 @@ class Bot(object):
                     "currentWeekGames": currentWeekGames,
                     "todayGames": todayGames,
                     "gameTime": {
-                        "bot": self.convert_timezone(
-                            datetime.fromisoformat(gameTime), "local",
-                        ),
+                        "bot": gameTime_local,
                         "myTeam": datetime.fromisoformat(gameTime),
                     },
                     "myGameIndex": myGameIndex,
