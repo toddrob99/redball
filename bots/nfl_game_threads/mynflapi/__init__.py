@@ -40,6 +40,7 @@ ENDPOINTS = {
     "standings": "/football/v2/standings",
     "shield": "/v3/shield",
     "football": "/football/v2",
+    "experience": "/experience/v1",
 }
 
 QUERIES = {
@@ -208,6 +209,9 @@ class APISession(object):
 
     def currentWeek(self, query=None):
         return self.shieldQuery(query or QUERIES["shield"]["currentWeek"])
+
+    def weekByDate(self, date):
+        return self.api_call(f"{ENDPOINTS['football']}/weeks/date/{date}")
 
     def gamesByWeek(self, season, week, seasonType, limit=100):
         return self.api_call(

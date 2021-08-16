@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "2.1.1"
+__version__ = "2.2"
 
 DATA_LOCK = threading.Lock()
 
@@ -245,57 +245,22 @@ class Bot(object):
                 todayOverrideFlag = (
                     False  # Only override once, then go back to current date
                 )
-                currentWeekGames = self.nfl.gamesByWeek(
-                    season=self.settings.get("NFL", {}).get(
-                        "SEASON_OVERRIDE", self.today["season"]
-                    ),
-                    week=self.settings.get("NFL", {}).get("WEEK_OVERRIDE", 0),
-                    seasonType=self.settings.get("NFL", {}).get(
-                        "SEASONTYPE_OVERRIDE", "UNKNOWN"
-                    ),
-                )["games"]
-                if len(currentWeekGames):
-                    currentWeek = {
-                        "season": currentWeekGames[0]["season"],
-                        "seasonType": currentWeekGames[0]["seasonType"],
-                        "week": currentWeekGames[0]["week"],
-                        "weekType": currentWeekGames[0]["weekType"],
-                    }
-                else:
-                    currentWeek = {
-                        "season": int(
-                            self.settings.get("NFL", {}).get(
-                                "SEASON_OVERRIDE", self.today["season"]
-                            )
-                        ),
-                        "seasonType": self.settings.get("NFL", {}).get(
-                            "SEASONTYPE_OVERRIDE", "UNKNOWN"
-                        ),
-                        "week": int(
-                            self.settings.get("NFL", {}).get("WEEK_OVERRIDE", 0)
-                        ),
-                        "weekType": self.settings.get("NFL", {}).get(
-                            "SEASONTYPE_OVERRIDE", "UNKNOWN"
-                        ),
-                    }
-            else:
-                currentWeek = self.nfl.currentWeek()["data"]["viewer"]["league"][
-                    "current"
-                ]["week"]
-                currentWeek.update(
-                    {
-                        "season": currentWeek["seasonValue"],
-                        "week": currentWeek["weekValue"],
-                    }
+
+            currentWeek = self.nfl.weekByDate(self.today["Y-m-d"])
+            if currentWeek.get("message"):
+                self.log.error(
+                    f"Error retrieving currentWeek Assuming no games today. Response: {currentWeek}"
                 )
+                currentWeekGames = []
+            else:
                 currentWeekGames = self.nfl.gamesByWeek(
                     season=currentWeek["season"],
                     week=currentWeek["week"],
                     seasonType=currentWeek["seasonType"],
                 )["games"]
-            self.log.debug(
-                f"Season: {currentWeek['season']}; Season Type: {currentWeek['seasonType']}; Week: {currentWeek['week']}"
-            )
+                self.log.debug(
+                    f"Season: {currentWeek['season']}; Season Type: {currentWeek['seasonType']}; Week: {currentWeek['week']}"
+                )
 
             # Get today's games
             todayGames = [
@@ -397,15 +362,16 @@ class Bot(object):
                 gameTime_local = next(
                     (
                         self.convert_timezone(  # Convert Zulu to my team TZ
-                            datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"),
-                            "local",
+                            datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"), "local",
                         )
                         for g in todayGames
                         if g["id"] == myTeamTodayGameId
                     ),
                     None,
                 )
-                self.log.debug(f"gameTime (my team TZ): {gameTime}; gameTime_local: {gameTime_local}")
+                self.log.debug(
+                    f"gameTime (my team TZ): {gameTime}; gameTime_local: {gameTime_local}"
+                )
                 standings = self.nfl.standings(
                     season=currentWeek["season"],
                     seasonType=currentWeek["seasonType"],
@@ -1856,15 +1822,16 @@ class Bot(object):
             gameTime_local = next(
                 (
                     self.convert_timezone(  # Convert Zulu to my team TZ
-                        datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"),
-                        "local",
+                        datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"), "local",
                     )
                     for g in todayGames
                     if g["id"] == self.allData["gameId"]
                 ),
                 None,
             )
-            self.log.debug(f"gameTime (my team TZ): {gameTime}; gameTime_local: {gameTime_local}")
+            self.log.debug(
+                f"gameTime (my team TZ): {gameTime}; gameTime_local: {gameTime_local}"
+            )
             standings = self.nfl.standings(
                 season=self.allData["currentWeek"]["season"],
                 seasonType=self.allData["currentWeek"]["seasonType"],
