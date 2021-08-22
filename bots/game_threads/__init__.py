@@ -30,7 +30,7 @@ import twitter
 
 import praw
 
-__version__ = "1.2"
+__version__ = "1.2.1"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -85,10 +85,14 @@ class Bot(object):
         # Initialize scheduler
         if "SCHEDULER" in vars(self.bot):
             # Scheduler is already running, maybe bot crashed and restarted
+            sch_jobs = self.bot.SCHEDULER.get_jobs()
             self.log.warning(
-                f"Found scheduler already running on startup with the following job(s): {self.bot.SCHEDULER.get_jobs()}"
+                f"Found scheduler already running on startup with the following job(s): {sch_jobs}"
             )
-            self.bot.SCHEDULER.shutdown(wait=False)
+            # Remove all jobs and shut down so we can start fresh
+            for x in sch_jobs:
+                x.remove()
+            self.bot.SCHEDULER.shutdown()
 
         self.bot.SCHEDULER = BackgroundScheduler(
             timezone=tzlocal.get_localzone()
