@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.1.0.3"
+__version__ = "2.2.1"
 
 DATA_LOCK = threading.Lock()
 
@@ -83,12 +83,23 @@ class Bot(object):
         self.init_reddit()
 
         # Initialize scheduler
-        self.SCHEDULER = BackgroundScheduler(
+        if "SCHEDULER" in vars(self.bot):
+            # Scheduler is already running, maybe bot crashed and restarted
+            sch_jobs = self.bot.SCHEDULER.get_jobs()
+            self.log.warning(
+                f"Found scheduler already running on startup with the following job(s): {sch_jobs}"
+            )
+            # Remove all jobs and shut down so we can start fresh
+            for x in sch_jobs:
+                x.remove()
+            self.bot.SCHEDULER.shutdown()
+
+        self.bot.SCHEDULER = BackgroundScheduler(
             timezone=tzlocal.get_localzone()
             if str(tzlocal.get_localzone()) != "local"
             else "America/New_York"
         )
-        self.SCHEDULER.start()
+        self.bot.SCHEDULER.start()
 
         self.bot.detailedState = {
             "summary": {
@@ -102,12 +113,12 @@ class Bot(object):
         if not next(
             (
                 x
-                for x in self.SCHEDULER.get_jobs()
+                for x in self.bot.SCHEDULER.get_jobs()
                 if x.name == f"bot-{self.bot.id}-statusUpdateTask"
             ),
             None,
         ):
-            self.SCHEDULER.add_job(
+            self.bot.SCHEDULER.add_job(
                 self.bot_state,
                 "interval",
                 name=f"bot-{self.bot.id}-statusUpdateTask",
@@ -163,7 +174,7 @@ class Bot(object):
             self.today.update(
                 {
                     "season": (
-                        int(self.today["Y"]) - 1
+                        str(int(self.today["Y"]) - 1)
                         if int(self.today["Y-m-d"].split("-")[1]) < 4
                         else self.today["Y"]
                     )
@@ -180,14 +191,15 @@ class Bot(object):
             self.nfl = mynflapi.APISession(self.getNflToken())
             # Start a scheduled task to refresh NFL API token before it expires
             if not next(
-                (x for x in self.SCHEDULER.get_jobs() if x.name == "getNflToken"), None
+                (x for x in self.bot.SCHEDULER.get_jobs() if x.name == "getNflToken"),
+                None,
             ):
                 self.log.debug("Scheduling getNflToken job...")
                 # First check if job exists
-                self.SCHEDULER.add_job(
+                self.bot.SCHEDULER.add_job(
                     self.getNflToken,
                     "interval",
-                    name="getNflToken",
+                    name=f"bot-{self.bot.id}-getNflToken",
                     kwargs={"nflSession": self.nfl},
                     minutes=58,
                 )
@@ -200,13 +212,17 @@ class Bot(object):
                 self.bot.STOP = True
                 break
 
-            self.allTeams = self.nfl.teams(season=self.today["season"])["data"]
+            self.allTeams = self.nfl.teams(season=self.today["season"])["teams"]
+            self.log.debug(f"{self.allTeams=}")
+            self.log.debug(
+                f"{self.settings.get('NFL', {}).get('TEAM', '').split('|')[1]=}"
+            )
 
             self.myTeam = next(
                 (
                     x
                     for x in self.allTeams
-                    if x["abbr"]
+                    if x["abbreviation"]
                     == self.settings.get("NFL", {}).get("TEAM", "").split("|")[1]
                 ),
                 None,
@@ -224,7 +240,7 @@ class Bot(object):
             self.otherDivisionTeams = [
                 x
                 for x in self.allTeams
-                if x["division"]["abbr"] == self.myTeam["division"]["abbr"]
+                if x["divisionFullName"] == self.myTeam["divisionFullName"]
                 and x["id"] != self.myTeam["id"]
             ]
 
@@ -233,67 +249,29 @@ class Bot(object):
                 todayOverrideFlag = (
                     False  # Only override once, then go back to current date
                 )
-                currentWeekGames = self.nfl.gamesByWeek(
-                    season=self.settings.get("NFL", {}).get(
-                        "SEASON_OVERRIDE", self.today["season"]
-                    ),
-                    week=self.settings.get("NFL", {}).get("WEEK_OVERRIDE", 0),
-                    seasonType=self.settings.get("NFL", {}).get(
-                        "SEASONTYPE_OVERRIDE", "UNKNOWN"
-                    ),
-                )["data"]
-                if len(currentWeekGames):
-                    currentWeek = currentWeekGames[0]["week"]
-                else:
-                    currentWeek = {
-                        "id": "unknown",
-                        "season": int(
-                            self.settings.get("NFL", {}).get(
-                                "SEASON_OVERRIDE", self.today["season"]
-                            )
-                        ),
-                        "seasonType": self.settings.get("NFL", {}).get(
-                            "SEASONTYPE_OVERRIDE", "UNKNOWN"
-                        ),
-                        "week": int(
-                            self.settings.get("NFL", {}).get("WEEK_OVERRIDE", 0)
-                        ),
-                        "name": "Unknown",
-                        "weekType": self.settings.get("NFL", {}).get(
-                            "SEASONTYPE_OVERRIDE", "UNKNOWN"
-                        ),
-                    }
-                    weekOrderDifferential = {
-                        "HOF": 0,
-                        "PRE": 1,
-                        "REG": 5,
-                        "POST": 22,
-                        "PRO": 25,
-                        "SB": 26,
-                    }
-                    currentWeek.update(
-                        {
-                            "weekOrder": currentWeek["week"]
-                            + weekOrderDifferential[currentWeek["seasonType"]],
-                        }
-                    )
+
+            currentWeek = self.nfl.weekByDate(self.today["Y-m-d"])
+            if currentWeek.get("message"):
+                self.log.error(
+                    f"Error retrieving currentWeek Assuming no games today. Response: {currentWeek}"
+                )
+                currentWeekGames = []
             else:
-                currentWeek = self.nfl.currentWeek()
                 currentWeekGames = self.nfl.gamesByWeek(
                     season=currentWeek["season"],
                     week=currentWeek["week"],
                     seasonType=currentWeek["seasonType"],
-                )["data"]
-            self.log.debug(
-                f"Season: {currentWeek['season']}; Season Type: {currentWeek['seasonType']}; Week: {currentWeek['week']}; WeekOrder: {currentWeek['weekOrder']}"
-            )
+                )["games"]
+                self.log.debug(
+                    f"Season: {currentWeek['season']}; Season Type: {currentWeek['seasonType']}; Week: {currentWeek['week']}"
+                )
 
             # Get today's games
             todayGames = [
                 g
                 for g in currentWeekGames
                 if self.convert_timezone(
-                    datetime.strptime(g["gameTime"], "%Y-%m-%dT%H:%M:%S.%fZ"),
+                    datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"),
                     self.settings.get("Bot", {}).get(
                         "TEAM_TIMEZONE", "America/New_York"
                     ),
@@ -305,8 +283,7 @@ class Bot(object):
                 (
                     g["id"]
                     for g in todayGames
-                    if self.myTeam["abbr"]
-                    in [g["visitorTeam"]["abbr"], g["homeTeam"]["abbr"]]
+                    if self.myTeam["id"] in [g["awayTeam"]["id"], g["homeTeam"]["id"]]
                 ),
                 None,
             )
@@ -319,6 +296,7 @@ class Bot(object):
                 "currentWeekGames": currentWeekGames,
                 "todayGames": todayGames,
                 "gameId": myTeamTodayGameId,
+                "otherDivisionTeams": self.otherDivisionTeams,
             }
             # Initialize vars to hold data about reddit and process threads
             self.stopFlags = {"tailgate": False, "game": False, "post": False}
@@ -347,8 +325,6 @@ class Bot(object):
                 self.log.info(f"IT'S GAME DAY! gameId: {myTeamTodayGameId}")
                 gameById = self.nfl.gameById(gameId=myTeamTodayGameId)
                 self.log.debug(f"gameById: {gameById}")
-                gameDetailId = gameById["data"]["viewer"]["game"]["gameDetailId"]
-                self.log.debug(f"gameDetailId: {gameDetailId}")
                 myGameIndex = next(
                     (
                         k
@@ -357,18 +333,16 @@ class Bot(object):
                     ),
                     None,
                 )
-                homeVisitor = (
+                homeAway = (
                     "home"
-                    if todayGames[myGameIndex]["homeTeam"]["abbr"]
-                    == self.myTeam["abbr"]
-                    else "visitor"
-                    if todayGames[myGameIndex]["visitorTeam"]["abbr"]
-                    == self.myTeam["abbr"]
+                    if todayGames[myGameIndex]["homeTeam"]["id"] == self.myTeam["id"]
+                    else "away"
+                    if todayGames[myGameIndex]["awayTeam"]["id"] == self.myTeam["id"]
                     else None
                 )
-                self.log.debug(f"My team is [{homeVisitor}] (homeVisitor)")
+                self.log.debug(f"My team is [{homeAway}] (homeAway)")
                 oppTeam = todayGames[myGameIndex][
-                    ("visitor" if homeVisitor == "home" else "home") + "Team"
+                    ("away" if homeAway == "home" else "home") + "Team"
                 ]
                 oppTeamId = oppTeam["id"]
                 self.log.debug(f"oppTeamId: {oppTeamId}")
@@ -377,7 +351,7 @@ class Bot(object):
                 gameTime = next(
                     (
                         self.convert_timezone(  # Convert Zulu to my team TZ
-                            datetime.strptime(g["gameTime"], "%Y-%m-%dT%H:%M:%S.%fZ"),
+                            datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"),
                             self.settings.get("Bot", {}).get(
                                 "TEAM_TIMEZONE", "America/New_York"
                             ),
@@ -389,31 +363,46 @@ class Bot(object):
                     ),
                     None,
                 )
-                self.log.debug(f"gameTime: {gameTime}")
+                gameTime_local = next(
+                    (
+                        self.convert_timezone(  # Convert Zulu to my team TZ
+                            datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"), "local",
+                        )
+                        for g in todayGames
+                        if g["id"] == myTeamTodayGameId
+                    ),
+                    None,
+                )
+                self.log.debug(
+                    f"gameTime (my team TZ): {gameTime}; gameTime_local: {gameTime_local}"
+                )
                 standings = self.nfl.standings(
-                    season=currentWeek["season"], seasonType=currentWeek["seasonType"]
-                )["data"]
+                    season=currentWeek["season"],
+                    seasonType=currentWeek["seasonType"],
+                    week=currentWeek["week"],
+                )
+                if len(standings["weeks"]) and standings["weeks"][0].get("standings"):
+                    standings = standings["weeks"][0]["standings"]
+                else:
+                    standings = []
                 # Initialize var to hold game data throughout the day
                 self.allData.update(
                     {
                         "myTeam": self.nfl.teamById(
-                            teamId=todayGames[myGameIndex][homeVisitor + "Team"]["id"]
+                            teamId=todayGames[myGameIndex][homeAway + "Team"]["id"]
                         ),
-                        # "myTeam": todayGames[myGameIndex][homeVisitor + "Team"],
-                        "gameDetailId": gameDetailId,
-                        "gameDetails": self.nfl.gameDetails(gameDetailId=gameDetailId)[
-                            "data"
-                        ]["viewer"]["gameDetail"]
-                        if gameDetailId
-                        else {},
+                        "myTeamRoster": self.nfl.team_roster(self.myTeam["id"])["data"][
+                            "viewer"
+                        ]["clubs"]["currentClubRoster"],
                         "gameInsights": gameInsights,
-                        "homeVisitor": homeVisitor,
+                        "homeAway": homeAway,
                         "oppTeam": oppTeam,
+                        "oppTeamRoster": self.nfl.team_roster(oppTeam["id"])["data"][
+                            "viewer"
+                        ]["clubs"]["currentClubRoster"],
                         "gameTime": {
                             # "homeTeam": datetime.fromisoformat(gameTime),
-                            "bot": self.convert_timezone(
-                                datetime.fromisoformat(gameTime), "local",
-                            ),
+                            "bot": gameTime_local,
                             "myTeam": datetime.fromisoformat(gameTime),
                         },
                         "myGameIndex": myGameIndex,
@@ -421,6 +410,32 @@ class Bot(object):
                     }
                 )
                 """ Holds data about current week games, including detailed data for my team's game """
+                try:
+                    gameDetails = self.nfl.gameDetails(
+                        gameDetailId=next(
+                            (
+                                x["id"]
+                                for x in todayGames[myGameIndex]["externalIds"]
+                                if x["source"] == "gamedetail"
+                            ),
+                            {},
+                        )
+                    )
+                except Exception as e:
+                    if "404" in str(e):
+                        self.log.debug(
+                            f"Game detail id is not active in shield API yet: {e}"
+                        )
+                        gameDetails = {}
+                    else:
+                        raise
+                self.allData.update(
+                    {
+                        "gameDetails": gameDetails.get("data", {})
+                        .get("viewer", {})
+                        .get("gameDetail", {}),
+                    }
+                )
                 if redball.DEV:
                     self.log.debug(f"allData: {self.allData}")
 
@@ -699,7 +714,7 @@ class Bot(object):
             self.log.info("All done for today! Going into end of day loop...")
             self.eod_loop(self.today["Y-m-d"])
 
-        self.SCHEDULER.shutdown()
+        self.bot.SCHEDULER.shutdown()
         self.log.info("Bot {} (id={}) exiting...".format(self.bot.name, self.bot.id))
         self.bot.detailedState = {
             "lastUpdated": datetime.today().strftime("%m/%d/%Y %I:%M:%S %p"),
@@ -951,9 +966,7 @@ class Bot(object):
                     break
             elif update_tailgate_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.allData["todayGames"][self.allData["myGameIndex"]][
-                        "gameStatus"
-                    ]["phase"]
+                    self.allData["gameDetails"].get("phase", "UNKNOWN")
                     in ["FINAL", "FINAL_OVERTIME", "SUSPENDED", "CANCELED", "CANCELLED"]
                 ) and not next(  # And all division games are final
                     (
@@ -965,7 +978,7 @@ class Bot(object):
                                 True
                                 for divTeam in self.otherDivisionTeams
                                 if divTeam["id"]
-                                in [x["visitorTeam"]["id"], x["homeTeam"]["id"]]
+                                in [x["awayTeam"]["id"], x["homeTeam"]["id"]]
                             )
                         )
                     ),
@@ -1108,9 +1121,7 @@ class Bot(object):
                 and not self.bot.STOP
                 and not self.threadCache["game"].get("thread")
             ):
-                if self.allData["todayGames"][self.allData["myGameIndex"]][
-                    "gameStatus"
-                ]["phase"] in [
+                if self.allData["gameDetails"].get("phase", "UNKNOWN") in [
                     "SUSPENDED",
                     "FINAL",
                     "FINAL_OVERTIME",
@@ -1133,16 +1144,15 @@ class Bot(object):
                         # Post game thread is enabled, so skip game thread
                         self.log.info(
                             "Game is {}; skipping game thread...".format(
-                                self.allData["todayGames"][self.allData["myGameIndex"]][
-                                    "gameStatus"
-                                ]["phase"],
+                                self.allData["gameDetails"].get("phase", "UNKNOWN"),
                             )
                         )
                         skipFlag = True
                     break
-                elif self.allData["todayGames"][self.allData["myGameIndex"]][
-                    "gameStatus"
-                ]["phase"] in ["INGAME", "HALFTIME"]:
+                elif self.allData["gameDetails"].get("phase", "UNKNOWN") in [
+                    "INGAME",
+                    "HALFTIME",
+                ]:
                     # Game is already in live status (including halftime), so submit the game thread!
                     self.log.info(
                         "It's technically not time to submit the game thread yet, but the game status is INGAME/HALFTIME. Proceeding..."
@@ -1274,9 +1284,7 @@ class Bot(object):
                     self.log.info("Edits submitted for game thread.")
                     self.count_check_edit(
                         self.threadCache["game"]["thread"].id,
-                        self.allData["todayGames"][self.allData["myGameIndex"]][
-                            "gameStatus"
-                        ]["phase"],
+                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
                         edit=True,
                     )
                     self.log_last_updated_date_in_db(
@@ -1290,9 +1298,7 @@ class Bot(object):
                     self.log.info("No changes to game thread.")
                     self.count_check_edit(
                         self.threadCache["game"]["thread"].id,
-                        self.allData["todayGames"][self.allData["myGameIndex"]][
-                            "gameStatus"
-                        ]["phase"],
+                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
                         edit=False,
                     )
 
@@ -1316,9 +1322,7 @@ class Bot(object):
                 self.stopFlags.update({"game": True})
                 break
             elif update_game_thread_until == "My team's game is final":
-                if self.allData["todayGames"][self.allData["myGameIndex"]][
-                    "gameStatus"
-                ]["phase"] in [
+                if self.allData["gameDetails"].get("phase", "UNKNOWN") in [
                     "FINAL",
                     "FINAL_OVERTIME",
                     "SUSPENDED",
@@ -1333,9 +1337,7 @@ class Bot(object):
                     break
             elif update_game_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.allData["todayGames"][self.allData["myGameIndex"]][
-                        "gameStatus"
-                    ]["phase"]
+                    self.allData["gameDetails"].get("phase", "UNKNOWN")
                     in ["FINAL", "FINAL_OVERTIME", "SUSPENDED", "CANCELED", "CANCELLED"]
                 ) and not next(  # And all division games are final
                     (
@@ -1347,7 +1349,7 @@ class Bot(object):
                                 True
                                 for divTeam in self.otherDivisionTeams
                                 if divTeam["id"]
-                                in [x["visitorTeam"]["id"], x["homeTeam"]["id"]]
+                                in [x["awayTeam"]["id"], x["homeTeam"]["id"]]
                             )
                         )
                     ),
@@ -1381,12 +1383,7 @@ class Bot(object):
                 )
             )  # debug - need this to tell if logic is working
 
-            if (
-                self.allData["todayGames"][self.allData["myGameIndex"]]["gameStatus"][
-                    "phase"
-                ]
-                == "HALFTIME"
-            ):
+            if self.allData["gameDetails"].get("phase", "UNKNOWN") == "HALFTIME":
                 # Game is at halftime
                 # Update interval is in minutes (seconds only when game is live)
                 gtnlWait = self.settings.get("Game Thread", {}).get(
@@ -1398,12 +1395,7 @@ class Bot(object):
                     "Game is at halftime, sleeping for {} minutes...".format(gtnlWait,)
                 )
                 self.sleep(gtnlWait * 60)
-            elif (
-                self.allData["todayGames"][self.allData["myGameIndex"]]["gameStatus"][
-                    "phase"
-                ]
-                == "INGAME"
-            ):
+            elif self.allData["gameDetails"].get("phase", "UNKNOWN") == "INGAME":
                 # Update interval is in seconds (minutes for all other cases)
                 gtWait = self.settings.get("Game Thread", {}).get("UPDATE_INTERVAL", 10)
                 if gtWait < 1:
@@ -1421,10 +1413,7 @@ class Bot(object):
                     gtnlWait = 1
                 self.log.info(
                     "Game is not live ({}), sleeping for {} minutes...".format(
-                        self.allData["todayGames"][self.allData["myGameIndex"]][
-                            "gameStatus"
-                        ]["phase"],
-                        gtnlWait,
+                        self.allData["gameDetails"].get("phase", "UNKNOWN"), gtnlWait,
                     )
                 )
                 self.sleep(gtnlWait * 60)
@@ -1449,31 +1438,31 @@ class Bot(object):
         )
 
         while redball.SIGNAL is None and not self.bot.STOP:
-            if self.allData["todayGames"][self.allData["myGameIndex"]]["gameStatus"][
-                "phase"
-            ] in ["FINAL", "FINAL_OVERTIME", "SUSPENDED", "CANCELED", "CANCELLED"]:
+            if self.allData["gameDetails"].get("phase", "UNKNOWN") in [
+                "FINAL",
+                "FINAL_OVERTIME",
+                "SUSPENDED",
+                "CANCELED",
+                "CANCELLED",
+            ]:
                 # Game is over
                 self.log.info(
                     "Game is over ({}). Proceeding with post game thread...".format(
-                        self.allData["todayGames"][self.allData["myGameIndex"]][
-                            "gameStatus"
-                        ]["phase"],
+                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
                     )
                 )
                 break
             elif self.stopFlags["game"]:
                 # Game thread process has stopped, but game status isn't final yet... get fresh data!
                 self.log.info(
-                    f"Game thread process has ended, but cached game status is still ({self.allData['todayGames'][self.allData['myGameIndex']]['gameStatus']['phase']}). Refreshing data..."
+                    f"Game thread process has ended, but cached game status is still ({self.allData['gameDetails'].get('phase', 'UNKNOWN')}). Refreshing data..."
                 )
                 # Update data
                 self.collect_data()
             else:
                 self.log.debug(
                     "Game is not yet final ({}). Sleeping for 1 minute...".format(
-                        self.allData["todayGames"][self.allData["myGameIndex"]][
-                            "gameStatus"
-                        ]["phase"],
+                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
                     )
                 )
                 self.sleep(60)
@@ -1611,9 +1600,7 @@ class Bot(object):
                         )
                         self.count_check_edit(
                             self.threadCache["post"]["thread"].id,
-                            self.allData["todayGames"][self.allData["myGameIndex"]][
-                                "gameStatus"
-                            ]["phase"],
+                            self.allData["gameDetails"].get("phase", "UNKNOWN"),
                             edit=True,
                         )
                     elif text == "":
@@ -1624,9 +1611,7 @@ class Bot(object):
                         self.log.info("No changes to post game thread.")
                         self.count_check_edit(
                             self.threadCache["post"]["thread"].id,
-                            self.allData["todayGames"][self.allData["myGameIndex"]][
-                                "gameStatus"
-                            ]["phase"],
+                            self.allData["gameDetails"].get("phase", "UNKNOWN"),
                             edit=False,
                         )
                 except Exception as e:
@@ -1657,7 +1642,7 @@ class Bot(object):
                 break
             elif update_postgame_thread_until == "An hour after thread is posted":
                 self.log.debug(
-                    f'Thread posted: {int(self.threadCache["post"]["thread"].created_utc)}, 1 hour ago: {round(time.time()) - 3600}, minutes to go: {round((time.time() - int(self.threadCache["post"]["thread"].created_utc)) / 60)}'
+                    f'Thread posted: {int(self.threadCache["post"]["thread"].created_utc)}, 1 hour ago: {round(time.time()) - 3600}, minutes to go: {60 - (round((time.time() - int(self.threadCache["post"]["thread"].created_utc)) / 60))}'
                 )
                 if (
                     int(self.threadCache["post"]["thread"].created_utc)
@@ -1671,9 +1656,7 @@ class Bot(object):
                     break
             elif update_postgame_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.allData["todayGames"][self.allData["myGameIndex"]][
-                        "gameStatus"
-                    ]["phase"]
+                    self.allData["gameDetails"].get("phase", "UNKNOWN")
                     in ["FINAL", "FINAL_OVERTIME", "SUSPENDED", "CANCELED", "CANCELLED"]
                 ) and not next(  # And all division games are final
                     (
@@ -1685,7 +1668,7 @@ class Bot(object):
                                 True
                                 for divTeam in self.otherDivisionTeams
                                 if divTeam["id"]
-                                in [x["visitorTeam"]["id"], x["homeTeam"]["id"]]
+                                in [x["awayTeam"]["id"], x["homeTeam"]["id"]]
                             )
                         )
                     ),
@@ -1765,12 +1748,12 @@ class Bot(object):
                 season=self.allData["currentWeek"]["season"],
                 week=self.allData["currentWeek"]["week"],
                 seasonType=self.allData["currentWeek"]["seasonType"],
-            )["data"]
+            )["games"]
             todayGames = [
                 g
                 for g in currentWeekGames
                 if self.convert_timezone(
-                    datetime.strptime(g["gameTime"], "%Y-%m-%dT%H:%M:%S.%fZ"),
+                    datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"),
                     self.settings.get("Bot", {}).get(
                         "TEAM_TIMEZONE", "America/New_York"
                     ),
@@ -1785,24 +1768,42 @@ class Bot(object):
                 ),
                 None,
             )
-            if not self.allData.get("gameDetailId"):
-                gameById = self.nfl.gameById(gameId=self.allData["gameId"])
-                self.allData.update(
-                    {
-                        "gameDetailId": gameById["data"]["viewer"]["game"][
-                            "gameDetailId"
-                        ],
-                    }
-                )
-            self.log.debug(
-                f"self.allData['gameDetailId']: {self.allData['gameDetailId']}; self.allData['gameId']: {self.allData['gameId']}; "
+            gameDetailId = next(
+                (
+                    x["id"]
+                    for x in todayGames[myGameIndex]["externalIds"]
+                    if x["source"] == "gamedetail"
+                ),
+                {},
             )
-            gameDetails = (
-                self.nfl.gameDetails(gameDetailId=self.allData["gameDetailId"])["data"][
-                    "viewer"
-                ]["gameDetail"]
-                if self.allData["gameDetailId"]
-                else {}
+            self.log.debug(
+                f"self.allData['gameId']: {self.allData['gameId']}; gameDetailId: {gameDetailId}"
+            )
+            try:
+                gameDetails = self.nfl.gameDetails(
+                    gameDetailId=next(
+                        (
+                            x["id"]
+                            for x in todayGames[myGameIndex]["externalIds"]
+                            if x["source"] == "gamedetail"
+                        ),
+                        {},
+                    )
+                )
+            except Exception as e:
+                if "404" in str(e):
+                    self.log.debug(
+                        f"Game detail id is not active in shield API yet: {e}"
+                    )
+                    gameDetails = {}
+                else:
+                    raise
+            self.allData.update(
+                {
+                    "gameDetails": gameDetails.get("data", {})
+                    .get("viewer", {})
+                    .get("gameDetail", {}),
+                }
             )
             gameInsights = self.nfl.gameInsights(gameId=self.allData["gameId"])["data"][
                 "viewer"
@@ -1810,7 +1811,7 @@ class Bot(object):
             gameTime = next(
                 (
                     self.convert_timezone(  # Convert Zulu to my team TZ
-                        datetime.strptime(g["gameTime"], "%Y-%m-%dT%H:%M:%S.%fZ"),
+                        datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"),
                         self.settings.get("Bot", {}).get(
                             "TEAM_TIMEZONE", "America/New_York"
                         ),
@@ -1822,34 +1823,47 @@ class Bot(object):
                 ),
                 None,
             )
-            self.log.debug(f"gameTime: {gameTime}")
+            gameTime_local = next(
+                (
+                    self.convert_timezone(  # Convert Zulu to my team TZ
+                        datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"), "local",
+                    )
+                    for g in todayGames
+                    if g["id"] == self.allData["gameId"]
+                ),
+                None,
+            )
+            self.log.debug(
+                f"gameTime (my team TZ): {gameTime}; gameTime_local: {gameTime_local}"
+            )
             standings = self.nfl.standings(
                 season=self.allData["currentWeek"]["season"],
                 seasonType=self.allData["currentWeek"]["seasonType"],
-            )["data"]
+                week=self.allData["currentWeek"]["week"],
+            )
+            if len(standings["weeks"]) and standings["weeks"][0].get("standings"):
+                standings = standings["weeks"][0]["standings"]
+            else:
+                standings = []
             self.allData.update(
                 {
                     "myTeam": self.nfl.teamById(
                         teamId=todayGames[myGameIndex][
-                            self.allData["homeVisitor"] + "Team"
+                            self.allData["homeAway"] + "Team"
                         ]["id"]
                     ),
-                    # "myTeam": todayGames[myGameIndex][
-                    #    self.allData["homeVisitor"] + "Team"
-                    # ],
+                    "myTeamRoster": self.nfl.team_roster(self.myTeam["id"])["data"][
+                        "viewer"
+                    ]["clubs"]["currentClubRoster"],
                     "oppTeam": self.nfl.teamById(teamId=self.allData["oppTeam"]["id"]),
-                    # "oppTeam": todayGames[myGameIndex]["homeTeam"]
-                    # if self.allData["homeVisitor"] == "visitor"
-                    # else todayGames[myGameIndex]["visitorTeam"],
-                    "gameDetails": gameDetails,
+                    "oppTeamRoster": self.nfl.team_roster(
+                        self.allData["oppTeam"]["id"]
+                    )["data"]["viewer"]["clubs"]["currentClubRoster"],
                     "gameInsights": gameInsights,
                     "currentWeekGames": currentWeekGames,
                     "todayGames": todayGames,
                     "gameTime": {
-                        # "homeTeam": datetime.fromisoformat(gameTime),
-                        "bot": self.convert_timezone(
-                            datetime.fromisoformat(gameTime), "local",
-                        ),
+                        "bot": gameTime_local,
                         "myTeam": datetime.fromisoformat(gameTime),
                     },
                     "myGameIndex": myGameIndex,
@@ -2735,7 +2749,7 @@ class Bot(object):
         "SF": "r/49ers",
         "TB": "r/buccaneers",
         "TEN": "r/Tennesseetitans",
-        "WAS": "r/Redskins",
+        "WAS": "r/washingtonNFL",
         0: "r/NFL",
         "nfl": "r/NFL",
     }
@@ -2753,9 +2767,9 @@ class Bot(object):
                 "myTeam": {
                     "id": self.myTeam["id"],
                     "fullName": self.myTeam["fullName"],
-                    "abbr": self.myTeam["abbr"],
+                    "abbreviation": self.myTeam["abbreviation"],
                     "nickName": self.myTeam["nickName"],
-                    "cityStateRegion": self.myTeam["cityStateRegion"],
+                    "location": self.myTeam["location"],
                 },
                 "today": self.today,
                 "currentWeek": self.allData["currentWeek"],
@@ -2788,7 +2802,7 @@ class Bot(object):
                     "gameId": self.allData.get("gameId"),
                     "status": self.allData.get("gameDetails", {}).get("phase"),
                     "oppTeam": deepcopy(self.allData.get("oppTeam")),
-                    "homeVisitor": self.allData.get("homeVisitor"),
+                    "homeAway": self.allData.get("homeAway"),
                     "gameTime": self.allData["gameTime"]["myTeam"].strftime(
                         "%I:%M %p %Z"
                     )
@@ -2839,12 +2853,6 @@ class Bot(object):
                     },
                 },
             }
-            if botStatus["game"]["oppTeam"]:
-                if botStatus["game"]["oppTeam"].get("roster"):
-                    botStatus["game"]["oppTeam"].pop("roster")
-
-                if botStatus["game"]["oppTeam"].get("injuries"):
-                    botStatus["game"]["oppTeam"].pop("injuries")
 
             botStatus.update(
                 {
@@ -2853,19 +2861,19 @@ class Bot(object):
                             botStatus["today"]["Y-m-d"],
                             botStatus["currentWeek"]["season"],
                             botStatus["currentWeek"]["seasonType"],
-                            botStatus["currentWeek"]["name"],
+                            botStatus["currentWeek"]["week"],
                         ),
                         "html": "Today is {}.<br />Current Week: {} {} {}.".format(
                             botStatus["today"]["Y-m-d"],
                             botStatus["currentWeek"]["season"],
                             botStatus["currentWeek"]["seasonType"],
-                            botStatus["currentWeek"]["name"],
+                            botStatus["currentWeek"]["week"],
                         ),
                         "markdown": "Today is {}.\n\nCurrent Week: {} {} {}.".format(
                             botStatus["today"]["Y-m-d"],
                             botStatus["currentWeek"]["season"],
                             botStatus["currentWeek"]["seasonType"],
-                            botStatus["currentWeek"]["name"],
+                            botStatus["currentWeek"]["week"],
                         ),
                     }
                 }
@@ -2878,13 +2886,13 @@ class Bot(object):
 
                 botStatus["summary"][
                     "text"
-                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeVisitor']=='visitor' else 'vs.'} {botStatus['game']['oppTeam']['abbr']}"
+                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam']['fullName']}"
                 botStatus["summary"][
                     "html"
-                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeVisitor']=='visitor' else 'vs.'} {botStatus['game']['oppTeam']['abbr']}"
+                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam']['fullName']}"
                 botStatus["summary"][
                     "markdown"
-                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeVisitor']=='visitor' else 'vs.'} {botStatus['game']['oppTeam']['abbr']}"
+                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam']['fullName']}"
 
                 if not botStatus["tailgateThread"]["enabled"]:
                     # Tailgate thread is disabled

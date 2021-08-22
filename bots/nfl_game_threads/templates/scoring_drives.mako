@@ -1,21 +1,24 @@
 <%
     game = data["todayGames"][data["myGameIndex"]]
+    gameDetails = data["gameDetails"]
+    awayTeam = data["myTeam"] if data["homeAway"] == "away" else data["oppTeam"]
+    homeTeam = data["myTeam"] if data["homeAway"] == "home" else data["oppTeam"]
 %>\
-%if len(data["gameDetails"].get("scoringSummaries", [])) > 0 and not (len(data["gameDetails"]["scoringSummaries"]) == 1 and data["gameDetails"]["scoringSummaries"][0]["playId"] == 0):
+%if len(gameDetails.get("scoringSummaries", [])) > 0 and not (len(gameDetails["scoringSummaries"]) == 1 and gameDetails["scoringSummaries"][0]["playId"] == 0):
 ${'##'} Scoring Summary
 |Qtr|Team|Type|Description|Score|
 |:--|:--|:--|:--|:--|
-%for x in data["gameDetails"]["scoringSummaries"]:
+%for x in gameDetails["scoringSummaries"]:
 <%
-play = next((p for p in data["gameDetails"]["plays"] if p["playId"] == x["playId"] and p["scoringPlay"]), None)
+play = next((p for p in gameDetails["plays"] if p["playId"] == x["playId"] and p["scoringPlay"]), None)
 %>\
 %if play:
 ##* Q${play["quarter"]} ${play["scoringTeam"]["abbreviation"]} ${play["shortDescription"]} - Score: ${max(x["visitorScore"], x["homeScore"])}-${min(x["visitorScore"], x["homeScore"])} \
 |${play["quarter"]}|${play["scoringTeam"]["abbreviation"]}|${play["scoringPlayType"]}|${x["playDescription"]}|${max(x["visitorScore"], x["homeScore"])}-${min(x["visitorScore"], x["homeScore"])} \
 %if x["visitorScore"] > x["homeScore"]:
-${game["visitorTeam"]["abbr"]}|
+${awayTeam["abbreviation"]}|
 %elif x["homeScore"] > x["visitorScore"]:
-${game["homeTeam"]["abbr"]}|
+${homeTeam["abbreviation"]}|
 %else:
 |
 %endif

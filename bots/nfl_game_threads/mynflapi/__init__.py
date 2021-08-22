@@ -4,11 +4,9 @@ Python wrapper for NFL API
 
 Created by Todd Roberts
 
-https://pypi.org/project/nflapi
+Issues: https://github.com/toddrob99/mynflapi/issues
 
-Issues: https://github.com/toddrob99/nflapi/issues
-
-Wiki/Documentation: https://github.com/toddrob99/nflapi/wiki
+Wiki/Documentation: https://github.com/toddrob99/mynflapi/wiki
 
 NOTICE REGARDING API TOKEN: This API wrapper does not facilitate obtaining
 an access token, which is required to submit requests to the NFL API. The
@@ -20,7 +18,6 @@ method of obtaining an access token, this API wrapper will be useless.
 from datetime import datetime
 import logging
 import requests
-import time
 
 from . import version
 
@@ -38,61 +35,20 @@ logger.debug(
 
 ENDPOINTS = {
     "currentWeek": "/v1/currentWeek",
-    "games": "/v1/games",
-    "teams": "/v1/teams",
+    "games": "/football/v2/games",
+    "teams": "/football/v2/teams/history",
+    "standings": "/football/v2/standings",
     "shield": "/v3/shield",
+    "football": "/football/v2",
+    "experience": "/experience/v1",
 }
 
 QUERIES = {
-    "teams": {
-        "bySeason": (
-            '?s={open_brace}"$query":{open_brace}"season":'
-            "{param_season}{close_brace}{close_brace}"
-        ),
-        "byId": ("?"),
-        "standings": (
-            '?s={open_brace}"$query":{open_brace}{param_teamAbbr}"season":'
-            '{param_season},"standings":{open_brace}"$query":{open_brace}"week.'
-            'seasonType":"{param_seasonType}"{close_brace}{close_brace},"$takeLast":1'
-            '{close_brace},"$take":{param_take}{close_brace}'
-        ),
-        "topOffense": (
-            '?s={open_brace}"$query":{open_brace}"season":{param_season}{close_brace},'
-            '"$sort":{open_brace}"{param_seasonType}TeamSeasonStats.teamStats.'
-            'totalPointScore":1{close_brace}{close_brace}'
-        ),
-        "topDefense": (
-            '?s={open_brace}"$query":{open_brace}"season":{param_season}{close_brace},'
-            '"$sort":{open_brace}"{param_seasonType}TeamSeasonStats.opponentStats.'
-            'totalPointScore":1{close_brace}{close_brace}'
-        ),
-    },
-    "games": {
-        "byWeek": (
-            '?s={open_brace}"$query":{open_brace}"week.season":{param_season},'
-            '"week.seasonType":"{param_seasonType}","week.week":{param_week}'
-            "{close_brace}{close_brace}"
-        ),
-        "byWeekType": (
-            '?s={open_brace}"$query":{open_brace}"week.weekType":"'
-            '{param_weekType}"{close_brace},"$take":{param_take},"$skip":'
-            "{param_skip}{close_brace}"
-        ),
-        "byTeam": (
-            '?s={open_brace}"$query":{open_brace}"week.season":{param_season},'
-            '"$or":[{open_brace}"homeTeam.abbr":"{param_teamAbbr}"{close_brace},'
-            '{open_brace}"visitorTeam.abbr":"{param_teamAbbr}"{close_brace}]'
-            "{close_brace}{close_brace}"
-        ),
-        "byMatchup": (
-            '?s={open_brace}"$query":{open_brace}"$or":[{open_brace}"visitorTeam.'
-            'abbr":"{param_team1}","homeTeam.abbr":"{param_team2}"{close_brace},'
-            '{open_brace}"homeTeam.abbr":"{param_team1}","visitorTeam.abbr":"'
-            '{param_team2}"{close_brace}]{close_brace},"$sort":{open_brace}"gameTime'
-            '":1{close_brace},"$take":{param_take}{close_brace}'
-        ),
-    },
     "shield": {
+        "currentWeek": (
+            "query%7Bviewer%7Bleague%7Bcurrent%7Bweek%7BdateBegin%20dateEnd%20"
+            "seasonValue%20seasonType%20weekOrder%20weekType%20weekValue%7D%7D%7D%7D%7D"
+        ),
         "gameById": (
             "query%7Bviewer%7Bgame(id%3A%22{param_gameId}%22)%7Bid%20networkChannels%20"
             "gameTime%20gsisId%20slug%20awayTeam%7Babbreviation%20fullName%20id%20"
@@ -208,34 +164,14 @@ QUERIES = {
             "id%20status%20position%20jerseyNumber%20person%7BfirstName%20lastName%20"
             "displayName%20highSchool%7D%7D%20injuries%7Bid%7D%7D%7D%7D"
         ),
+        "teamRoster": (
+            "query%7Bviewer%7Bclubs%7BcurrentClubRoster(propertyId%3A%20%22"
+            "{param_propertyId}%22)%20%7Bcollege%20displayName%20firstName%20height%20"
+            "jerseyNumber%20lastName%20nflExperience%20person%7BcollegeName%20"
+            "displayName%20highSchool%20id%20nickName%20status%20summary%7D%20"
+            "personId%20position%20status%20weight%7D%7D%7D%7D"
+        ),
     },
-}
-
-DEFAULT_FIELDS = {
-    "teams": (
-        "{id,season,fullName,nickName,cityStateRegion,abbr,teamType,conference{abbr},"
-        "division{abbr},standings{overallWins,overallLosses,overallTies,overallWinPct,"
-        "divisionWins,divisionLosses,divisionTies,clinchDivision,"
-        "clinchDivisionAndHomefield,clinchWildcard,clinchPlayoff,conferenceRank,"
-        "divisionRank}}"
-        # "{id,season,fullName,nickName,abbr,teamType,conference{abbr},division{abbr}}"
-    ),
-    "teamsById": (
-        "{id,season,fullName,nickName,abbr,type,cityStateRegion,conference{abbr},"
-        "division{abbr},roster{id,type,firstName,lastName,displayName,homeTown,"
-        "college{id,name,type},highSchool,activeRole,player,coach},injuries{status,"
-        "injuryStatus,practiceStatus,type,person{id,firstName,lastName,displayName,"
-        "activeRole,player}}}"
-    ),
-    "games": (
-        "{week{id,season,weekOrder,seasonType,week,weekType,name},id,type,"
-        "lastModifiedDate,gameTime,gameStatus{gameClock,down,yardsToGo,yardLineSide,"
-        "yardLineNumber,period,scoringPlayType,phase,possessionTeam{abbr}},homeTeam{"
-        "id,season,fullName,nickName,cityStateRegion,abbr,teamType,conference{abbr},"
-        "division{abbr}},visitorTeam{id,season,fullName,nickName,cityStateRegion,abbr,"
-        "teamType,conference{abbr},division{abbr}},homeTeamScore,visitorTeamScore,"
-        "networkChannel,venue{id,type,name}}"
-    ),
 }
 
 
@@ -243,9 +179,7 @@ class APISession(object):
     def __init__(self, token):
         self.token = token
 
-    def api_call(
-        self, endpoint, query="", headers={}, data={}, method="GET"
-    ):  # , wait=True):
+    def api_call(self, endpoint, query="", headers={}, data={}, method="GET"):
         headers.update({"Authorization": f"Bearer {self.token['access_token']}"})
         if method == "GET":
             r = requests.get(API_BASE_URL + endpoint + query, headers=headers)
@@ -255,93 +189,58 @@ class APISession(object):
             )
         if r.status_code not in [200, 201]:
             r.raise_for_status()
-        #  elif r.status_code == 429:  # Find status code for too many requests/wait
-        #      # if wait:
-        #      #     wait(r.json.get("wait_time"))  # Find the wait time in the response
         else:
             return r.json()
 
-    def currentWeek(self):
-        return self.api_call(ENDPOINTS["currentWeek"])
-
-    def gamesByWeek(self, season, week, seasonType, fields=DEFAULT_FIELDS["games"]):
-        return self.api_call(
-            ENDPOINTS["games"],
-            query=QUERIES["games"]["byWeek"].format(
-                param_season=season,
-                param_week=week,
-                param_seasonType=seasonType,
-                open_brace=OPEN_BRACE,
-                close_brace=CLOSE_BRACE,
+    def shieldQuery(self, query, variables=None, attempts=1):
+        success = False
+        while not success and attempts >= 1:
+            result = self.api_call(
+                ENDPOINTS["shield"],
+                query=f"?query={query}&variables={variables or 'null'}",
             )
-            + "&fs="
-            + fields,
+            logger.debug(f"Shield query result: {result}")
+            if not result.get("code"):
+                success = True
+            else:
+                attempts -= 1
+
+        return result
+
+    def currentWeek(self, query=None):
+        return self.shieldQuery(query or QUERIES["shield"]["currentWeek"])
+
+    def weekByDate(self, date):
+        return self.api_call(f"{ENDPOINTS['football']}/weeks/date/{date}")
+
+    def gamesByWeek(self, season, week, seasonType, limit=100):
+        return self.api_call(
+            f"{ENDPOINTS['games']}/season/{season}/seasonType/{seasonType}/week/{week}",
+            query=f"?withExternalIds=true&limit={limit}",
         )
 
-    def gamesByWeekType(
-        self, weekType, take=10, skip=0, fields=DEFAULT_FIELDS["games"]
-    ):
+    def gameById(self, gameId):
         return self.api_call(
-            ENDPOINTS["games"],
-            query=QUERIES["games"]["byWeekType"].format(
-                param_weekType=weekType,
-                param_take=take,
-                param_skip=skip,
-                open_brace=OPEN_BRACE,
-                close_brace=CLOSE_BRACE,
-            )
-            + "&fs="
-            + fields,
+            f"{ENDPOINTS['games']}/{gameId}", query="?withExternalIds=true"
         )
 
-    def gamesByTeam(self, season, teamAbbr, fields=DEFAULT_FIELDS["games"]):
+    def teams(self, season, limit=100):
         return self.api_call(
-            ENDPOINTS["games"],
-            query=QUERIES["games"]["byTeam"].format(
-                param_season=season,
-                param_teamAbbr=teamAbbr,
-                open_brace=OPEN_BRACE,
-                close_brace=CLOSE_BRACE,
-            )
-            + "&fs="
-            + fields,
+            ENDPOINTS["teams"], query=f"?season={season}&limit={limit}"
         )
 
-    def gamesByMatchup(
-        self, team1Abbr, team2Abbr, take=1, fields=DEFAULT_FIELDS["games"]
-    ):
-        return self.api_call(
-            ENDPOINTS["games"],
-            query=QUERIES["games"]["byMatchup"].format(
-                param_team1=team1Abbr,
-                param_team2=team2Abbr,
-                param_take=take,
-                open_brace=OPEN_BRACE,
-                close_brace=CLOSE_BRACE,
+    def teamById(self, teamId, season=None):
+        # There is an endpoint to query a team by id, but it returns hardly any info
+        # So retrieve all teams and extract the one we want
+        if not season:
+            current_year = datetime.now().strftime("%Y")
+            season = (
+                current_year
+                if int(datetime.now().strftime("%m")) >= 4
+                else int(current_year) - 1
             )
-            + "&fs="
-            + fields,
-        )
-
-    def teams(self, season=None, fields=DEFAULT_FIELDS["teams"]):
-        return self.api_call(
-            ENDPOINTS["teams"],
-            query=QUERIES["teams"]["bySeason"].format(
-                param_season=season, open_brace=OPEN_BRACE, close_brace=CLOSE_BRACE
-            )
-            + "&fs="
-            + fields,
-        )
-
-    def teamById(self, teamId, fields=DEFAULT_FIELDS["teamsById"]):
-        return self.api_call(
-            f"{ENDPOINTS['teams']}/{teamId}",
-            query=QUERIES["teams"]["byId"].format(
-                open_brace=OPEN_BRACE, close_brace=CLOSE_BRACE
-            )
-            + "&fs="
-            + fields,
-        )
+        teams = self.teams(season)
+        return next((x for x in teams["teams"] if x["id"] == teamId), None)
 
     def teamById_shield(self, teamId, query=None):
         if not query:
@@ -350,70 +249,20 @@ class APISession(object):
             ENDPOINTS["shield"], query=f"?query={query}&variables=null",
         )
 
-    def standings(
-        self, season, seasonType, teamAbbr=None, take=40, fields=DEFAULT_FIELDS["teams"]
-    ):
+    def team_roster(self, propertyId, query=None):
+        if not query:
+            query = QUERIES["shield"]["teamRoster"].format(param_propertyId=propertyId)
         return self.api_call(
-            ENDPOINTS["teams"],
-            query=QUERIES["teams"]["standings"].format(
-                param_season=season,
-                param_seasonType=seasonType,
-                param_teamAbbr=f'"abbr":"{teamAbbr}",' if teamAbbr else "",
-                param_take=take,
-                open_brace=OPEN_BRACE,
-                close_brace=CLOSE_BRACE,
-            )
-            + "&fs="
-            + fields,
+            ENDPOINTS["shield"], query=f"?query={query}&variables=null",
         )
 
-    def teamsByDefensiveRanking(
-        self, season, seasonType, fields=None,
-    ):
-        if not fields:
-            fields = (
-                "{id,season,fullName,nickName,cityStateRegion,abbr,teamType,"
-                "conference{abbr},division{abbr},"
-                "{param_seasonType}TeamSeasonStats"
-                "{teamStats{teamStat{totalTouchdowns},passing{netYards}"
-                ",rushing{yards}}}}".replace("{param_seasonType}", seasonType.lower())
-            )
+    def standings(self, season, seasonType, week, limit=100):
         return self.api_call(
-            ENDPOINTS["teams"],
-            query=QUERIES["teams"]["topDefense"].format(
-                param_season=season,
-                param_seasonType=seasonType.lower(),
-                open_brace=OPEN_BRACE,
-                close_brace=CLOSE_BRACE,
-            )
-            + "&fs="
-            + fields,
+            ENDPOINTS["standings"],
+            query=f"?season={season}&seasonType={seasonType}&week={week}&limit={limit}",
         )
 
-    def teamsByOffensiveRanking(
-        self, season, seasonType, fields=None,
-    ):
-        if not fields:
-            fields = (
-                "{id,season,fullName,nickName,cityStateRegion,abbr,teamType,"
-                "conference{abbr},division{abbr},"
-                "{param_seasonType}TeamSeasonStats"
-                "{teamStats{teamStat{totalTouchdowns},passing{netYards}"
-                ",rushing{yards}}}}".replace("{param_seasonType}", seasonType.lower())
-            )
-        return self.api_call(
-            ENDPOINTS["teams"],
-            query=QUERIES["teams"]["topOffense"].format(
-                param_season=season,
-                param_seasonType=seasonType.lower(),
-                open_brace=OPEN_BRACE,
-                close_brace=CLOSE_BRACE,
-            )
-            + "&fs="
-            + fields,
-        )
-
-    def gameById(self, gameId, query=None):
+    def gameById_shield(self, gameId, query=None):
         if not query:
             query = QUERIES["shield"]["gameById"].format(param_gameId=gameId)
         return self.api_call(
@@ -454,12 +303,3 @@ class APISession(object):
         return self.api_call(
             ENDPOINTS["shield"], query=f"?query={query}&variables=null",
         )
-
-    def shieldQuery(self, query):
-        return self.api_call(
-            ENDPOINTS["shield"], query=f"?query={query}&variables=null",
-        )
-
-
-def wait(seconds):
-    time.sleep(seconds)
