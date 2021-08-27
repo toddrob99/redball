@@ -86,6 +86,8 @@ ${gameDetails.get("yardLine", "")} yard line
 % endif
 %elif gameDetails.get("phase", "SCHEDULED") == "HALFTIME":
 ${'##'} Game Status: HALFTIME
+%elif gameDetails.get("phase", "SCHEDULED") == "SUSPENDED":
+${'##'} Game Status: SUSPENDED
 %elif result:
 ${'##'} Final Score${f" (Overtime)" if gameDetails.get("phase", "SCHEDULED") == "FINAL_OVERTIME" else ""}: \
 ${max(int(gameDetails["homePointsTotal"]), int(gameDetails["visitorPointsTotal"]))}\
