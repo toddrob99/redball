@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "2.2.1"
+__version__ = "2.2.2"
 
 DATA_LOCK = threading.Lock()
 
@@ -967,7 +967,7 @@ class Bot(object):
             elif update_tailgate_thread_until == "All division games are final":
                 if (  # This game is final
                     self.allData["gameDetails"].get("phase", "UNKNOWN")
-                    in ["FINAL", "FINAL_OVERTIME", "SUSPENDED", "CANCELED", "CANCELLED"]
+                    in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # And all division games are final
                     (
                         True
@@ -1122,7 +1122,6 @@ class Bot(object):
                 and not self.threadCache["game"].get("thread")
             ):
                 if self.allData["gameDetails"].get("phase", "UNKNOWN") in [
-                    "SUSPENDED",
                     "FINAL",
                     "FINAL_OVERTIME",
                     "CANCELED",
@@ -1325,7 +1324,6 @@ class Bot(object):
                 if self.allData["gameDetails"].get("phase", "UNKNOWN") in [
                     "FINAL",
                     "FINAL_OVERTIME",
-                    "SUSPENDED",
                     "CANCELED",
                     "CANCELLED",
                 ]:
@@ -1338,7 +1336,7 @@ class Bot(object):
             elif update_game_thread_until == "All division games are final":
                 if (  # This game is final
                     self.allData["gameDetails"].get("phase", "UNKNOWN")
-                    in ["FINAL", "FINAL_OVERTIME", "SUSPENDED", "CANCELED", "CANCELLED"]
+                    in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # And all division games are final
                     (
                         True
@@ -1441,7 +1439,6 @@ class Bot(object):
             if self.allData["gameDetails"].get("phase", "UNKNOWN") in [
                 "FINAL",
                 "FINAL_OVERTIME",
-                "SUSPENDED",
                 "CANCELED",
                 "CANCELLED",
             ]:
@@ -1657,7 +1654,7 @@ class Bot(object):
             elif update_postgame_thread_until == "All division games are final":
                 if (  # This game is final
                     self.allData["gameDetails"].get("phase", "UNKNOWN")
-                    in ["FINAL", "FINAL_OVERTIME", "SUSPENDED", "CANCELED", "CANCELLED"]
+                    in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # And all division games are final
                     (
                         True
