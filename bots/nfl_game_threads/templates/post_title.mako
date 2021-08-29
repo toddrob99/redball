@@ -59,7 +59,7 @@ ${data["oppTeam"]["nickName"]} \
 ## Score
 %if result == "tie":
 ## TIE
-with ${game["homeTeamScore"]["pointsTotal"]} points each \
+with ${gameDetails["visitorPointsTotal"]} points each \
 %elif result in ["win", "loss"]:
 ## WIN / LOSS
 by a score of ${maxScore} to ${minScore} \
