@@ -5,6 +5,7 @@ by Todd Roberts
 """
 
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers import SchedulerNotRunningError
 from datetime import datetime, timedelta
 import json
 import pytz
@@ -30,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -84,15 +85,18 @@ class Bot(object):
 
         # Initialize scheduler
         if "SCHEDULER" in vars(self.bot):
-            # Scheduler is already running, maybe bot crashed and restarted
+            # Scheduler already exists, maybe bot restarted
             sch_jobs = self.bot.SCHEDULER.get_jobs()
             self.log.warning(
-                f"Found scheduler already running on startup with the following job(s): {sch_jobs}"
+                f"Scheduler already exists on bot startup with the following job(s): {sch_jobs}"
             )
             # Remove all jobs and shut down so we can start fresh
             for x in sch_jobs:
                 x.remove()
-            self.bot.SCHEDULER.shutdown()
+            try:
+                self.bot.SCHEDULER.shutdown()
+            except SchedulerNotRunningError as e:
+                self.log.debug(f"Could not shut down scheduler because: {e}")
 
         self.bot.SCHEDULER = BackgroundScheduler(
             timezone=tzlocal.get_localzone()
