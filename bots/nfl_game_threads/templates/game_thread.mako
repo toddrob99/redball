@@ -114,6 +114,10 @@ ${data["oppTeam"]["nickName"]}
 ##<%include file="drive_summary.mako" />
 
 <%include file="game_stats.mako" />
+%else:
+
+<%include file="inactives.mako" />
+
 %endif
 ##
 ##<%include file="division_scoreboard.mako" />  ## This is not working because game status is not available in v2 game endpoint
