@@ -370,7 +370,8 @@ class Bot(object):
                 gameTime_local = next(
                     (
                         self.convert_timezone(  # Convert Zulu to my team TZ
-                            datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"), "local",
+                            datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"),
+                            "local",
                         )
                         for g in todayGames
                         if g["id"] == myTeamTodayGameId
@@ -487,7 +488,8 @@ class Bot(object):
                             "game": threading.Thread(
                                 target=self.game_thread_update_loop,
                                 name="bot-{}-{}-game".format(
-                                    self.bot.id, self.bot.name.replace(" ", "-"),
+                                    self.bot.id,
+                                    self.bot.name.replace(" ", "-"),
                                 ),
                                 daemon=True,
                             )
@@ -508,7 +510,8 @@ class Bot(object):
                             "post": threading.Thread(
                                 target=self.postgame_thread_update_loop,
                                 name="bot-{}-{}-postgame".format(
-                                    self.bot.id, self.bot.name.replace(" ", "-"),
+                                    self.bot.id,
+                                    self.bot.name.replace(" ", "-"),
                                 ),
                                 daemon=True,
                             )
@@ -538,7 +541,10 @@ class Bot(object):
                         elif (
                             not self.stopFlags["game"]
                             and self.THREADS.get("game")
-                            and isinstance(self.THREADS["game"], threading.Thread,)
+                            and isinstance(
+                                self.THREADS["game"],
+                                threading.Thread,
+                            )
                             and self.THREADS["game"].is_alive()
                         ):
                             self.log.debug(
@@ -589,7 +595,10 @@ class Bot(object):
                         elif (
                             not self.stopFlags["post"]
                             and self.THREADS.get("post")
-                            and isinstance(self.THREADS["post"], threading.Thread,)
+                            and isinstance(
+                                self.THREADS["post"],
+                                threading.Thread,
+                            )
                             and self.THREADS["post"].is_alive()
                         ):
                             self.log.debug(
@@ -1273,15 +1282,16 @@ class Bot(object):
                 if text != self.threadCache["game"].get("text") and text != "":
                     self.threadCache["game"].update({"text": text})
                     # Add last updated timestamp
-                    text += """
+                    text += (
+                        """
 
-^^^Last ^^^Updated: ^^^""" + self.convert_timezone(
-                        datetime.utcnow(),
-                        self.settings.get("Bot", {}).get(
-                            "TEAM_TIMEZONE", "America/New_York"
-                        ),
-                    ).strftime(
-                        "%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z"
+^^^Last ^^^Updated: ^^^"""
+                        + self.convert_timezone(
+                            datetime.utcnow(),
+                            self.settings.get("Bot", {}).get(
+                                "TEAM_TIMEZONE", "America/New_York"
+                            ),
+                        ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
                     )
                     self.threadCache["game"]["thread"].edit(text)
                     self.log.info("Edits submitted for game thread.")
@@ -1394,7 +1404,9 @@ class Bot(object):
                 if gtnlWait < 1:
                     gtnlWait = 1
                 self.log.info(
-                    "Game is at halftime, sleeping for {} minutes...".format(gtnlWait,)
+                    "Game is at halftime, sleeping for {} minutes...".format(
+                        gtnlWait,
+                    )
                 )
                 self.sleep(gtnlWait * 60)
             elif self.allData["gameDetails"].get("phase", "UNKNOWN") == "INGAME":
@@ -1403,7 +1415,9 @@ class Bot(object):
                 if gtWait < 1:
                     gtWait = 1
                 self.log.info(
-                    "Game is live, sleeping for {} seconds...".format(gtWait,)
+                    "Game is live, sleeping for {} seconds...".format(
+                        gtWait,
+                    )
                 )
                 self.sleep(gtWait)
             else:
@@ -1415,7 +1429,8 @@ class Bot(object):
                     gtnlWait = 1
                 self.log.info(
                     "Game is not live ({}), sleeping for {} minutes...".format(
-                        self.allData["gameDetails"].get("phase", "UNKNOWN"), gtnlWait,
+                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                        gtnlWait,
                     )
                 )
                 self.sleep(gtnlWait * 60)
@@ -1584,15 +1599,16 @@ class Bot(object):
                     self.log.debug(f"Rendered post game thread text: {text}")
                     if text != self.threadCache["post"]["text"] and text != "":
                         self.threadCache["post"]["text"] = text
-                        text += """
+                        text += (
+                            """
 
-^^^Last ^^^Updated: ^^^""" + self.convert_timezone(
-                            datetime.utcnow(),
-                            self.settings.get("Bot", {}).get(
-                                "TEAM_TIMEZONE", "America/New_York"
-                            ),
-                        ).strftime(
-                            "%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z"
+^^^Last ^^^Updated: ^^^"""
+                            + self.convert_timezone(
+                                datetime.utcnow(),
+                                self.settings.get("Bot", {}).get(
+                                    "TEAM_TIMEZONE", "America/New_York"
+                                ),
+                            ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
                         )
                         self.threadCache["post"]["thread"].edit(text)
                         self.log.info("Post game thread edits submitted.")
@@ -1721,8 +1737,7 @@ class Bot(object):
         return  # All done with this game!
 
     def collect_data(self):
-        """Collect data to be available for template rendering
-        """
+        """Collect data to be available for template rendering"""
         with DATA_LOCK:
             # Need to use cached data because multiple threads will be trying to update the same data at the same time
             cache_seconds = self.settings.get("NFL", {}).get("API_CACHE_SECONDS", 5)
@@ -1827,7 +1842,8 @@ class Bot(object):
             gameTime_local = next(
                 (
                     self.convert_timezone(  # Convert Zulu to my team TZ
-                        datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"), "local",
+                        datetime.strptime(g["time"], "%Y-%m-%dT%H:%M:%SZ"),
+                        "local",
                     )
                     for g in todayGames
                     if g["id"] == self.allData["gameId"]
@@ -2313,7 +2329,10 @@ class Bot(object):
         )
         try:
             p.notify(
-                event=event, description=description, priority=priority, url=url,
+                event=event,
+                description=description,
+                priority=priority,
+                url=url,
             )
             self.log.info("Notification successfully sent to Prowl!")
             return True

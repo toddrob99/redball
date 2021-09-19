@@ -3299,8 +3299,10 @@ class Bot(object):
             return True
 
     def get_processedAtBats_from_db(self, pk, gameThreadId):
-        sq = "SELECT * FROM {}processedAtBats WHERE gamePk=? and gameThreadId=?;".format(
-            self.dbTablePrefix
+        sq = (
+            "SELECT * FROM {}processedAtBats WHERE gamePk=? and gameThreadId=?;".format(
+                self.dbTablePrefix
+            )
         )
         local_args = (pk, gameThreadId)
         s = rbdb.db_qry((sq, local_args), fetchone=True, closeAfter=True, logg=self.log)
@@ -3321,7 +3323,12 @@ class Bot(object):
             ts = time.time()
             emptyDict = json.dumps({})
             q = "insert into {}processedAtBats (gamePk, gameThreadId, processedAtBats, dateCreated, dateUpdated) values ({}, '{}', '{}', '{}', '{}');".format(
-                self.dbTablePrefix, pk, gameThreadId, emptyDict, ts, ts,
+                self.dbTablePrefix,
+                pk,
+                gameThreadId,
+                emptyDict,
+                ts,
+                ts,
             )
 
             r = rbdb.db_qry(q, commit=True, closeAfter=True, logg=self.log)
@@ -3604,7 +3611,8 @@ class Bot(object):
         if self.myTeam["league"]["seasonDateInfo"].get(
             "preSeasonStartDate"
         ) and datetime.strptime(
-            self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"], "%Y-%m-%d",
+            self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
+            "%Y-%m-%d",
         ) <= datetime.strptime(
             self.today["Y-m-d"], "%Y-%m-%d"
         ) < datetime.strptime(
@@ -3842,8 +3850,7 @@ class Bot(object):
         return {}
 
     def collect_data(self, gamePk):
-        """Collect data to be available for template rendering
-        """
+        """Collect data to be available for template rendering"""
 
         # Need to use cached data because multiple threads will be trying to update the same data at the same time
         cache_seconds = self.settings.get("MLB", {}).get("API_CACHE_SECONDS", 5)
@@ -5722,7 +5729,10 @@ class Bot(object):
         )
         try:
             p.notify(
-                event=event, description=description, priority=priority, url=url,
+                event=event,
+                description=description,
+                priority=priority,
+                url=url,
             )
             self.log.info("Notification successfully sent to Prowl!")
             return True
