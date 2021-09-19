@@ -539,7 +539,7 @@ class Bot(object):
                             not self.stopFlags["game"]
                             and self.THREADS.get("game")
                             and isinstance(self.THREADS["game"], threading.Thread,)
-                            and self.THREADS["game"].isAlive()
+                            and self.THREADS["game"].is_alive()
                         ):
                             self.log.debug(
                                 "Game thread looks fine..."
@@ -590,7 +590,7 @@ class Bot(object):
                             not self.stopFlags["post"]
                             and self.THREADS.get("post")
                             and isinstance(self.THREADS["post"], threading.Thread,)
-                            and self.THREADS["post"].isAlive()
+                            and self.THREADS["post"].is_alive()
                         ):
                             self.log.debug(
                                 "Post game thread looks fine..."
@@ -643,7 +643,7 @@ class Bot(object):
                             not self.stopFlags["tailgate"]
                             and self.THREADS.get("tailgate")
                             and isinstance(self.THREADS["tailgate"], threading.Thread)
-                            and self.THREADS["tailgate"].isAlive()
+                            and self.THREADS["tailgate"].is_alive()
                         ):
                             self.log.debug(
                                 "Tailgate update thread looks fine..."

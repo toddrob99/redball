@@ -110,7 +110,7 @@ class Bot(object):
         except AttributeError:
             self.thread = None
 
-        if isinstance(self.thread, threading.Thread) and self.thread.isAlive():
+        if isinstance(self.thread, threading.Thread) and self.thread.is_alive():
             return True
         else:
             return False

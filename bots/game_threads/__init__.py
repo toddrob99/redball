@@ -422,7 +422,7 @@ class Bot(object):
                                         self.THREADS[pk]["GAME_THREAD"],
                                         threading.Thread,
                                     )
-                                    and self.THREADS[pk]["GAME_THREAD"].isAlive()
+                                    and self.THREADS[pk]["GAME_THREAD"].is_alive()
                                 ):
                                     self.log.debug(
                                         "Game thread for game {} looks fine...".format(
@@ -487,7 +487,7 @@ class Bot(object):
                                         self.THREADS[pk]["POSTGAME_THREAD"],
                                         threading.Thread,
                                     )
-                                    and self.THREADS[pk]["POSTGAME_THREAD"].isAlive()
+                                    and self.THREADS[pk]["POSTGAME_THREAD"].is_alive()
                                 ):
                                     self.log.debug(
                                         "Post game thread for game {} looks fine...".format(
@@ -554,7 +554,7 @@ class Bot(object):
                                         self.THREADS[pk]["COMMENT_THREAD"],
                                         threading.Thread,
                                     )
-                                    and self.THREADS[pk]["COMMENT_THREAD"].isAlive()
+                                    and self.THREADS[pk]["COMMENT_THREAD"].is_alive()
                                 ):
                                     self.log.debug(
                                         "Comment thread for game {} looks fine...".format(
@@ -654,7 +654,7 @@ class Bot(object):
                                 and isinstance(
                                     self.THREADS["GAMEDAY_THREAD"], threading.Thread
                                 )
-                                and self.THREADS["GAMEDAY_THREAD"].isAlive()
+                                and self.THREADS["GAMEDAY_THREAD"].is_alive()
                             ):
                                 self.log.debug(
                                     "Game day update thread looks fine..."
@@ -799,7 +799,7 @@ class Bot(object):
                     not self.activeGames["off"]["STOP_FLAG"]
                     and self.THREADS.get("OFFDAY_THREAD")
                     and isinstance(self.THREADS["OFFDAY_THREAD"], threading.Thread)
-                    and self.THREADS["OFFDAY_THREAD"].isAlive()
+                    and self.THREADS["OFFDAY_THREAD"].is_alive()
                 ):
                     self.log.debug(
                         "Off day update thread looks fine..."
