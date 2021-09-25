@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.2.2"
+__version__ = "1.2.3"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -1867,13 +1867,16 @@ class Bot(object):
                     ),
                     None,
                 )
-                self.log.debug(
-                    "Other Game ({}) abstractGameCode: {} - codedGameState: {}".format(
-                        otherGame["schedule"]["gamePk"],
-                        otherGame["schedule"]["status"]["abstractGameCode"],
-                        otherGame["schedule"]["status"]["codedGameState"],
+                if otherGame:
+                    self.log.debug(
+                        "Other Game ({}) abstractGameCode: {} - codedGameState: {}".format(
+                            otherGame["schedule"]["gamePk"],
+                            otherGame["schedule"]["status"]["abstractGameCode"],
+                            otherGame["schedule"]["status"]["codedGameState"],
+                        )
                     )
-                )
+                else:
+                    self.log.warning("Other Game in doubleheader pair not found.")
 
             # Check/wait for time to submit game thread
             while (
