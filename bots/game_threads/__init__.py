@@ -6613,7 +6613,7 @@ class Bot(object):
                 botStatus["summary"][
                     "html"
                 ] += "<br /><br /><strong>Game Day Thread</strong>{}.".format(
-                    " disabled."
+                    " disabled"
                     if not botStatus["gameDayThread"]["enabled"]
                     else " skipped or failed to post (check log for error)"
                     if not botStatus["gameDayThread"]["posted"]
@@ -6630,7 +6630,7 @@ class Bot(object):
                     )
                 )
                 botStatus["summary"]["markdown"] += "\n\n**Game Day Thread**{}.".format(
-                    " disabled."
+                    " disabled"
                     if not botStatus["gameDayThread"]["enabled"]
                     else " suppressed during off season."
                     if self.settings.get("Off Day Thread", {}).get(
