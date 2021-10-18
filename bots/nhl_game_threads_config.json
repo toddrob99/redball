@@ -92,7 +92,7 @@
         },
         {
             "key": "THREAD_TEMPLATE",
-            "description": "Template for the thread body. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nfl_game_threads/templates/",
+            "description": "Template for the thread body. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nhl_game_threads/templates/",
             "type": "str",
             "val": "tailgate_thread.mako",
             "options": [],
@@ -110,7 +110,7 @@
         },
         {
             "key": "TITLE_TEMPLATE",
-            "description": "Template for the post title. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nfl_game_threads/templates/",
+            "description": "Template for the post title. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nhl_game_threads/templates/",
             "type": "str",
             "val": "tailgate_title.mako",
             "options": [],
@@ -135,7 +135,7 @@
                 "Do not update",
                 "Game thread is posted",
                 "All division games are final",
-                "All NFL games are final"
+                "All NHL games are final"
             ],
             "subkeys": [],
             "parent_key": null
@@ -252,7 +252,7 @@
         },
         {
             "key": "THREAD_TEMPLATE",
-            "description": "Template for the thread body. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nfl_game_threads/templates/",
+            "description": "Template for the thread body. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nhl_game_threads/templates/",
             "type": "str",
             "val": "game_thread.mako",
             "options": [],
@@ -270,7 +270,7 @@
         },
         {
             "key": "TITLE_TEMPLATE",
-            "description": "Template for the post title. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nfl_game_threads/templates/",
+            "description": "Template for the post title. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nhl_game_threads/templates/",
             "type": "str",
             "val": "game_title.mako",
             "options": [],
@@ -304,7 +304,7 @@
                 "Do not update",
                 "My team's game is final",
                 "All division games are final",
-                "All NFL games are final"
+                "All NHL games are final"
             ],
             "subkeys": [],
             "parent_key": null
@@ -405,10 +405,10 @@
             "parent_key": ""
         }
     ],
-    "NFL": [
+    "NHL": [
         {
             "key": "API_CACHE_SECONDS",
-            "description": "Number of seconds to cache data from NFL API",
+            "description": "Number of seconds to cache data from NHL API",
             "type": "int",
             "val": 5,
             "options": [],
@@ -422,40 +422,38 @@
             "val": "",
             "options": [
                 "",
-                "Arizona Cardinals|ARI",
-                "Atlanta Falcons|ATL",
-                "Baltimore Ravens|BAL",
-                "Buffalo Bills|BUF",
-                "Carolina Panthers|CAR",
-                "Chicago Bears|CHI",
-                "Cincinnati Bengals|CIN",
-                "Cleveland Browns|CLE",
-                "Dallas Cowboys|DAL",
-                "Denver Broncos|DEN",
-                "Detroit Lions|DET",
-                "Green Bay Packers|GB",
-                "Houston Texans|HOU",
-                "Indianapolis Colts|IND",
-                "Jacksonville Jaguars|JAX",
-                "Kansas City Chiefs|KC",
-                "Los Angeles Rams|LA",
-                "Los Angeles Chargers|LAC",
-                "Las Vegas Raiders|LV",
-                "Miami Dolphins|MIA",
-                "Minnesota Vikings|MIN",
-                "New England Patriots|NE",
-                "New Orleans Saints|NO",
-                "New York Giants|NYG",
-                "New York Jets|NYJ",
-                "Philadelphia Eagles|PHI",
-                "Pittsburgh Steelers|PIT",
-                "Seattle Seahawks|SEA",
-                "San Francisco 49ers|SF",
-                "Tampa Bay Buccaneers|TB",
-                "Tennessee Titans|TEN",
-                "Washington Football Team|WAS",
-                "AFC Pro Bowl Team|AFC",
-                "NFC Pro Bowl Team|NFC"
+                "Anaheim Ducks|24",
+                "Arizona Coyotes|53",
+                "Boston Bruins|6",
+                "Buffalo Sabres|7",
+                "Calgary Flames|20",
+                "Carolina Hurricanes|12",
+                "Chicago Blackhawks|16",
+                "Colorado Avalanche|21",
+                "Columbus Blue Jackets|29",
+                "Dallas Stars|25",
+                "Detroit Red Wings|17",
+                "Edmonton Oilers|22",
+                "Florida Panthers|13",
+                "Los Angeles Kings|26",
+                "Minnesota Wild|30",
+                "Montréal Canadiens|8",
+                "Nashville Predators|18",
+                "New Jersey Devils|1",
+                "New York Islanders|2",
+                "New York Rangers|3",
+                "Ottawa Senators|9",
+                "Philadelphia Flyers|4",
+                "Pittsburgh Penguins|5",
+                "San Jose Sharks|28",
+                "Seattle Kraken|55",
+                "St. Louis Blues|19",
+                "Tampa Bay Lightning|14",
+                "Toronto Maple Leafs|10",
+                "Vancouver Canucks|23",
+                "Vegas Golden Knights|54",
+                "Washington Capitals|15",
+                "Winnipeg Jets|52"
             ],
             "subkeys": [],
             "parent_key": ""
@@ -545,7 +543,7 @@
         },
         {
             "key": "THREAD_TEMPLATE",
-            "description": "Template for the thread body. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nfl_game_threads/templates/",
+            "description": "Template for the thread body. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nhl_game_threads/templates/",
             "type": "str",
             "val": "post_thread.mako",
             "options": [],
@@ -563,7 +561,7 @@
         },
         {
             "key": "TITLE_TEMPLATE",
-            "description": "Template for the post title. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nfl_game_threads/templates/",
+            "description": "Template for the post title. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nhl_game_threads/templates/",
             "type": "str",
             "val": "post_title.mako",
             "options": [],
@@ -588,7 +586,7 @@
                 "Do not update",
                 "An hour after thread is posted",
                 "All division games are final",
-                "All NFL games are final"
+                "All NHL games are final"
             ],
             "subkeys": [],
             "parent_key": null
