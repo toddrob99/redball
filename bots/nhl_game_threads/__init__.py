@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0"
+__version__ = "1.0.0.1"
 
 DATA_LOCK = threading.Lock()
 
@@ -2079,8 +2079,8 @@ class Bot(object):
             else:
                 self.notify_prowl(
                     apiKey=prowlKey,
-                    event=f"{self.myTeam['nickName']} {thread.title()} Thread Posted",
-                    description=f"""{self.myTeam['nickName']} {thread} thread was posted to r/{self.settings["Reddit"]["SUBREDDIT"]} at {self.convert_timezone(datetime.utcfromtimestamp(theThread.created_utc),'local').strftime('%I:%M %p %Z')}\nThread title: {theThread.title}\nURL: {theThread.shortlink}""",
+                    event=f"{self.myTeam['teamName']} {thread.title()} Thread Posted",
+                    description=f"""{self.myTeam['teamName']} {thread} thread was posted to r/{self.settings["Reddit"]["SUBREDDIT"]} at {self.convert_timezone(datetime.utcfromtimestamp(theThread.created_utc),'local').strftime('%I:%M %p %Z')}\nThread title: {theThread.title}\nURL: {theThread.shortlink}""",
                     priority=prowlPriority,
                     url=theThread.shortlink,
                     appName=f"redball - {self.bot.name}",
@@ -2103,11 +2103,11 @@ class Bot(object):
                 self.log.debug("Twitter disabled or not configured")
             else:
                 if thread == "game":
-                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['nickName'].replace(' ','')}"""
+                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')}"""
                 elif thread == "tailgate":
-                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['nickName'].replace(' ','')}"""
+                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')}"""
                 elif thread == "post":
-                    message = f"""{theThread.title} - The discussion continues: {theThread.shortlink} #{self.myTeam['nickName'].replace(' ','')}"""
+                    message = f"""{theThread.title} - The discussion continues: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')}"""
                 else:
                     self.log.error(f"Can't tweet about unknown thread type [{thread}]!")
                     return (None, text)
