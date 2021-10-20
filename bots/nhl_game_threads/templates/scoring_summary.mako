@@ -6,7 +6,7 @@
         plays = []
         for i in data["game"]["liveData"]["plays"]["scoringPlays"]:
             play = next(
-                (p for p in data["game"]["liveData"]["plays"]["allPlays"] if p["about"].get("eventIdx") == i),
+                (p for p in data["game"]["liveData"]["plays"]["allPlays"] if p["about"].get("eventIdx") == i and p["result"]["eventTypeId"]=="GOAL"),
                 None,
             )
             if play and play['result'].get('description'):

@@ -29,8 +29,8 @@ ${next((t["teamName"] for t in data["allTeams"] if t["id"] == game["teams"]["awa
 (${game["teams"]["home"]["score"]}) ${next((t["teamName"] for t in data["allTeams"] if t["id"] == game["teams"]["home"]["team"]["id"]), "Unknown Team")} \
 - ${game["linescore"]["currentPeriodOrdinal"]} ${game["linescore"]["currentPeriodTimeRemaining"]}
 % else:
-${next((t["teamName"] for t in data["allTeams"] if t["id"] == game["teams"]["away"]["team"]["id"]), "Unknown Team")} (${game["teams"]["away"]["score"]}) @ \
-(${game["teams"]["home"]["score"]}) ${next((t["teamName"] for t in data["allTeams"] if t["id"] == game["teams"]["home"]["team"]["id"]), "Unknown Team")} \
+${next((t["teamName"] for t in data["allTeams"] if t["id"] == game["teams"]["away"]["team"]["id"]), "Unknown Team")} @ \
+${next((t["teamName"] for t in data["allTeams"] if t["id"] == game["teams"]["home"]["team"]["id"]), "Unknown Team")} \
 - ${formattedGameTime}
 % endif
 

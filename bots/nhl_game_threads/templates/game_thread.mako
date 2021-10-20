@@ -1,4 +1,5 @@
 <%
+    from datetime import datetime, timedelta
     if data["game"]["gameData"]["status"]["abstractGameState"] == "Final":
         result = (
             "tie" if data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"] == data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]
@@ -36,8 +37,8 @@ ${data["game"]["gameData"]["teams"]["home"]["teamName"]}${myTeamRecord if data["
 ${'##'} Game Status - \
 %   if data["game"]["liveData"]["linescore"]["hasShootout"]:
 Shootout! ${data["game"]["gameData"]["teams"]["away"]["teamName"]}: ${data["game"]["liveData"]["linescore"]["shootoutInfo"]["away"]["scores"]}/${data["game"]["liveData"]["linescore"]["shootoutInfo"]["away"]["attempts"]}, ${data["game"]["gameData"]["teams"]["home"]["teamName"]}: ${data["game"]["liveData"]["linescore"]["shootoutInfo"]["home"]["scores"]}/${data["game"]["liveData"]["linescore"]["shootoutInfo"]["home"]["attempts"]}}
-%   elif data["game"]["liveData"]["linescore"]["intermissionInfo"]["intermission"]:
-Intermission, ${data["game"]["liveData"]["linescore"]["intermissionInfo"]["timeRemaining"]} Remaining
+%   elif data["game"]["liveData"]["linescore"]["intermissionInfo"].get("inIntermission"):
+Intermission, ${str(timedelta(seconds=int(data["game"]["liveData"]["linescore"]["intermissionInfo"]["intermissionTimeRemaining"])))[-5:]} Remaining
 %   else:
 ${data["game"]["liveData"]["linescore"]["currentPeriodOrdinal"]}${' Period' if data["game"]["liveData"]["linescore"]["currentPeriod"] <= 3 else ''} - ${data["game"]["liveData"]["linescore"]["currentPeriodTimeRemaining"]} \
 %       if data["game"]["liveData"]["linescore"]["teams"]["away"]["powerPlay"]:

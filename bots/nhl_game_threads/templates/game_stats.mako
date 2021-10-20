@@ -10,7 +10,8 @@
     awayStats = data["game"]["liveData"]["boxscore"]["teams"]["away"]["teamStats"]["teamSkaterStats"]
     homeStats = data["game"]["liveData"]["boxscore"]["teams"]["home"]["teamStats"]["teamSkaterStats"]
 %>\
-|Team|SOG|FO%|PP|PIM|Hits|Blks|GVA|
+${'##'} Team Stats
+||SOG|FO%|PP|PIM|Hits|Blks|GVA|
 |:--|:--|:--|:--|:--|:--|:--|:--|
 ## Team
 |${awayTeam["teamName"]}|${awayStats["shots"]}|${round(float(awayStats["faceOffWinPercentage"]))}%|\

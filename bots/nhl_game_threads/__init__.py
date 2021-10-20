@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.0.1"
+__version__ = "1.0.0.2"
 
 DATA_LOCK = threading.Lock()
 
@@ -225,7 +225,7 @@ class Bot(object):
             # Get today's games
             todayAllGames = self.nhl.schedule(
                 self.today["Y-m-d"],
-                expand="schedule.venue,schedule.broadcasts,schedule.radioBroadcasts",
+                expand="schedule.linescore,schedule.venue,schedule.broadcasts,schedule.radioBroadcasts",
             )
             todayAllGames = next(
                 (
@@ -1693,19 +1693,33 @@ class Bot(object):
 
             # Collect the data...
             # Get today's games
-            todayGames = self.nhl.schedule(
+            todayAllGames = self.nhl.schedule(
                 self.today["Y-m-d"],
-                team_id=self.myTeamId,
-                expand="schedule.linescore,schedule.scoringplays,schedule.decisions,schedule,venue,schedule.broadcasts,schedule.radioBroadcasts",
+                expand="schedule.linescore,schedule.venue,schedule.broadcasts,schedule.radioBroadcasts",
             )
-            todayGames = next(
+            todayAllGames = next(
                 (
                     x["games"]
-                    for x in todayGames["dates"]
+                    for x in todayAllGames["dates"]
                     if x["date"] == self.today["Y-m-d"]
                 ),
                 [],
             )
+            todayGames = [
+                x
+                for x in todayAllGames
+                if self.myTeam["id"]
+                in [x["teams"]["away"]["team"]["id"], x["teams"]["home"]["team"]["id"]]
+            ]
+            todayOtherGames = [
+                x
+                for x in todayAllGames
+                if self.myTeam["id"]
+                not in [
+                    x["teams"]["away"]["team"]["id"],
+                    x["teams"]["home"]["team"]["id"],
+                ]
+            ]
             self.log.debug(f"Gathering data for gamePk [{self.allData['gamePk']}]...")
             game = self.nhl.game(self.allData["gamePk"])
             homeAway = (
@@ -1776,6 +1790,7 @@ class Bot(object):
                         "myTeam": gameTime,
                     },
                     "game": game,
+                    "todayOtherGames": todayOtherGames,
                     "standings": standings,
                 }
             )
