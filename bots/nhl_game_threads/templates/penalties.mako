@@ -14,11 +14,13 @@
 %>
 % if len(plays):
 ${'##'} Penalty Summary
+|Per./Time|Team|Type|Description|
+|:--|:--|:--|:--|
 %   for p in plays:
-* ${f" {p['about']['ordinalNum']}{(' ' + p['about']['periodTime']) if p['about']['periodType'] != 'SHOOTOUT' else ''}"} - \
-[${p['team']['triCode']}](${data['teamSubsById'].get(p['team']['id'], '')}) - \
-${p['result']['penaltyMinutes']}:00 ${p['result']['penaltySeverity']} - \
-${p['result']['description']}
+|${f" {p['about']['ordinalNum']}{(' ' + p['about']['periodTime']) if p['about']['periodType'] != 'SHOOTOUT' else ''}"}|\
+[${p['team']['triCode']}](${data['teamSubsById'].get(p['team']['id'], '')})|\
+${p['result']['penaltyMinutes']}:00 ${p['result']['penaltySeverity']}|\
+${p['result']['description']}|
 %   endfor
 
 % endif
