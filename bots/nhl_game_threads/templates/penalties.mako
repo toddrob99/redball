@@ -16,7 +16,7 @@
 ${'##'} Penalty Summary
 %   for p in plays:
 * ${f" {p['about']['ordinalNum']}{(' ' + p['about']['periodTime']) if p['about']['periodType'] != 'SHOOTOUT' else ''}"} - \
-${p['team']['triCode']} - \
+[${p['team']['triCode']}](${data['teamSubsById'].get(p['team']['id'], '')}) - \
 ${p['result']['penaltyMinutes']}:00 ${p['result']['penaltySeverity']} - \
 ${p['result']['description']}
 %   endfor

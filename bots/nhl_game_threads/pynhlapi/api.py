@@ -19,6 +19,13 @@ class API:
         if json:
             return json
 
+    def game_content(self, game_pk, json=True, **kwargs):
+        url = f"{self.api_url}{constants.GAME_CONTENT_ENDPOINT.format(game_pk=game_pk)}"
+        url = self.add_kwargs_to_url(url, kwargs)
+        json = self.get_json(url)
+        if json:
+            return json
+
     def schedule(
         self,
         start_date=datetime.today().strftime("%Y-%m-%d"),

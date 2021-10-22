@@ -26,10 +26,10 @@
     ) if data["todayGames"][0]["teams"][oppHomeAway].get("leagueRecord") else ""
 %>\
 ## Visiting Team
-${'##'} ${data["game"]["gameData"]["teams"]["away"]["teamName"]}${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
+${'##'} [${data["game"]["gameData"]["teams"]["away"]["name"]}](${data["teamSubs"][data["game"]["gameData"]["teams"]["away"]["abbreviation"]]})${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
 @ \
 ## Home Team
-${data["game"]["gameData"]["teams"]["home"]["teamName"]}${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
+[${data["game"]["gameData"]["teams"]["home"]["name"]}](${data["teamSubs"][data["game"]["gameData"]["teams"]["home"]["abbreviation"]]})${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
 
 <%include file="game_info.mako" />
 
@@ -43,8 +43,8 @@ Intermission, ${str(timedelta(seconds=int(data["game"]["liveData"]["linescore"][
 ${data["game"]["liveData"]["linescore"]["currentPeriodOrdinal"]}${' Period' if data["game"]["liveData"]["linescore"]["currentPeriod"] <= 3 else ''} - ${data["game"]["liveData"]["linescore"]["currentPeriodTimeRemaining"]} \
 %       if data["game"]["liveData"]["linescore"]["teams"]["away"]["powerPlay"]:
 - ${data["game"]["gameData"]["teams"]["away"]["teamName"]} Power Play (${data["game"]["liveData"]["linescore"]["teams"]["away"]["numSkaters"]} on ${data["game"]["liveData"]["linescore"]["teams"]["home"]["numSkaters"]}) \
-%       elif data["game"]["liveData"]["linescore"]["teams"]["away"]["powerPlay"]:
-- ${data["game"]["gameData"]["teams"]["away"]["teamName"]} Power Play (${data["game"]["liveData"]["linescore"]["teams"]["away"]["numSkaters"]} on ${data["game"]["liveData"]["linescore"]["teams"]["home"]["numSkaters"]}) \
+%       elif data["game"]["liveData"]["linescore"]["teams"]["home"]["powerPlay"]:
+- ${data["game"]["gameData"]["teams"]["home"]["teamName"]} Power Play (${data["game"]["liveData"]["linescore"]["teams"]["home"]["numSkaters"]} on ${data["game"]["liveData"]["linescore"]["teams"]["away"]["numSkaters"]}) \
 %       endif
 %       if data["game"]["liveData"]["linescore"]["teams"]["away"]["goaliePulled"]:
 - ${data["game"]["gameData"]["teams"]["away"]["teamName"]} Goalie Pulled \
@@ -71,11 +71,18 @@ ${data["oppTeam"]["teamName"]}
 %if data["game"]["gameData"]["status"]["abstractGameState"] == "Final" and len(data["game"]["liveData"].get("decisions", {})):
 ## Only include decisions if the game has ended
 <%include file="decisions.mako" />
+
 %endif
 
 %if data["game"]["gameData"]["status"]["abstractGameState"] in ["Live", "Final"]:
 ## Only include the line score if the game has already started
 <%include file="linescore.mako" />
+
+<%include file="skaters.mako" />
+%if data["game"]["gameData"]["status"]["abstractGameState"] == "Preview":
+
+<%include file="scratches.mako" />
+%endif
 
 <%include file="game_stats.mako" />
 %endif

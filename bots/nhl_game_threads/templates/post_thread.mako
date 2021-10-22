@@ -24,10 +24,11 @@
     ) if data["todayGames"][0]["teams"][oppHomeAway].get("leagueRecord") else ""
 %>\
 ## Visiting Team
-${'##'} ${data["game"]["gameData"]["teams"]["away"]["teamName"]}${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
+## Visiting Team
+${'##'} [${data["game"]["gameData"]["teams"]["away"]["name"]}](${data["teamSubs"][data["game"]["gameData"]["teams"]["away"]["abbreviation"]]})${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
 @ \
 ## Home Team
-${data["game"]["gameData"]["teams"]["home"]["teamName"]}${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
+[${data["game"]["gameData"]["teams"]["home"]["name"]}](${data["teamSubs"][data["game"]["gameData"]["teams"]["home"]["abbreviation"]]})${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
 
 %if result != "":
 ${'##'} Final${f'/{data["game"]["liveData"]["linescore"]["currentPeriodOrdinal"]}' if data["game"]["liveData"]["linescore"]["currentPeriod"] > 3 else ""}: \

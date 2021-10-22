@@ -11,12 +11,16 @@
     ) if data["todayGames"][0]["teams"][oppHomeAway].get("leagueRecord") else ""
 %>\
 ## Visiting Team
-${'##'} ${data["game"]["gameData"]["teams"]["away"]["name"]}${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
+${'##'} [${data["game"]["gameData"]["teams"]["away"]["name"]}](${data["teamSubs"][data["game"]["gameData"]["teams"]["away"]["abbreviation"]]})${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
 @ \
 ## Home Team
-${data["game"]["gameData"]["teams"]["home"]["name"]}${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
+[${data["game"]["gameData"]["teams"]["home"]["name"]}](${data["teamSubs"][data["game"]["gameData"]["teams"]["home"]["abbreviation"]]})${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
 
 <%include file="game_info.mako" />
+
+<%include file="skaters.mako" />
+
+<%include file="scratches.mako" />
 
 <%include file="standings.mako" />
 

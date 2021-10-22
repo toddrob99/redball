@@ -10,4 +10,6 @@
 ${'##'} ${data["myTeam"]["division"]["nameShort"]} Standings
 |Rank|Team|Wins|Losses|OT|Points|
 |:--|:--|:--|:--|:--|:--|
-${"\n".join([f"|{x['divisionRank']}|{x['team']['name']}|{x['leagueRecord']['wins']}|{x['leagueRecord']['losses']}|{x['leagueRecord']['ot']}|{x['points']}|" for x in myDivStandings])}
+${"\n".join([f"|{x['divisionRank']}|\
+[{x['team']['name']}]({data['teamSubsById'][x['team']['id']]})|\
+{x['leagueRecord']['wins']}|{x['leagueRecord']['losses']}|{x['leagueRecord']['ot']}|{x['points']}|" for x in myDivStandings])}

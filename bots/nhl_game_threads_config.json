@@ -206,6 +206,18 @@
             "parent_key": null
         },
         {
+            "key": "LINK_IN_TAILGATE_THREAD",
+            "description": "Post a stickied comment in the tailgate thread, linking to the game thread, when the game thread is submitted. Add a setting with key=TAILGATE_THREAD_MESSAGE to override the comment text; use markdown format for the link and just put (link)--e.g. [game thread](link).",
+            "type": "bool",
+            "val": true,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
             "key": "FOOTER",
             "description": "Footer text to include at the bottom of the thread.",
             "type": "str",
@@ -507,6 +519,18 @@
             "description": "Lock the game thread when post game thread is posted.",
             "type": "bool",
             "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LINK_IN_GAME_THREAD",
+            "description": "Post a stickied comment in the game thread, linking to the post game thread, when the post game thread is submitted. Add a setting with key=GAME_THREAD_MESSAGE to override the comment text; use markdown format for the link and just put (link)--e.g. [post game thread](link).",
+            "type": "bool",
+            "val": true,
             "options": [
                 true,
                 false

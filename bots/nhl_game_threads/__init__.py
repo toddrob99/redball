@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.0.2"
+__version__ = "1.0.0.3"
 
 DATA_LOCK = threading.Lock()
 
@@ -264,6 +264,8 @@ class Bot(object):
                 "otherDivisionTeams": self.otherDivisionTeams,
                 "otherDivisionTeamIds": self.otherDivisionTeamIds,
                 "todayOtherGames": todayOtherGames,
+                "teamSubs": self.teamSubs,
+                "teamSubsById": self.teamSubsById,
             }
             # Initialize vars to hold data about reddit and process threads
             self.stopFlags = {"tailgate": False, "game": False, "post": False}
@@ -339,6 +341,7 @@ class Bot(object):
                     f"gameTime (my team TZ): {gameTime}; gameTime_homeTeam: {gameTime_homeTeam}; gameTime_local: {gameTime_local}"
                 )
                 standings = self.nhl.standings(self.today["season"]["seasonId"])
+                content = self.nhl.game_content(gamePk)
 
                 # Initialize var to hold game data throughout the day
                 self.allData.update(
@@ -353,6 +356,7 @@ class Bot(object):
                             "myTeam": gameTime,
                         },
                         "game": game,
+                        "content": content,
                         "standings": standings,
                     }
                 )
@@ -1776,6 +1780,7 @@ class Bot(object):
                 f"gameTime (my team TZ): {gameTime}; gameTime_homeTeam: {gameTime_homeTeam}; gameTime_local: {gameTime_local}"
             )
             standings = self.nhl.standings(self.today["season"]["seasonId"])
+            content = self.nhl.game_content(self.allData["gamePk"])
 
             # Initialize var to hold game data throughout the day
             self.allData.update(
@@ -1790,6 +1795,7 @@ class Bot(object):
                         "myTeam": gameTime,
                     },
                     "game": game,
+                    "content": content,
                     "todayOtherGames": todayOtherGames,
                     "standings": standings,
                 }
@@ -1946,6 +1952,15 @@ class Bot(object):
             if thread == "game"
             else self.settings.get("Post Game Thread", {}).get(
                 "LOCK_GAME_THREAD", False
+            )
+            if thread == "post"
+            else False
+        )
+        linkPrevious = (
+            self.settings.get("Game Thread", {}).get("LINK_IN_TAILGATE_THREAD", False)
+            if thread == "game"
+            else self.settings.get("Post Game Thread", {}).get(
+                "LINK_IN_GAME_THREAD", False
             )
             if thread == "post"
             else False
@@ -2138,46 +2153,59 @@ class Bot(object):
                     self.log.info("Tweet submitted successfully!")
 
             # Lock previous thread
-            if lockPrevious:
-                if threadToLock := (
+            if lockPrevious or linkPrevious:
+                if previousThread := (
                     self.threadCache["tailgate"].get("thread")
                     if thread == "game"
                     else self.threadCache["game"].get("thread")
                     if thread == "post"
                     else None
                 ):
-                    commentText = (
-                        self.settings.get("Game Thread", {}).get("LOCK_MESSAGE", None)
-                        if thread == "game"
-                        else self.settings.get("Post Game Thread", {}).get(
-                            "LOCK_MESSAGE", None
+                    if lockPrevious:
+                        try:
+                            self.log.debug(
+                                f"Attempting to lock {'tailgate' if thread == 'game' else 'game' if thread == 'post' else ''} thread [{previousThread.id}]..."
+                            )
+                            previousThread.mod.lock()
+                        except Exception as e:
+                            self.log.warning(
+                                f"Failed to lock {'tailgate' if thread == 'game' else 'game' if thread == 'post' else ''} thread [{previousThread.id}]: {e}"
+                            )
+
+                    if linkPrevious:
+                        commentText = (
+                            self.settings.get("Game Thread", {}).get(
+                                "TAILGATE_THREAD_MESSAGE", None
+                            )
+                            if thread == "game"
+                            else self.settings.get("Post Game Thread", {}).get(
+                                "GAME_THREAD_MESSAGE", None
+                            )
+                            if thread == "post"
+                            else None
                         )
-                        if thread == "post"
-                        else None
-                    )
-                    if not commentText:
-                        commentText = f"This thread has been locked. Please continue the discussion in the [{'game' if thread == 'game' else 'post game' if thread == 'post' else 'new'} thread](link)."
-                    parsedCommentText = commentText.replace(
-                        "(link)", f"({theThread.shortlink})"
-                    )
-                    try:
-                        self.log.debug(
-                            f"Attempting to lock {'tailgate' if thread == 'game' else 'game' if thread == 'post' else ''} thread [{threadToLock.id}]..."
+                        if not commentText:
+                            commentText = f"{'This thread has been locked. ' if lockPrevious else ''}Please continue the discussion in the [{'game' if thread == 'game' else 'post game' if thread == 'post' else 'new'} thread](link)."
+
+                        parsedCommentText = commentText.replace(
+                            "(link)", f"({theThread.shortlink})"
                         )
-                        threadToLock.mod.lock()
-                        self.log.debug("Submitting comment with link to new thread...")
-                        lockReply = threadToLock.reply(parsedCommentText)
-                        self.log.debug("Distinguishing comment...")
-                        lockReply.mod.distinguish(sticky=True)
-                        self.log.debug(
-                            "Successfully locked thread and posted a distinguished/sticky reply."
-                        )
-                    except Exception as e:
-                        self.log.warning(
-                            f"Failed to lock {'tailgate' if thread == 'game' else 'game' if thread == 'post' else ''} thread [{threadToLock.id}], submit reply with link to new thread, or distinguish and sticky comment: {e}"
-                        )
+                        try:
+                            self.log.debug(
+                                "Submitting comment in previous thread with link to new thread..."
+                            )
+                            lockReply = previousThread.reply(parsedCommentText)
+                            self.log.debug("Distinguishing comment...")
+                            lockReply.mod.distinguish(sticky=True)
+                            self.log.debug(
+                                f"Successfully posted a distinguished/sticky reply in {'tailgate' if thread == 'game' else 'game' if thread == 'post' else ''} thread."
+                            )
+                        except Exception as e:
+                            self.log.warning(
+                                f"Failed to submit reply with link to new thread or distinguish and sticky comment in {'tailgate' if thread == 'game' else 'game' if thread == 'post' else ''} thread: {e}"
+                            )
                 else:
-                    self.log.debug("I did not find a previous thread to lock.")
+                    self.log.debug("I did not find a previous thread to lock or link.")
 
             if restrictSelfPosts:
                 # Disable self posts now that the thread is submitted
@@ -2642,6 +2670,76 @@ class Bot(object):
             to_tz = pytz.timezone(convert_to)
 
         return dt.astimezone(to_tz)
+
+    teamSubs = {
+        "ANA": "/r/anaheimducks",
+        "ARI": "/r/coyotes",
+        "BOS": "/r/bostonbruins",
+        "BUF": "/r/sabres",
+        "CAR": "/r/canes",
+        "CBJ": "/r/bluejackets",
+        "CGY": "/r/calgaryflames",
+        "CHI": "/r/hawks",
+        "COL": "/r/coloradoavalanche",
+        "DAL": "/r/dallasstars",
+        "DET": "/r/detroitredwings",
+        "EDM": "/r/edmontonoilers",
+        "FLA": "/r/floridapanthers",
+        "LAK": "/r/losangeleskings",
+        "MIN": "/r/wildhockey",
+        "MTL": "/r/habs",
+        "NJD": "/r/devils",
+        "NSH": "/r/predators",
+        "NYI": "/r/newyorkislanders",
+        "NYR": "/r/rangers",
+        "OTT": "/r/ottawasenators",
+        "PHI": "/r/flyers",
+        "PIT": "/r/penguins",
+        "SEA": "/r/seattlekraken",
+        "SJS": "/r/sanjosesharks",
+        "STL": "/r/stlouisblues",
+        "TBL": "/r/tampabaylightning",
+        "TOR": "/r/leafs",
+        "VAN": "/r/canucks",
+        "VGK": "/r/goldenknights",
+        "WPG": "/r/winnipegjets",
+        "WSH": "/r/caps",
+    }
+
+    teamSubsById = {
+        1: "/r/devils",
+        2: "/r/newyorkislanders",
+        3: "/r/rangers",
+        4: "/r/flyers",
+        5: "/r/penguins",
+        6: "/r/bostonbruins",
+        7: "/r/sabres",
+        8: "/r/habs",
+        9: "/r/ottawasenators",
+        10: "/r/leafs",
+        12: "/r/canes",
+        13: "/r/floridapanthers",
+        14: "/r/tampabaylightning",
+        15: "/r/caps",
+        16: "/r/hawks",
+        17: "/r/detroitredwings",
+        18: "/r/predators",
+        19: "/r/stlouisblues",
+        20: "/r/calgaryflames",
+        21: "/r/coloradoavalanche",
+        22: "/r/edmontonoilers",
+        23: "/r/canucks",
+        24: "/r/anaheimducks",
+        25: "/r/dallasstars",
+        26: "/r/losangeleskings",
+        28: "/r/sanjosesharks",
+        29: "/r/bluejackets",
+        30: "/r/wildhockey",
+        52: "/r/winnipegjets",
+        53: "/r/coyotes",
+        54: "/r/goldenknights",
+        55: "/r/seattlekraken",
+    }
 
     def bot_state(self):
         """Return current state...

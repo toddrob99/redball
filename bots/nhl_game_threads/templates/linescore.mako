@@ -13,8 +13,8 @@
     ):
         headerLine = "||"
         alignmentLine = "|:--|"
-        awayLine = f'|{awayTeam["teamName"]}|'
-        homeLine = f'|{homeTeam["teamName"]}|'
+        awayLine = f'|[{awayTeam["teamName"]}]({data["teamSubs"][awayTeam["abbreviation"]]})|'
+        homeLine = f'|[{homeTeam["teamName"]}]({data["teamSubs"][homeTeam["abbreviation"]]})|'
         for period in data["game"]["liveData"]["linescore"]["periods"]:
             headerLine += f'{period["ordinalNum"]}|'
             alignmentLine += ":--|"
@@ -30,6 +30,7 @@
         awayLine += f'|{data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"]}|'
         homeLine += f'|{data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]}|'
 %>\
+${'##'} Linescore
 ${headerLine}
 ${alignmentLine}
 ${awayLine}
