@@ -18,7 +18,7 @@ ${'##'} Scoring Summary
 |:--|:--|:--|:--|
 %   for p in plays:
 <%
-    milestone = next((x for x in data["content"].get("media", {}).get("milestones", {}).get("items", []) if x["type"]=="GOAL" and x["highlight"]["type"]=="video" and str(x["period"])==str(p["about"]["period"]) and x["periodTime"]==p["about"]["periodTime"]), None)
+    milestone = next((x for x in data["content"].get("media", {}).get("milestones", {}).get("items", []) if x.get("type")=="GOAL" and x.get("highlight", {}).get("type")=="video" and str(x["period"])==str(p["about"]["period"]) and x["periodTime"]==p["about"]["periodTime"]), {})
     hdLink = next((v.get('url') for v in milestone.get('highlight', {}).get('playbacks',[]) if v.get('name')=='FLASH_1800K_896x504'),'')
     #hdLink = ""
 %>\

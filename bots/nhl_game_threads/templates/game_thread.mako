@@ -73,26 +73,28 @@ ${data["oppTeam"]["teamName"]}
 <%include file="decisions.mako" />
 
 %endif
-
 %if data["game"]["gameData"]["status"]["abstractGameState"] in ["Live", "Final"]:
 ## Only include the line score if the game has already started
 <%include file="linescore.mako" />
 
-<%include file="skaters.mako" />
+%endif
 %if data["game"]["gameData"]["status"]["abstractGameState"] == "Preview":
+<%include file="skaters.mako" />
+
 
 <%include file="scratches.mako" />
-%endif
 
+%endif
+%if data["game"]["gameData"]["status"]["abstractGameState"] in ["Live", "Final"]:
 <%include file="game_stats.mako" />
+
 %endif
 %if data["game"]["gameData"]["status"]["abstractGameState"] != "Preview":
-
 <%include file="scoring_summary.mako" />
 
 <%include file="penalties.mako" />
-%endif
 
+%endif
 <%include file="division_scoreboard.mako" />
 
 ## Configurable footer text
