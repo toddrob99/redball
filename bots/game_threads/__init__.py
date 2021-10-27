@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.2.3"
+__version__ = "1.2.5"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -3677,8 +3677,34 @@ class Bot(object):
                 # The team is in the postseason, hooray!
                 return "post:in"
             else:
-                # Better luck next year...
-                return "post:out"
+                # Check if there is a game scheduled where my team is part of a TBD
+                sc = self.get_schedule_data(
+                    sd=self.today["Y-m-d"],
+                    ed=self.myTeam["league"]["seasonDateInfo"]["postSeasonEndDate"],
+                )
+                all_teams = []
+                for d in sc["dates"]:
+                    for g in d["games"]:
+                        all_teams.extend(
+                            [
+                                g["teams"]["away"]["team"]["name"],
+                                g["teams"]["home"]["team"]["name"],
+                            ]
+                        )
+                all_teams = set(all_teams)
+                team = self.get_team(t, h="")
+                team_found = next(
+                    (x for x in all_teams if team["abbreviation"] in x), False
+                )
+                if team_found:
+                    # The team is in the postseason!
+                    self.log.info(
+                        f"Team determined to be in the postseason based on a game scheduled with a TBD team that includes [{team['abbreviation']}] in the name: [{team_found}]."
+                    )
+                    return "post:in"
+                else:
+                    # Better luck next year...
+                    return "post:out"
         elif datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d") > datetime.strptime(
             self.myTeam["league"]["seasonDateInfo"]["postSeasonEndDate"], "%Y-%m-%d"
         ):

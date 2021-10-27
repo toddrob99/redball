@@ -402,4 +402,15 @@ upgradeScripts = {
             time.time()
         ),
     ],
+    10: [
+        # Add NHL Game Threads bot type
+        """INSERT OR IGNORE INTO rb_botTypes (name, description, moduleName)
+            VALUES
+            ('nhl-game-threads', 'NHL Game Threads', 'nhl_game_threads')
+        ;""",
+        # Update DB version to 10
+        "UPDATE rb_meta SET val='10', lastUpdate='{}' WHERE key='dbVersion';".format(
+            time.time()
+        ),
+    ],
 }
