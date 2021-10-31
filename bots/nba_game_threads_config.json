@@ -1,0 +1,802 @@
+{
+    "Tailgate Thread": [
+        {
+            "key": "RESTRICT_SELF_POSTS",
+            "description": "Disable self posts in the subreddit when the tailgate thread is submitted.",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "ENABLED",
+            "description": "Enable posting of tailgate threads.",
+            "type": "bool",
+            "val": true,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "FLAIR",
+            "description": "Flair to add to tailgate thread post.",
+            "type": "str",
+            "val": "Tailgate Thread",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LIVE_DISCUSSION",
+            "description": "Submit posts as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "FOOTER",
+            "description": "Footer text to include at the bottom of the thread.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "POST_TIME",
+            "description": "Time of day when tailgate thread should be posted. Include zero-padded hour and minute in 24 hour time, e.g. 08:00 or 14:30.",
+            "type": "str",
+            "val": "05:00",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "SUGGESTED_SORT",
+            "description": "Suggested sort to set on the tailgate thread post.",
+            "type": "str",
+            "val": "new",
+            "options": [
+                "",
+                "confidence",
+                "top",
+                "new",
+                "controversial",
+                "old",
+                "random",
+                "qa"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "SUPPRESS_MINUTES",
+            "description": "Tailgate thread will be skipped if game thread will be posted within this many minutes. Set to 0 to suppress tailgate thread only if it is already time to post game thread. Set to -1 to never suppress tailgate thread.",
+            "type": "int",
+            "val": 60,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "THREAD_TEMPLATE",
+            "description": "Template for the thread body. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nba_game_threads/templates/",
+            "type": "str",
+            "val": "tailgate_thread.mako",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "TITLE_PREFIX",
+            "description": "Prefix to include at the beginning of the thread title, after the team name. Trailing space and separator dash will be added.",
+            "type": "str",
+            "val": "Tailgate Thread:",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "TITLE_TEMPLATE",
+            "description": "Template for the post title. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nba_game_threads/templates/",
+            "type": "str",
+            "val": "tailgate_title.mako",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "UPDATE_INTERVAL",
+            "description": "Number of minutes between tailgate thread updates.",
+            "type": "int",
+            "val": 5,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "UPDATE_UNTIL",
+            "description": "Keep updating the thread until the selected threshold is reached.",
+            "type": "str",
+            "val": "Game thread is posted",
+            "options": [
+                "Do not update",
+                "Game thread is posted",
+                "All division games are final",
+                "All NBA games are final"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "WEBHOOK_URL",
+            "description": "URL to call when thread is posted.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "WEBHOOK_TEMPLATE",
+            "description": "Template to parse for body of call to WEBHOOK_URL.",
+            "type": "str",
+            "val": "tailgate_webhook.mako",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ],
+    "Game Thread": [
+        {
+            "key": "ENABLED",
+            "description": "Enable posting of game threads.",
+            "type": "bool",
+            "val": true,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "FLAIR",
+            "description": "Flair to add to game thread post.",
+            "type": "str",
+            "val": "Game Thread",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LIVE_DISCUSSION",
+            "description": "Submit posts as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LOCK_TAILGATE_THREAD",
+            "description": "Lock the tailgate thread when game thread is posted.",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LINK_IN_TAILGATE_THREAD",
+            "description": "Post a stickied comment in the tailgate thread, linking to the game thread, when the game thread is submitted. Add a setting with key=TAILGATE_THREAD_MESSAGE to override the comment text; use markdown format for the link and just put (link)--e.g. [game thread](link).",
+            "type": "bool",
+            "val": true,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "FOOTER",
+            "description": "Footer text to include at the bottom of the thread.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "MINUTES_BEFORE",
+            "description": "How many minutes before the scheduled game start time to post the game thread.",
+            "type": "int",
+            "val": 60,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "POST_BY",
+            "description": "Time of day by which game thread should be posted, if the configured time comes before MINUTES_BEFORE setting. Include zero-padded hour and minute in 24 hour time, e.g. 08:00 or 14:30.",
+            "type": "str",
+            "val": "19:30",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "SUGGESTED_SORT",
+            "description": "Suggested sort to set on the game thread post.",
+            "type": "str",
+            "val": "new",
+            "options": [
+                "",
+                "confidence",
+                "top",
+                "new",
+                "controversial",
+                "old",
+                "random",
+                "qa"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "THREAD_TEMPLATE",
+            "description": "Template for the thread body. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nba_game_threads/templates/",
+            "type": "str",
+            "val": "game_thread.mako",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "TITLE_PREFIX",
+            "description": "Prefix to include at the beginning of the thread title (include : or - if desired). Trailing space will be added if not blank.",
+            "type": "str",
+            "val": "Game Thread:",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "TITLE_TEMPLATE",
+            "description": "Template for the post title. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nba_game_threads/templates/",
+            "type": "str",
+            "val": "game_title.mako",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "UPDATE_INTERVAL",
+            "description": "Number of seconds between game thread updates.",
+            "type": "int",
+            "val": 30,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "UPDATE_INTERVAL_NOT_LIVE",
+            "description": "Number of minutes between game thread updates while the game is not live (including pregame and halftime).",
+            "type": "int",
+            "val": 3,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "UPDATE_UNTIL",
+            "description": "Keep updating the thread until the selected threshold is reached.",
+            "type": "str",
+            "val": "All division games are final",
+            "options": [
+                "Do not update",
+                "My team's game is final",
+                "All division games are final",
+                "All NBA games are final"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "WEBHOOK_URL",
+            "description": "URL to call when thread is posted.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "WEBHOOK_TEMPLATE",
+            "description": "Template to parse for body of call to WEBHOOK_URL.",
+            "type": "str",
+            "val": "game_webhook.mako",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ],
+    "Logging": [
+        {
+            "key": "CONSOLE_LOG_LEVEL",
+            "description": "Console Log Level",
+            "type": "str",
+            "val": "INFO",
+            "options": [
+                "DEBUG",
+                "INFO",
+                "WARNING",
+                "ERROR"
+            ],
+            "subkeys": [],
+            "parent_key": "LOG_TO_CONSOLE"
+        },
+        {
+            "key": "FILE_LOG_LEVEL",
+            "description": "File Log Level",
+            "type": "str",
+            "val": "DEBUG",
+            "options": [
+                "DEBUG",
+                "INFO",
+                "WARNING",
+                "ERROR"
+            ],
+            "subkeys": [],
+            "parent_key": "LOG_TO_FILE"
+        },
+        {
+            "key": "LOG_TO_CONSOLE",
+            "description": "Log to Console",
+            "type": "bool",
+            "val": true,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [
+                "CONSOLE_LOG_LEVEL"
+            ],
+            "parent_key": ""
+        },
+        {
+            "key": "LOG_TO_FILE",
+            "description": "Log to File",
+            "type": "bool",
+            "val": true,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [
+                "FILE_LOG_LEVEL",
+                "LOG_RETENTION"
+            ],
+            "parent_key": ""
+        },
+        {
+            "key": "LOG_RETENTION",
+            "description": "Log File Retention (Days)",
+            "type": "int",
+            "val": 7,
+            "options": [],
+            "subkeys": [],
+            "parent_key": "LOG_TO_FILE"
+        },
+        {
+            "key": "PROPAGATE",
+            "description": "Propagate Logs",
+            "type": "bool",
+            "val": false,
+            "options": [true, false],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ],
+    "NBA": [
+        {
+            "key": "API_CACHE_SECONDS",
+            "description": "Number of seconds to cache data from NBA API",
+            "type": "int",
+            "val": 8,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "TEAM",
+            "description": "My Team",
+            "type": "str",
+            "val": "",
+            "options": [
+                "",
+                "Atlanta Hawks|1610612737",
+                "Boston Celtics|1610612738",
+                "Brooklyn Nets|1610612751",
+                "Charlotte Hornets|1610612766",
+                "Chicago Bulls|1610612741",
+                "Cleveland Cavaliers|1610612739",
+                "Dallas Mavericks|1610612742",
+                "Denver Nuggets|1610612743",
+                "Detroit Pistons|1610612765",
+                "Golden State Warriors|1610612744",
+                "Houston Rockets|1610612745",
+                "Indiana Pacers|1610612754",
+                "LA Clippers|1610612746",
+                "Los Angeles Lakers|1610612747",
+                "Memphis Grizzlies|1610612763",
+                "Miami Heat|1610612748",
+                "Milwaukee Bucks|1610612749",
+                "Minnesota Timberwolves|1610612750",
+                "New Orleans Pelicans|1610612740",
+                "New York Knicks|1610612752",
+                "Oklahoma City Thunder|1610612760",
+                "Orlando Magic|1610612753",
+                "Philadelphia 76ers|1610612755",
+                "Phoenix Suns|1610612756",
+                "Portland Trail Blazers|1610612757",
+                "Sacramento Kings|1610612758",
+                "San Antonio Spurs|1610612759",
+                "Toronto Raptors|1610612761",
+                "Utah Jazz|1610612762",
+                "Washington Wizards|1610612764"
+            ],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "GAME_DATE_OVERRIDE",
+            "description": "Leave blank in most cases. Use this to force the bot to treat a specific date as 'today', and then go back to current day. Date format: %Y-%m-%d, e.g. 2019-10-25.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ],
+    "Post Game Thread": [
+        {
+            "key": "ENABLED",
+            "description": "Enable posting of post game threads.",
+            "type": "bool",
+            "val": true,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "FLAIR",
+            "description": "Flair to add to post game thread post.",
+            "type": "str",
+            "val": "Post Game Thread",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LIVE_DISCUSSION",
+            "description": "Submit posts as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LOCK_GAME_THREAD",
+            "description": "Lock the game thread when post game thread is posted.",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LINK_IN_GAME_THREAD",
+            "description": "Post a stickied comment in the game thread, linking to the post game thread, when the post game thread is submitted. Add a setting with key=GAME_THREAD_MESSAGE to override the comment text; use markdown format for the link and just put (link)--e.g. [post game thread](link).",
+            "type": "bool",
+            "val": true,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "FOOTER",
+            "description": "Footer text to include at the bottom of the thread.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "SUGGESTED_SORT",
+            "description": "Suggested sort to set on the post game thread post.",
+            "type": "str",
+            "val": "new",
+            "options": [
+                "",
+                "confidence",
+                "top",
+                "new",
+                "controversial",
+                "old",
+                "random",
+                "qa"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "THREAD_TEMPLATE",
+            "description": "Template for the thread body. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nba_game_threads/templates/",
+            "type": "str",
+            "val": "post_thread.mako",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "TITLE_PREFIX",
+            "description": "Prefix to include at the beginning of the thread title (include : or - if desired). Trailing space will be added if not blank.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "TITLE_TEMPLATE",
+            "description": "Template for the post title. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nba_game_threads/templates/",
+            "type": "str",
+            "val": "post_title.mako",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "UPDATE_INTERVAL",
+            "description": "Number of minutes between post game thread updates.",
+            "type": "int",
+            "val": 5,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "UPDATE_UNTIL",
+            "description": "Keep updating the thread until the selected threshold is reached.",
+            "type": "str",
+            "val": "An hour after thread is posted",
+            "options": [
+                "Do not update",
+                "An hour after thread is posted",
+                "All division games are final",
+                "All NBA games are final"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "WEBHOOK_URL",
+            "description": "URL to call when thread is posted.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "WEBHOOK_TEMPLATE",
+            "description": "Template to parse for body of call to WEBHOOK_URL.",
+            "type": "str",
+            "val": "post_webhook.mako",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ],
+    "Reddit": [
+        {
+            "key": "FLAIR_MODE",
+            "description": "Method of adding flair to posts. Depends on subreddit configuration.",
+            "type": "str",
+            "val": "mod",
+            "options": [
+                "mod",
+                "submitter",
+                ""
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "INBOX_REPLIES",
+            "description": "Subscribe to inbox replies for submitted posts and comments.",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "STICKY",
+            "description": "Sticky submitted posts (requires mod rights in the subreddit).",
+            "type": "bool",
+            "val": true,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "SUBREDDIT",
+            "description": "Subreddit where posts should be submitted.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        }
+    ],
+    "Bot": [
+        {
+            "key": "TEMPLATE_PATH",
+            "description": "Path where custom templates are stored (defaults to the same path as the standard templates).",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "TEAM_TIMEZONE",
+            "description": "Timezone to use for dates in the threads (e.g. game time)",
+            "type": "str",
+            "val": "America/New_York",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        }
+    ],
+    "Prowl" : [
+        {
+            "key": "ERROR_API_KEY",
+            "description": "API Key for sending error notifications to Prowl.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": ["ERROR_PRIORITY"],
+            "parent_key": ""
+        },
+        {
+            "key": "ERROR_PRIORITY",
+            "description": "Priority when sending error notifications to Prowl (leave blank to disable).",
+            "type": "str",
+            "val": "",
+            "options": [
+                "",
+                "-2",
+                "-1",
+                "0",
+                "1",
+                "2"
+            ],
+            "subkeys": [],
+            "parent_key": "ERROR_API_KEY"
+        },
+        {
+            "key": "THREAD_POSTED_API_KEY",
+            "description": "API Key for sending thread posted notifications to Prowl.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": ["THREAD_POSTED_PRIORITY"],
+            "parent_key": ""
+        },
+        {
+            "key": "THREAD_POSTED_PRIORITY",
+            "description": "Priority when sending thread posted notifications to Prowl (leave blank to disable).",
+            "type": "str",
+            "val": "",
+            "options": [
+                "",
+                "-2",
+                "-1",
+                "0",
+                "1",
+                "2"
+            ],
+            "subkeys": [],
+            "parent_key": "THREAD_POSTED_API_KEY"
+        }
+    ],
+    "Twitter" : [
+        {
+            "key": "TWEET_THREAD_POSTED",
+            "description": "Tweet when threads are posted (see wiki for info).",
+            "type": "bool",
+            "val": "false",
+            "options": [true, false],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "CONSUMER_KEY",
+            "description": "Twitter Consumer Key (see wiki)",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "CONSUMER_SECRET",
+            "description": "Twitter Consumer Secret (see wiki)",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "ACCESS_TOKEN",
+            "description": "Twitter Access Token (see wiki)",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "ACCESS_SECRET",
+            "description": "Twitter Access Secret (see wiki)",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ]
+}

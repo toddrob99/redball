@@ -19,4 +19,4 @@ ${data["game"]["gameData"]["teams"]["away"]["name"]}${myTeamRecord if data["home
 ${data["game"]["gameData"]["teams"]["home"]["name"]}${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord} \
 - \
 ## Date/Time
-${data["gameTime"]["myTeam"].strftime(settings.get("Tailgate Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y @ %I:%M %p %Z"))}
+${data["gameTime"]["myTeam"].strftime(settings.get("Game Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y @ %I:%M %p %Z"))}

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # encoding=utf-8
-"""NHL Game Thread Bot
+"""NBA Game Thread Bot
 by Todd Roberts
 """
 
@@ -26,13 +26,13 @@ import os
 from mako.lookup import TemplateLookup
 import mako.exceptions
 
-from . import pynhlapi
+from . import pynbaapi
 import pyprowl
 import twitter
 
 import praw
 
-__version__ = "1.0.0.5"
+__version__ = "1.0.0"
 
 DATA_LOCK = threading.Lock()
 
@@ -69,14 +69,14 @@ class Bot(object):
             propagate=False,
         )
         self.log.debug(
-            "NHL Game Thread Bot v{} received settings: {}. Template path: {}".format(
+            "NBA Game Thread Bot v{} received settings: {}. Template path: {}".format(
                 __version__, self.settings, self.BOT_TEMPLATE_PATH
             )
         )
 
         # Check db for tables and create if necessary
         self.dbTablePrefix = self.settings.get("Database").get(
-            "dbTablePrefix", "nhl_gdt{}_".format(self.bot.id)
+            "dbTablePrefix", "nba_gdt{}_".format(self.bot.id)
         )
         self.build_tables()
 
@@ -133,8 +133,12 @@ class Bot(object):
                 f"The bot-{self.bot.id}-statusUpdateTask scheduled job already exists."
             )
 
+        self.team_timezone = self.settings.get("Bot", {}).get(
+            "TEAM_TIMEZONE", "America/New_York"
+        )
+
         settings_date = datetime.today().strftime("%Y-%m-%d")
-        if self.settings.get("NHL", {}).get("GAME_DATE_OVERRIDE", "") != "":
+        if self.settings.get("NBA", {}).get("GAME_DATE_OVERRIDE", "") != "":
             # Bot config says to treat specified date as 'today'
             todayOverrideFlag = True
         else:
@@ -147,52 +151,42 @@ class Bot(object):
                 self.refresh_settings()
                 settings_date = datetime.today().strftime("%Y-%m-%d")
 
-            # (Re-)Initialize NHL API
+            # (Re-)Initialize NBA API
             self.log.debug(
-                f"Initializing NHL API with pynhlapi v{pynhlapi.__version__}"
+                f"Initializing NBA API with pynbaapi v{pynbaapi.__version__.__version__}"
             )
-            self.nhl = pynhlapi.API()
+            self.nba = pynbaapi.nba.NBA(
+                f"NBAGameThreads/{__version__} (platform; redball/{redball.__version__})"
+            )
 
             # Get info about configured team
-            if self.settings.get("NHL", {}).get("TEAM", "") == "":
-                self.log.critical("No team selected! Set NHL > TEAM in Bot Config.")
+            if self.settings.get("NBA", {}).get("TEAM", "") == "":
+                self.log.critical("No team selected! Set NBA > TEAM in Bot Config.")
                 self.bot.STOP = True
                 break
 
-            self.allTeams = self.nhl.teams()
             self.myTeamId = int(
-                self.settings.get("NHL", {}).get("TEAM", "").split("|")[1]
+                self.settings.get("NBA", {}).get("TEAM", "").split("|")[1]
             )
             self.log.debug(f"{self.myTeamId=}")
-            self.myTeam = next(
-                (t for t in self.allTeams if t["id"] == self.myTeamId), None
-            )
+            self.myTeam = self.nba.team(self.myTeamId)
             if not self.myTeam:
                 self.log.critical(
-                    "Unable to look up team info! Check NHL > TEAM in Bot Config."
+                    "Unable to look up team info! Check NBA > TEAM in Bot Config."
                 )
                 self.bot.STOP = True
                 break
-            self.log.info("Configured team: {}".format(self.myTeam["name"]))
-            self.log.debug(f"{self.myTeam=}")
-
-            # Other division teams
-            self.otherDivisionTeams = [
-                t
-                for t in self.allTeams
-                if t["division"]["id"] == self.myTeam["division"]["id"]
-            ]
-            self.otherDivisionTeamIds = [t["id"] for t in self.otherDivisionTeams]
+            self.log.info(f"Configured team: {str(self.myTeam)}")
 
             if todayOverrideFlag:
                 self.log.info(
                     "Overriding game date per GAME_DATE_OVERRIDE setting [{}].".format(
-                        self.settings["NHL"]["GAME_DATE_OVERRIDE"]
+                        self.settings["NBA"]["GAME_DATE_OVERRIDE"]
                     )
                 )
                 try:
                     todayObj = datetime.strptime(
-                        self.settings["NHL"]["GAME_DATE_OVERRIDE"], "%Y-%m-%d"
+                        self.settings["NBA"]["GAME_DATE_OVERRIDE"], "%Y-%m-%d"
                     )
                 except Exception as e:
                     self.log.error(
@@ -212,7 +206,13 @@ class Bot(object):
                 "Ymd": todayObj.strftime("%Y%m%d"),
                 "Y": todayObj.strftime("%Y"),
             }
-            self.today.update({"season": self.nhl.season_by_date(self.today["Y-m-d"])})
+            self.today.update(
+                {
+                    "season": todayObj.strftime("%Y")
+                    if int(todayObj.strftime("%m")) >= 9
+                    else str(int(todayObj.strftime("%Y")) - 1)
+                }
+            )
             self.log.debug(
                 f"Today is {self.today['Y-m-d']}. Season: {self.today['season']}."
             )
@@ -222,48 +222,55 @@ class Bot(object):
                     False  # Only override once, then go back to current date
                 )
 
+            # Standings
+            standings = self.nba.standings(self.today["season"])
+
+            # Other division teams
+            self.otherDivisionTeamIds = [
+                t.teamid
+                for t in standings.standings
+                if t.division == self.myTeam.team_info.team_division
+                and t.teamid != self.myTeam.team_info.team_id
+            ]
+            self.log.debug(f"{self.otherDivisionTeamIds=}")
+
             # Get today's games
-            todayAllGames = self.nhl.schedule(
-                self.today["Y-m-d"],
-                expand="schedule.linescore,schedule.venue,schedule.broadcasts,schedule.radioBroadcasts",
-            )
-            todayAllGames = next(
-                (
-                    x["games"]
-                    for x in todayAllGames["dates"]
-                    if x["date"] == self.today["Y-m-d"]
-                ),
-                [],
-            )
-            todayGames = [
+            todayScoreboard = self.nba.scoreboard(self.today["Y-m-d"])
+            todayMyGames = [
                 x
-                for x in todayAllGames
-                if self.myTeam["id"]
-                in [x["teams"]["away"]["team"]["id"], x["teams"]["home"]["team"]["id"]]
+                for x in todayScoreboard.scoreboard.games
+                if self.myTeamId in [x.away_team.team_id, x.home_team.team_id]
             ]
-            todayOtherGames = [
+            todayOtherDivisionGames = [
                 x
-                for x in todayAllGames
-                if self.myTeam["id"]
-                not in [
-                    x["teams"]["away"]["team"]["id"],
-                    x["teams"]["home"]["team"]["id"],
-                ]
-            ]
-            self.log.debug(f"Today's game(s): {todayGames}")
-            if len(todayGames) > 1:
-                self.log.warning(
-                    f"Multiple games found, but only one game supported per day: {[g['gamePk'] for g in todayGames]}"
+                for x in todayScoreboard.scoreboard.games
+                if x.game_id != [g.game_id for g in todayMyGames]
+                and (
+                    x.away_team.team_id in self.otherDivisionTeamIds
+                    or x.home_team.team_id in self.otherDivisionTeamIds
                 )
+            ]
+            todayAllOtherGames = [
+                x
+                for x in todayScoreboard.scoreboard.games
+                if self.myTeamId not in [x.away_team.team_id, x.home_team.team_id]
+            ]
+            self.log.debug(f"Today's game(s): {str(todayMyGames)}")
+            if len(todayMyGames) > 1:
+                self.log.warning(
+                    f"Multiple games found, but only one game supported per day: {[g.game_id for g in todayMyGames]}"
+                )
+            self.log.debug(
+                f"{len(todayOtherDivisionGames)=}, {len(todayAllOtherGames)=}"
+            )
 
             # (Re-)Initialize dict to hold game data
             self.allData = {
                 "myTeam": self.myTeam,
-                "allTeams": self.allTeams,
-                "todayGames": todayGames,
-                "otherDivisionTeams": self.otherDivisionTeams,
                 "otherDivisionTeamIds": self.otherDivisionTeamIds,
-                "todayOtherGames": todayOtherGames,
+                "todayMyGames": todayMyGames,
+                "todayAllOtherGames": todayAllOtherGames,
+                "todayOtherDivisionGames": todayOtherDivisionGames,
                 "teamSubs": self.teamSubs,
                 "teamSubsById": self.teamSubsById,
             }
@@ -275,106 +282,104 @@ class Bot(object):
             self.threadCache = {"tailgate": {}, "game": {}, "post": {}}
             """ Holds reddit threads and related data """
 
-            if not len(todayGames):
+            if not len(todayMyGames):
                 # It's not a game day
                 self.log.info("No games today!")
                 if redball.SIGNAL is not None or self.bot.STOP:
                     break
             else:
-                gamePk = todayGames[0]["gamePk"]
+                game_id = todayMyGames[0].game_id
                 self.log.info("IT'S GAME DAY!")
-                self.log.debug(f"Gathering initial data for gamePk [{gamePk}]...")
-                game = self.nhl.game(gamePk)
+                self.log.debug(f"Gathering initial data for game_id [{game_id}]...")
+                box_summary = self.nba.boxscore_summary(game_id)
+                box_traditional = self.nba.boxscore_traditional(game_id)
+                try:
+                    box_live = self.nba.api.from_url(
+                        f"https://cdn.nba.com/static/json/liveData/boxscore/boxscore_{self.allData['game_id']}.json"
+                    )
+                except Exception as e:
+                    self.log.debug(f"Exception retrieving live box from cdn: {e}")
+                    box_live = None
+                boxscore = {
+                    "summary": box_summary,
+                    "traditional": box_traditional,
+                    "live": box_live,
+                }
                 homeAway = (
                     "home"
-                    if game["gameData"]["teams"]["home"]["id"] == self.myTeam["id"]
+                    if boxscore["summary"].box_score_summary.home_team_id
+                    == self.myTeamId
                     else "away"
-                    if game["gameData"]["teams"]["away"]["id"] == self.myTeam["id"]
+                    if boxscore["summary"].box_score_summary.away_team_id
+                    == self.myTeamId
                     else None
                 )
+                oppHomeAway = "home" if homeAway == "away" else "away"
                 self.log.debug(f"My team is [{homeAway}] (homeAway)")
-                oppTeam = next(
-                    (
-                        x
-                        for x in self.allTeams
-                        if x["id"]
-                        == (
-                            game["gameData"]["teams"]["home"]["id"]
-                            if homeAway == "away"
-                            else game["gameData"]["teams"]["away"]["id"]
-                        )
-                    ),
-                    None,
+                oppTeam = self.nba.team(
+                    boxscore["summary"].box_score_summary.home_team_id
+                    if homeAway == "away"
+                    else boxscore["summary"].box_score_summary.away_team_id
                 )
-                oppTeamId = oppTeam["id"]
+                oppTeamId = oppTeam.team_info.team_id
                 self.log.debug(f"oppTeamId: {oppTeamId}")
-                self.log.debug(f"oppTeam: {oppTeam}")
-                gameTime = (
-                    self.convert_timezone(  # Convert Zulu to my team TZ
-                        datetime.strptime(
-                            game["gameData"]["datetime"]["dateTime"],
-                            "%Y-%m-%dT%H:%M:%SZ",
-                        ),
-                        self.myTeam["venue"]["timeZone"]["id"],
-                    )
-                    # .replace(tzinfo=None)
-                    # .isoformat()  # Convert back to tz-naive
-                )
-                gameTime_homeTeam = (
-                    self.convert_timezone(  # Convert Zulu to my team TZ
-                        datetime.strptime(
-                            game["gameData"]["datetime"]["dateTime"],
-                            "%Y-%m-%dT%H:%M:%SZ",
-                        ),
-                        game["gameData"]["teams"]["home"]["venue"]["timeZone"]["id"],
-                    )
-                    .replace(tzinfo=None)
-                    .isoformat()  # Convert back to tz-naive
+                self.log.debug(f"oppTeam: {str(oppTeam)}")
+                gameTime = self.convert_timezone(  # Convert Zulu to my team TZ
+                    datetime.strptime(
+                        boxscore["summary"].box_score_summary.game_time_utc,
+                        "%Y-%m-%dT%H:%M:%SZ",
+                    ),
+                    self.team_timezone,
                 )
                 gameTime_local = self.convert_timezone(  # Convert Zulu to my team TZ
                     datetime.strptime(
-                        game["gameData"]["datetime"]["dateTime"], "%Y-%m-%dT%H:%M:%SZ"
+                        boxscore["summary"].box_score_summary.game_time_utc,
+                        "%Y-%m-%dT%H:%M:%SZ",
                     ),
                     "local",
                 )
                 self.log.debug(
-                    f"gameTime (my team TZ): {gameTime}; gameTime_homeTeam: {gameTime_homeTeam}; gameTime_local: {gameTime_local}"
+                    f"gameTime (my team TZ): {gameTime}; gameTime_local: {gameTime_local}"
                 )
-                standings = self.nhl.standings(self.today["season"]["seasonId"])
-                content = self.nhl.game_content(gamePk)
+                standings = self.nba.standings(self.today["season"])
 
                 # Initialize var to hold game data throughout the day
                 self.allData.update(
                     {
-                        "gamePk": gamePk,
+                        "game_id": game_id,
                         "homeAway": homeAway,
                         "oppTeam": oppTeam,
                         "oppTeamId": oppTeamId,
+                        "oppHomeAway": oppHomeAway,
                         "gameTime": {
-                            "homeTeam": gameTime_homeTeam,
                             "bot": gameTime_local,
                             "myTeam": gameTime,
                         },
-                        "game": game,
-                        "content": content,
+                        "game": boxscore,
                         "standings": standings,
                     }
                 )
-                """ Holds data about current week games, including detailed data for my team's game """
+                """ Holds data about current day games, including detailed data for my team's game """
+                self.allData.update(
+                    {
+                        "gameStatus": self.game_status(),
+                        "gameStatusText": self.game_status_text(),
+                    }
+                )
                 if redball.DEV:
                     self.log.debug(f"allData: {self.allData}")
 
                 # Check DB for gameId
-                gq = f"select * from {self.dbTablePrefix}games where gameId = '{gamePk}' and gameDate = '{self.today['Y-m-d']}';"
+                gq = f"select * from {self.dbTablePrefix}games where gameId = '{game_id}' and gameDate = '{self.today['Y-m-d']}';"
                 dbGames = rbdb.db_qry(gq, closeAfter=True, logg=self.log)
 
                 if dbGames and len(dbGames) > 0:
-                    self.log.debug(f"Game [{gamePk}] is already in the database.")
+                    self.log.debug(f"Game [{game_id}] is already in the database.")
                 else:
                     # Add game to DB
                     q = (
                         f"insert into {self.dbTablePrefix}games (gameId, gameDate, dateAdded) "
-                        f"values ('{gamePk}', '{self.today['Y-m-d']}', {time.time()});"
+                        f"values ('{game_id}', '{self.today['Y-m-d']}', {time.time()});"
                     )
                     rbdb.db_qry(q, commit=True, closeAfter=True, logg=self.log)
 
@@ -400,7 +405,7 @@ class Bot(object):
                         "Started tailgate thread {}.".format(self.THREADS["tailgate"])
                     )
 
-                for g in todayGames:
+                for g in todayMyGames:
                     # Game thread update processes
                     if self.settings.get("Game Thread", {}).get("ENABLED", True):
                         # Spawn separate thread to wait for post time and then keep game thread updated
@@ -408,7 +413,7 @@ class Bot(object):
                             {
                                 "game": threading.Thread(
                                     target=self.game_thread_update_loop,
-                                    args=(g["gamePk"],),
+                                    args=(g.game_id,),
                                     name="bot-{}-{}-game".format(
                                         self.bot.id,
                                         self.bot.name.replace(" ", "-"),
@@ -453,7 +458,7 @@ class Bot(object):
                     and redball.SIGNAL is None
                     and not self.bot.STOP
                 ):
-                    for g in todayGames:
+                    for g in todayMyGames:
                         # Check submit/update thread for game thread
                         try:
                             if not self.settings.get("Game Thread", {}).get(
@@ -493,7 +498,7 @@ class Bot(object):
                                     {
                                         "game": threading.Thread(
                                             target=self.game_thread_update_loop,
-                                            args=(g["gamePk"],),
+                                            args=(g.game_id,),
                                             name="bot-{}-{}-game".format(
                                                 self.bot.id,
                                                 self.bot.name.replace(" ", "-"),
@@ -732,8 +737,8 @@ class Bot(object):
                 self.unsticky_threads(self.staleThreads)
                 self.staleThreads = []
 
-        # Check if tailgate thread already posted (record in threads table with type='tailgate' for today's gamePk)
-        tgq = f"select * from {self.dbTablePrefix}threads where type='tailgate' and gameId = '{self.allData['gamePk']}' and gameDate = '{self.today['Y-m-d']}' and deleted=0;"
+        # Check if tailgate thread already posted (record in threads table with type='tailgate' for today's game_id)
+        tgq = f"select * from {self.dbTablePrefix}threads where type='tailgate' and gameId = '{self.allData['game_id']}' and gameDate = '{self.today['Y-m-d']}' and deleted=0;"
         tgThread = rbdb.db_qry(tgq, closeAfter=True, logg=self.log)
 
         tailgateThread = None
@@ -785,9 +790,7 @@ class Bot(object):
 ^^^Posted: ^^^"""
                 + self.convert_timezone(
                     datetime.utcnow(),
-                    self.settings.get("Bot", {}).get(
-                        "TEAM_TIMEZONE", "America/New_York"
-                    ),
+                    self.team_timezone,
                 ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
                 + ", ^^^Update ^^^Interval: ^^^{} ^^^Minutes".format(
                     self.settings.get("Tailgate Thread", {}).get("UPDATE_INTERVAL", 5)
@@ -828,6 +831,7 @@ class Bot(object):
                         templateType="thread",
                         data=self.allData,
                         settings=self.settings,
+                        convert_timezone=self.convert_timezone,
                     )
                     self.log.debug("Rendered tailgate thread text: {}".format(text))
                     if text != self.threadCache["tailgate"].get("text") and text != "":
@@ -838,9 +842,7 @@ class Bot(object):
 ^^^Last ^^^Updated: ^^^"""
                             + self.convert_timezone(
                                 datetime.utcnow(),
-                                self.settings.get("Bot", {}).get(
-                                    "TEAM_TIMEZONE", "America/New_York"
-                                ),
+                                self.team_timezone,
                             ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
                             + ", ^^^Update ^^^Interval: ^^^{} ^^^Minutes".format(
                                 self.settings.get("Tailgate Thread", {}).get(
@@ -876,7 +878,7 @@ class Bot(object):
                 "Do not update",
                 "Game thread is posted",
                 "All division games are final",
-                "All NHL games are final",
+                "All NBA games are final",
             ]:
                 # Unsupported value, use default
                 update_tailgate_thread_until = "Game thread is posted"
@@ -915,24 +917,12 @@ class Bot(object):
                     break
             elif update_tailgate_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.allData["game"]["gameData"]["status"]["abstractGameState"]
-                    == "Final"
+                    self.game_status() >= 3
                 ) and not next(  # And all division games are final
                     (
                         True
-                        for x in self.allData["todayOtherGames"]
-                        if x["status"]["abstractGameState"] != "Final"
-                        and any(
-                            (
-                                True
-                                for divTeam in self.otherDivisionTeams
-                                if divTeam["id"]
-                                in [
-                                    x["teams"]["away"]["team"]["id"],
-                                    x["teams"]["home"]["team"]["id"],
-                                ]
-                            )
-                        )
+                        for x in self.allData["todayOtherDivisisionGames"]
+                        if x.game_status < 3
                     ),
                     False,
                 ):
@@ -942,21 +932,20 @@ class Bot(object):
                     )
                     self.stopFlags.update({"tailgate": True})
                     break
-            elif update_tailgate_thread_until == "All NHL games are final":
+            elif update_tailgate_thread_until == "All NBA games are final":
                 if (  # This game is final
-                    self.allData["game"]["gameData"]["status"]["abstractGameState"]
-                    == "Final"
-                ) and not next(  # All NHL games are final
+                    self.game_status() >= 3
+                ) and not next(  # All NBA games are final
                     (
                         True
-                        for x in self.allData["todayOtherGames"]
-                        if x["status"]["abstractGameState"] != "Final"
+                        for x in self.allData["todayAllOtherGames"]
+                        if x.game_status < 3
                     ),
                     False,
                 ):
-                    # NHL games are all final
+                    # NBA games are all final
                     self.log.info(
-                        "All NHL games are final. Stopping tailgate thread update loop per UPDATE_UNTIL setting."
+                        "All NBA games are final. Stopping tailgate thread update loop per UPDATE_UNTIL setting."
                     )
                     self.stopFlags.update({"tailgate": True})
                     break
@@ -985,14 +974,14 @@ class Bot(object):
         self.log.debug("Ending tailgate update thread...")
         return
 
-    def game_thread_update_loop(self, gamePk):
+    def game_thread_update_loop(self, game_id):
         skipFlag = (
             None  # Will be set later if game thread submit/edit should be skipped
         )
 
         # Check if game thread is already posted
         gq = "select * from {}threads where type='game' and gameId = '{}' and gameDate = '{}' and deleted=0;".format(
-            self.dbTablePrefix, gamePk, self.today["Y-m-d"]
+            self.dbTablePrefix, game_id, self.today["Y-m-d"]
         )
         gThread = rbdb.db_qry(gq, closeAfter=True, logg=self.log)
 
@@ -1076,10 +1065,7 @@ class Bot(object):
                 and not self.bot.STOP
                 and not self.threadCache["game"].get("thread")
             ):
-                if (
-                    self.allData["game"]["gameData"]["status"]["abstractGameState"]
-                    == "Final"
-                ):
+                if self.game_status() >= 3:
                     if not self.settings.get("Post Game Thread", {}).get(
                         "ENABLED", True
                     ):
@@ -1095,21 +1081,16 @@ class Bot(object):
                     else:
                         # Post game thread is enabled, so skip game thread
                         self.log.info(
-                            "Game is {}; skipping game thread...".format(
-                                self.allData["game"]["gameData"]["status"][
-                                    "detailedState"
-                                ],
+                            "Game status: {}; skipping game thread...".format(
+                                self.game_status_text(),
                             )
                         )
                         skipFlag = True
                     break
-                elif (
-                    self.allData["game"]["gameData"]["status"]["abstractGameState"]
-                    == "Live"
-                ):
-                    # Game is already in live status (including halftime), so submit the game thread!
+                elif self.game_status() == 2:
+                    # Game is already in live status, so submit the game thread!
                     self.log.info(
-                        "It's technically not time to submit the game thread yet, but the game status is INGAME/HALFTIME. Proceeding..."
+                        "It's technically not time to submit the game thread yet, but the game status is already 2. Proceeding..."
                     )
                     break
                 elif not self.settings.get("Game Thread", {}).get("ENABLED", True):
@@ -1175,9 +1156,7 @@ class Bot(object):
 ^^^Posted: ^^^"""
                     + self.convert_timezone(
                         datetime.utcnow(),
-                        self.settings.get("Bot", {}).get(
-                            "TEAM_TIMEZONE", "America/New_York"
-                        ),
+                        self.team_timezone,
                     ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z"),
                 )
                 self.threadCache["game"].update(
@@ -1219,6 +1198,7 @@ class Bot(object):
                     templateType="thread",
                     data=self.allData,
                     settings=self.settings,
+                    convert_timezone=self.convert_timezone,
                 )
                 self.log.debug(f"rendered game thread text: {text}")
                 if text != self.threadCache["game"].get("text") and text != "":
@@ -1230,16 +1210,14 @@ class Bot(object):
 ^^^Last ^^^Updated: ^^^"""
                         + self.convert_timezone(
                             datetime.utcnow(),
-                            self.settings.get("Bot", {}).get(
-                                "TEAM_TIMEZONE", "America/New_York"
-                            ),
+                            self.team_timezone,
                         ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
                     )
                     self.threadCache["game"]["thread"].edit(text)
                     self.log.info("Edits submitted for game thread.")
                     self.count_check_edit(
                         self.threadCache["game"]["thread"].id,
-                        self.allData["game"]["gameData"]["status"]["statusCode"],
+                        self.game_status(),
                         edit=True,
                     )
                     self.log_last_updated_date_in_db(
@@ -1253,7 +1231,7 @@ class Bot(object):
                     self.log.info("No changes to game thread.")
                     self.count_check_edit(
                         self.threadCache["game"]["thread"].id,
-                        self.allData["game"]["gameData"]["status"]["statusCode"],
+                        self.game_status(),
                         edit=False,
                     )
 
@@ -1264,7 +1242,7 @@ class Bot(object):
                 "Do not update",
                 "My team's game is final",
                 "All division games are final",
-                "All NHL games are final",
+                "All NBA games are final",
             ]:
                 # Unsupported value, use default
                 update_game_thread_until = "My team's game is final"
@@ -1277,10 +1255,7 @@ class Bot(object):
                 self.stopFlags.update({"game": True})
                 break
             elif update_game_thread_until == "My team's game is final":
-                if (
-                    self.allData["game"]["gameData"]["status"]["abstractGameState"]
-                    == "Final"
-                ):
+                if self.game_status() >= 3:
                     # My team's game is final
                     self.log.info(
                         "My team's game is final. Stopping game thread update loop per UPDATE_UNTIL setting."
@@ -1289,24 +1264,12 @@ class Bot(object):
                     break
             elif update_game_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.allData["game"]["gameData"]["status"]["abstractGameState"]
-                    == "Final"
+                    self.game_status() >= 3
                 ) and not next(  # And all division games are final
                     (
                         True
-                        for x in self.allData["todayOtherGames"]
-                        if x["status"]["abstractGameState"] != "Final"
-                        and any(
-                            (
-                                True
-                                for divTeam in self.otherDivisionTeams
-                                if divTeam["id"]
-                                in [
-                                    x["teams"]["away"]["team"]["id"],
-                                    x["teams"]["home"]["team"]["id"],
-                                ]
-                            )
-                        )
+                        for x in self.allData["todayOtherDivisionGames"]
+                        if x.game_status < 3
                     ),
                     False,
                 ):
@@ -1316,21 +1279,20 @@ class Bot(object):
                     )
                     self.stopFlags.update({"game": True})
                     break
-            elif update_game_thread_until == "All NHL games are final":
+            elif update_game_thread_until == "All NBA games are final":
                 if (  # This game is final
-                    self.allData["game"]["gameData"]["status"]["abstractGameState"]
-                    == "Final"
-                ) and not next(  # All NHL games are final
+                    self.game_status() >= 3
+                ) and not next(  # All NBA games are final
                     (
                         True
-                        for x in self.allData["todayOtherGames"]
-                        if x["status"]["abstractGameState"] != "Final"
+                        for x in self.allData["todayAllOtherGames"]
+                        if x.game_status < 3
                     ),
                     False,
                 ):
-                    # NHL games are all final
+                    # NBA games are all final
                     self.log.info(
-                        "All NHL games are final. Stopping game thread update loop per UPDATE_UNTIL setting."
+                        "All NBA games are final. Stopping game thread update loop per UPDATE_UNTIL setting."
                     )
                     self.stopFlags.update({"game": True})
                     break
@@ -1341,10 +1303,7 @@ class Bot(object):
                 )
             )  # debug - need this to tell if logic is working
 
-            if (
-                self.allData["game"]["gameData"]["status"]["abstractGameState"]
-                == "Live"
-            ):
+            if self.game_status() == 2:
                 # Update interval is in seconds (minutes for all other cases)
                 gtWait = self.settings.get("Game Thread", {}).get("UPDATE_INTERVAL", 10)
                 if gtWait < 1:
@@ -1364,7 +1323,7 @@ class Bot(object):
                     gtnlWait = 1
                 self.log.info(
                     "Game is not live ({}), sleeping for {} minutes...".format(
-                        self.allData["game"]["gameData"]["status"]["detailedState"],
+                        self.game_status_text(),
                         gtnlWait,
                     )
                 )
@@ -1390,28 +1349,25 @@ class Bot(object):
         )
 
         while redball.SIGNAL is None and not self.bot.STOP:
-            if (
-                self.allData["game"]["gameData"]["status"]["abstractGameState"]
-                == "Final"
-            ):
+            if self.game_status() >= 3:
                 # Game is over
                 self.log.info(
                     "Game is over ({}). Proceeding with post game thread...".format(
-                        self.allData["game"]["gameData"]["status"]["detailedState"],
+                        self.game_status_text(),
                     )
                 )
                 break
             elif self.stopFlags["game"]:
                 # Game thread process has stopped, but game status isn't final yet... get fresh data!
                 self.log.info(
-                    f"Game thread process has ended, but cached game status is still ({self.allData['game']['gameData']['status']['detailedState']}). Refreshing data..."
+                    f"Game thread process has ended, but cached game status is still ({self.allData['game']['summary'].box_score_summary.game_status}). Refreshing data..."
                 )
                 # Update data
                 self.collect_data()
             else:
                 self.log.debug(
                     "Game is not yet final ({}). Sleeping for 1 minute...".format(
-                        self.allData["game"]["gameData"]["status"]["detailedState"],
+                        self.game_status_text(),
                     )
                 )
                 self.sleep(60)
@@ -1436,7 +1392,7 @@ class Bot(object):
         # TODO: Loop in case thread creation fails due to title template error or API error? At least break from update loop...
         # Game is over - check if postgame thread already posted (record in db with gameId and type='post' and gameDate=today)
         pgq = "select * from {}threads where type='post' and gameId = '{}' and gameDate = '{}' and deleted=0;".format(
-            self.dbTablePrefix, self.allData["gamePk"], self.today["Y-m-d"]
+            self.dbTablePrefix, self.allData["game_id"], self.today["Y-m-d"]
         )
         pgThread = rbdb.db_qry(pgq, closeAfter=True, logg=self.log)
 
@@ -1491,9 +1447,7 @@ class Bot(object):
 ^^^Posted: ^^^"""
                 + self.convert_timezone(
                     datetime.utcnow(),
-                    self.settings.get("Bot", {}).get(
-                        "TEAM_TIMEZONE", "America/New_York"
-                    ),
+                    self.team_timezone,
                 ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z"),
             )
             self.threadCache["post"].update(
@@ -1528,6 +1482,7 @@ class Bot(object):
                         templateType="thread",
                         data=self.allData,
                         settings=self.settings,
+                        convert_timezone=self.convert_timezone,
                     )
                     self.log.debug(f"Rendered post game thread text: {text}")
                     if text != self.threadCache["post"]["text"] and text != "":
@@ -1538,9 +1493,7 @@ class Bot(object):
 ^^^Last ^^^Updated: ^^^"""
                             + self.convert_timezone(
                                 datetime.utcnow(),
-                                self.settings.get("Bot", {}).get(
-                                    "TEAM_TIMEZONE", "America/New_York"
-                                ),
+                                self.team_timezone,
                             ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
                         )
                         self.threadCache["post"]["thread"].edit(text)
@@ -1550,7 +1503,7 @@ class Bot(object):
                         )
                         self.count_check_edit(
                             self.threadCache["post"]["thread"].id,
-                            self.allData["game"]["gameData"]["status"]["statusCode"],
+                            self.game_status(),
                             edit=True,
                         )
                     elif text == "":
@@ -1561,7 +1514,7 @@ class Bot(object):
                         self.log.info("No changes to post game thread.")
                         self.count_check_edit(
                             self.threadCache["post"]["thread"].id,
-                            self.allData["game"]["gameData"]["status"]["statusCode"],
+                            self.game_status(),
                             edit=False,
                         )
                 except Exception as e:
@@ -1575,7 +1528,7 @@ class Bot(object):
                 "Do not update",
                 "An hour after thread is posted",
                 "All division games are final",
-                "All NHL games are final",
+                "All NBA games are final",
             ]:
                 # Unsupported value, use default
                 self.log.warning(
@@ -1606,24 +1559,12 @@ class Bot(object):
                     break
             elif update_postgame_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.allData["game"]["gameData"]["status"]["abstractGameState"]
-                    == "Final"
+                    self.game_status() >= 3
                 ) and not next(  # And all division games are final
                     (
                         True
-                        for x in self.allData["todayOtherGames"]
-                        if x["status"]["abstractGameState"] != "Final"
-                        and any(
-                            (
-                                True
-                                for divTeam in self.otherDivisionTeams
-                                if divTeam["id"]
-                                in [
-                                    x["teams"]["away"]["team"]["id"],
-                                    x["teams"]["home"]["team"]["id"],
-                                ]
-                            )
-                        )
+                        for x in self.allData["todayOtherDivisionGames"]
+                        if x.game_status < 3
                     ),
                     False,
                 ):
@@ -1633,21 +1574,20 @@ class Bot(object):
                     )
                     self.stopFlags.update({"post": True})
                     break
-            elif update_postgame_thread_until == "All NHL games are final":
+            elif update_postgame_thread_until == "All NBA games are final":
                 if (  # This game is final
-                    self.allData["game"]["gameData"]["status"]["abstractGameState"]
-                    == "Final"
-                ) and not next(  # All NHL games are final
+                    self.game_status() >= 3
+                ) and not next(  # All NBA games are final
                     (
                         True
-                        for x in self.allData["todayOtherGames"]
-                        if x["status"]["abstractGameState"] != "Final"
+                        for x in self.allData["todayAllOtherGames"]
+                        if x.game_status < 3
                     ),
                     False,
                 ):
-                    # NHL games are all final
+                    # NBA games are all final
                     self.log.info(
-                        "All NHL games are final. Stopping post game thread update loop per UPDATE_UNTIL setting."
+                        "All NBA games are final. Stopping post game thread update loop per UPDATE_UNTIL setting."
                     )
                     self.stopFlags.update({"post": True})
                     break
@@ -1679,7 +1619,7 @@ class Bot(object):
         """Collect data to be available for template rendering"""
         with DATA_LOCK:
             # Need to use cached data because multiple threads will be trying to update the same data at the same time
-            cache_seconds = self.settings.get("NHL", {}).get("API_CACHE_SECONDS", 5)
+            cache_seconds = self.settings.get("NBA", {}).get("API_CACHE_SECONDS", 5)
             if cache_seconds < 0:
                 cache_seconds = 5  # Use default of 5 seconds if negative value provided
 
@@ -1693,111 +1633,105 @@ class Bot(object):
                 )
                 return False
             else:
-                self.log.debug(f"Collecting data with pynhlapi v{pynhlapi.__version__}")
+                self.log.debug(
+                    f"Collecting data with pynbaapi v{pynbaapi.__version__.__version__}"
+                )
 
             # Collect the data...
             # Get today's games
-            todayAllGames = self.nhl.schedule(
-                self.today["Y-m-d"],
-                expand="schedule.linescore,schedule.venue,schedule.broadcasts,schedule.radioBroadcasts",
-            )
-            todayAllGames = next(
-                (
-                    x["games"]
-                    for x in todayAllGames["dates"]
-                    if x["date"] == self.today["Y-m-d"]
-                ),
-                [],
-            )
-            todayGames = [
+            todayScoreboard = self.nba.scoreboard(self.today["Y-m-d"])
+            todayMyGames = [
                 x
-                for x in todayAllGames
-                if self.myTeam["id"]
-                in [x["teams"]["away"]["team"]["id"], x["teams"]["home"]["team"]["id"]]
+                for x in todayScoreboard.scoreboard.games
+                if self.myTeamId in [x.away_team.team_id, x.home_team.team_id]
             ]
-            todayOtherGames = [
+            todayOtherDivisionGames = [
                 x
-                for x in todayAllGames
-                if self.myTeam["id"]
-                not in [
-                    x["teams"]["away"]["team"]["id"],
-                    x["teams"]["home"]["team"]["id"],
-                ]
+                for x in todayScoreboard.scoreboard.games
+                if x.game_id != [g.game_id for g in todayMyGames]
+                and (
+                    x.away_team.team_id in self.otherDivisionTeamIds
+                    or x.home_team.team_id in self.otherDivisionTeamIds
+                )
             ]
-            self.log.debug(f"Gathering data for gamePk [{self.allData['gamePk']}]...")
-            game = self.nhl.game(self.allData["gamePk"])
+            todayAllOtherGames = [
+                x
+                for x in todayScoreboard.scoreboard.games
+                if self.myTeamId not in [x.away_team.team_id, x.home_team.team_id]
+            ]
+            self.log.debug(f"Gathering data for game_id [{self.allData['game_id']}]...")
+            box_summary = self.nba.boxscore_summary(self.allData["game_id"])
+            box_traditional = self.nba.boxscore_traditional(self.allData["game_id"])
+            try:
+                box_live = self.nba.api.from_url(
+                    f"https://cdn.nba.com/static/json/liveData/boxscore/boxscore_{self.allData['game_id']}.json"
+                )
+            except Exception as e:
+                self.log.debug(f"Exception retrieving live box from cdn: {e}")
+                box_live = None
+            boxscore = {
+                "summary": box_summary,
+                "traditional": box_traditional,
+                "live": box_live,
+            }
             homeAway = (
                 "home"
-                if game["gameData"]["teams"]["home"]["id"] == self.myTeam["id"]
+                if boxscore["summary"].box_score_summary.home_team_id == self.myTeamId
                 else "away"
-                if game["gameData"]["teams"]["away"]["id"] == self.myTeam["id"]
+                if boxscore["summary"].box_score_summary.away_team_id == self.myTeamId
                 else None
             )
+            oppHomeAway = "home" if homeAway == "away" else "away"
             self.log.debug(f"My team is [{homeAway}] (homeAway)")
-            oppTeam = next(
-                (
-                    x
-                    for x in self.allTeams
-                    if x["id"]
-                    == (
-                        game["gameData"]["teams"]["home"]["id"]
-                        if homeAway == "away"
-                        else game["gameData"]["teams"]["away"]["id"]
-                    )
-                ),
-                None,
+            oppTeam = self.nba.team(
+                boxscore["summary"].box_score_summary.home_team_id
+                if homeAway == "away"
+                else boxscore["summary"].box_score_summary.away_team_id
             )
-            oppTeamId = oppTeam["id"]
+            oppTeamId = oppTeam.team_info.team_id
             self.log.debug(f"oppTeamId: {oppTeamId}")
-            self.log.debug(f"oppTeam: {oppTeam}")
-            gameTime = (
-                self.convert_timezone(  # Convert Zulu to my team TZ
-                    datetime.strptime(
-                        game["gameData"]["datetime"]["dateTime"], "%Y-%m-%dT%H:%M:%SZ"
-                    ),
-                    self.myTeam["venue"]["timeZone"]["id"],
-                )
-                # .replace(tzinfo=None)
-                # .isoformat()  # Convert back to tz-naive
-            )
-            gameTime_homeTeam = (
-                self.convert_timezone(  # Convert Zulu to my team TZ
-                    datetime.strptime(
-                        game["gameData"]["datetime"]["dateTime"], "%Y-%m-%dT%H:%M:%SZ"
-                    ),
-                    game["gameData"]["teams"]["home"]["venue"]["timeZone"]["id"],
-                )
-                .replace(tzinfo=None)
-                .isoformat()  # Convert back to tz-naive
+            self.log.debug(f"oppTeam: {str(oppTeam)}")
+            gameTime = self.convert_timezone(  # Convert Zulu to my team TZ
+                datetime.strptime(
+                    boxscore["summary"].box_score_summary.game_time_utc,
+                    "%Y-%m-%dT%H:%M:%SZ",
+                ),
+                self.team_timezone,
             )
             gameTime_local = self.convert_timezone(  # Convert Zulu to my team TZ
                 datetime.strptime(
-                    game["gameData"]["datetime"]["dateTime"], "%Y-%m-%dT%H:%M:%SZ"
+                    boxscore["summary"].box_score_summary.game_time_utc,
+                    "%Y-%m-%dT%H:%M:%SZ",
                 ),
                 "local",
             )
             self.log.debug(
-                f"gameTime (my team TZ): {gameTime}; gameTime_homeTeam: {gameTime_homeTeam}; gameTime_local: {gameTime_local}"
+                f"gameTime (my team TZ): {gameTime}; gameTime_local: {gameTime_local}"
             )
-            standings = self.nhl.standings(self.today["season"]["seasonId"])
-            content = self.nhl.game_content(self.allData["gamePk"])
+            standings = self.nba.standings(self.today["season"])
 
             # Initialize var to hold game data throughout the day
             self.allData.update(
                 {
-                    "todayGames": todayGames,
+                    "todayMyGames": todayMyGames,
                     "homeAway": homeAway,
                     "oppTeam": oppTeam,
                     "oppTeamId": oppTeamId,
+                    "oppHomeAway": oppHomeAway,
                     "gameTime": {
-                        "homeTeam": gameTime_homeTeam,
                         "bot": gameTime_local,
                         "myTeam": gameTime,
                     },
-                    "game": game,
-                    "content": content,
-                    "todayOtherGames": todayOtherGames,
+                    "game": boxscore,
+                    "todayOtherDivisionGames": todayOtherDivisionGames,
+                    "todayAllOtherGames": todayAllOtherGames,
                     "standings": standings,
+                }
+            )
+            self.allData.update(
+                {
+                    "gameStatus": self.game_status(),
+                    "gameStatusText": self.game_status_text(),
                 }
             )
 
@@ -1906,6 +1840,7 @@ class Bot(object):
                 templateType="title",
                 data=self.allData,
                 settings=self.settings,
+                convert_timezone=self.convert_timezone,
             )
             self.log.debug("Rendered {} title: {}".format(thread, title))
         except Exception as e:
@@ -2008,6 +1943,7 @@ class Bot(object):
                     templateType="thread",
                     data=self.allData,
                     settings=self.settings,
+                    convert_timezone=self.convert_timezone,
                 )
                 self.log.debug("Rendered {} text: {}".format(thread, text))
             except Exception as e:
@@ -2046,10 +1982,10 @@ class Bot(object):
         if theThread:
             self.log.debug(
                 "Inserting {} thread into DB for game {}...".format(
-                    thread, self.allData["gamePk"]
+                    thread, self.allData["game_id"]
                 )
             )
-            self.insert_thread_to_db(self.allData["gamePk"], theThread, thread)
+            self.insert_thread_to_db(self.allData["game_id"], theThread, thread)
 
             # Check for webhooks
             for w in range(0, 10):
@@ -2081,6 +2017,7 @@ class Bot(object):
                         data=self.allData,
                         settings=self.settings,
                         theThread=theThread,
+                        convert_timezone=self.convert_timezone,
                     )
                     self.log.debug(
                         "Rendered {} webhook{} text: {}".format(thread, s, webhook_text)
@@ -2109,8 +2046,8 @@ class Bot(object):
             else:
                 self.notify_prowl(
                     apiKey=prowlKey,
-                    event=f"{self.myTeam['teamName']} {thread.title()} Thread Posted",
-                    description=f"""{self.myTeam['teamName']} {thread} thread was posted to r/{self.settings["Reddit"]["SUBREDDIT"]} at {self.convert_timezone(datetime.utcfromtimestamp(theThread.created_utc),'local').strftime('%I:%M %p %Z')}\nThread title: {theThread.title}\nURL: {theThread.shortlink}""",
+                    event=f"{self.myTeam.team_info.team_name} {thread.title()} Thread Posted",
+                    description=f"""{self.myTeam.team_info.team_name} {thread} thread was posted to r/{self.settings["Reddit"]["SUBREDDIT"]} at {self.convert_timezone(datetime.utcfromtimestamp(theThread.created_utc),'local').strftime('%I:%M %p %Z')}\nThread title: {theThread.title}\nURL: {theThread.shortlink}""",
                     priority=prowlPriority,
                     url=theThread.shortlink,
                     appName=f"redball - {self.bot.name}",
@@ -2133,11 +2070,11 @@ class Bot(object):
                 self.log.debug("Twitter disabled or not configured")
             else:
                 if thread == "game":
-                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')}"""
+                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam.team_info.team_name.replace(' ','')}"""
                 elif thread == "tailgate":
-                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')}"""
+                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam.team_info.team_name.replace(' ','')}"""
                 elif thread == "post":
-                    message = f"""{theThread.title} - The discussion continues: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')}"""
+                    message = f"""{theThread.title} - The discussion continues: {theThread.shortlink} #{self.myTeam.team_info.team_name.replace(' ','')}"""
                 else:
                     self.log.error(f"Can't tweet about unknown thread type [{thread}]!")
                     return (None, text)
@@ -2672,74 +2609,92 @@ class Bot(object):
         return dt.astimezone(to_tz)
 
     teamSubs = {
-        "ANA": "/r/anaheimducks",
-        "ARI": "/r/coyotes",
-        "BOS": "/r/bostonbruins",
-        "BUF": "/r/sabres",
-        "CAR": "/r/canes",
-        "CBJ": "/r/bluejackets",
-        "CGY": "/r/calgaryflames",
-        "CHI": "/r/hawks",
-        "COL": "/r/coloradoavalanche",
-        "DAL": "/r/dallasstars",
-        "DET": "/r/detroitredwings",
-        "EDM": "/r/edmontonoilers",
-        "FLA": "/r/floridapanthers",
-        "LAK": "/r/losangeleskings",
-        "MIN": "/r/wildhockey",
-        "MTL": "/r/habs",
-        "NJD": "/r/devils",
-        "NSH": "/r/predators",
-        "NYI": "/r/newyorkislanders",
-        "NYR": "/r/rangers",
-        "OTT": "/r/ottawasenators",
-        "PHI": "/r/flyers",
-        "PIT": "/r/penguins",
-        "SEA": "/r/seattlekraken",
-        "SJS": "/r/sanjosesharks",
-        "STL": "/r/stlouisblues",
-        "TBL": "/r/tampabaylightning",
-        "TOR": "/r/leafs",
-        "VAN": "/r/canucks",
-        "VGK": "/r/goldenknights",
-        "WPG": "/r/winnipegjets",
-        "WSH": "/r/caps",
+        "ATL": "/r/atlantahawks",
+        "BKN": "/r/gonets",
+        "BOS": "/r/bostonceltics",
+        "CHA": "/r/charlottehornets",
+        "CHI": "/r/chicagobulls",
+        "CLE": "/r/clevelandcavs",
+        "DAL": "/r/mavericks",
+        "DEN": "/r/denvernuggets",
+        "DET": "/r/detroitpistons",
+        "GSW": "/r/warriors",
+        "HOU": "/r/rockets",
+        "IND": "/r/pacers",
+        "LAC": "/r/laclippers",
+        "LAL": "/r/lakers",
+        "MEM": "/r/memphisgrizzlies",
+        "MIA": "/r/heat",
+        "MIL": "/r/mkebucks",
+        "MIN": "/r/timberwolves",
+        "NOP": "/r/nolapelicans",
+        "NYK": "/r/nyknicks",
+        "OKC": "/r/thunder",
+        "ORL": "/r/orlandomagic",
+        "PHI": "/r/sixers",
+        "PHX": "/r/suns",
+        "POR": "/r/ripcity",
+        "SAC": "/r/kings",
+        "SAS": "/r/nbaspurs",
+        "TOR": "/r/torontoraptors",
+        "UTA": "/r/utahjazz",
+        "WAS": "/r/washingtonwizards",
     }
 
     teamSubsById = {
-        1: "/r/devils",
-        2: "/r/newyorkislanders",
-        3: "/r/rangers",
-        4: "/r/flyers",
-        5: "/r/penguins",
-        6: "/r/bostonbruins",
-        7: "/r/sabres",
-        8: "/r/habs",
-        9: "/r/ottawasenators",
-        10: "/r/leafs",
-        12: "/r/canes",
-        13: "/r/floridapanthers",
-        14: "/r/tampabaylightning",
-        15: "/r/caps",
-        16: "/r/hawks",
-        17: "/r/detroitredwings",
-        18: "/r/predators",
-        19: "/r/stlouisblues",
-        20: "/r/calgaryflames",
-        21: "/r/coloradoavalanche",
-        22: "/r/edmontonoilers",
-        23: "/r/canucks",
-        24: "/r/anaheimducks",
-        25: "/r/dallasstars",
-        26: "/r/losangeleskings",
-        28: "/r/sanjosesharks",
-        29: "/r/bluejackets",
-        30: "/r/wildhockey",
-        52: "/r/winnipegjets",
-        53: "/r/coyotes",
-        54: "/r/goldenknights",
-        55: "/r/seattlekraken",
+        1610612737: "/r/atlantahawks",
+        1610612738: "/r/gonets",
+        1610612751: "/r/bostonceltics",
+        1610612766: "/r/charlottehornets",
+        1610612741: "/r/chicagobulls",
+        1610612739: "/r/clevelandcavs",
+        1610612742: "/r/mavericks",
+        1610612743: "/r/denvernuggets",
+        1610612765: "/r/detroitpistons",
+        1610612744: "/r/warriors",
+        1610612745: "/r/rockets",
+        1610612754: "/r/pacers",
+        1610612746: "/r/laclippers",
+        1610612747: "/r/lakers",
+        1610612763: "/r/memphisgrizzlies",
+        1610612748: "/r/heat",
+        1610612749: "/r/mkebucks",
+        1610612750: "/r/timberwolves",
+        1610612740: "/r/nolapelicans",
+        1610612752: "/r/nyknicks",
+        1610612760: "/r/thunder",
+        1610612753: "/r/orlandomagic",
+        1610612755: "/r/sixers",
+        1610612756: "/r/suns",
+        1610612757: "/r/ripcity",
+        1610612758: "/r/kings",
+        1610612759: "/r/nbaspurs",
+        1610612761: "/r/torontoraptors",
+        1610612762: "/r/utahjazz",
+        1610612764: "/r/washingtonwizards",
     }
+
+    def game_status(self):
+        if self.allData.get("game", {}).get("live"):
+            return self.allData["game"]["live"].game.game_status
+        elif len(self.allData.get("todayMyGames", [])):
+            return self.allData["todayMyGames"][0].game_status
+        elif self.allData.get("game", {}).get("summary"):
+            return self.allData["game"]["summary"].box_score_summary.game_status
+        else:
+            return -1
+
+    def game_status_text(self):
+        if self.allData.get("game", {}).get("live"):
+            return self.allData["game"]["live"].game.game_status_text.strip()
+        elif len(self.allData.get("todayMyGames", [])):
+            return self.allData["todayMyGames"][0].game_status_text.strip()
+        elif self.allData.get("game", {}).get("summary"):
+            return self.allData["game"][
+                "summary"
+            ].box_score_summary.game_status_text.strip()
+        else:
+            return ""
 
     def bot_state(self):
         """Return current state...
@@ -2752,11 +2707,11 @@ class Bot(object):
             botStatus = {
                 "lastUpdated": datetime.today().strftime("%m/%d/%Y %I:%M:%S %p"),
                 "myTeam": {
-                    "id": self.myTeam["id"],
-                    "name": self.myTeam["name"],
-                    "abbreviation": self.myTeam["abbreviation"],
-                    "teamName": self.myTeam["teamName"],
-                    "locationName": self.myTeam["locationName"],
+                    "id": self.myTeam.team_info.team_id,
+                    "name": f"{self.myTeam.team_info.team_city} {self.myTeam.team_info.team_name}",
+                    "abbreviation": self.myTeam.team_info.team_abbreviation,
+                    "teamName": self.myTeam.team_info.team_name,
+                    "locationName": self.myTeam.team_info.team_city,
                 },
                 "today": self.today,
                 "tailgateThread": {
@@ -2785,8 +2740,8 @@ class Bot(object):
                     else None,
                 },
                 "game": {
-                    "gameId": self.allData.get("gamePk"),
-                    "status": self.allData.get("game", {}).get("status", {}),
+                    "gameId": self.allData.get("game_id"),
+                    "status": self.game_status(),
                     "oppTeam": deepcopy(self.allData.get("oppTeam")),
                     "homeAway": self.allData.get("homeAway"),
                     "gameTime": self.allData["gameTime"]["myTeam"].strftime(
@@ -2863,13 +2818,13 @@ class Bot(object):
 
                 botStatus["summary"][
                     "text"
-                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam']['name']}"
+                ] += f"Today's game ({botStatus['game']['gameId']}): {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam'].team_info.team_name}"
                 botStatus["summary"][
                     "html"
-                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam']['name']}"
+                ] += f"Today's game ({botStatus['game']['gameId']}): {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam'].team_info.team_name}"
                 botStatus["summary"][
                     "markdown"
-                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam']['name']}"
+                ] += f"Today's game ({botStatus['game']['gameId']}): {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam'].team_info.team_name}"
 
                 if not botStatus["tailgateThread"]["enabled"]:
                     # Tailgate thread is disabled
