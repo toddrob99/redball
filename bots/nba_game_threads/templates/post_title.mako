@@ -1,7 +1,11 @@
 <%
     prefix = settings.get("Post Game Thread", {}).get("TITLE_PREFIX","Post Game Thread:")
-    away_score = data["game"]["summary"].box_score_summary.away_team.score
-    home_score = data["game"]["summary"].box_score_summary.home_team.score
+    if data["game"]["live"] and hasattr(data["game"]["live"], "game"):
+        away_score = data["game"]["live"].game.away_team.score
+        home_score = data["game"]["live"].game.home_team.score
+    else:
+        away_score = data["game"]["summary"].box_score_summary.away_team.score
+        home_score = data["game"]["summary"].box_score_summary.home_team.score
     min_score = min(away_score, home_score)
     max_score = max(away_score, home_score)
     away_team = data["game"]["summary"].box_score_summary.away_team
@@ -25,23 +29,23 @@
 ## Prefix
 ${prefix + (" " if len(prefix) and not prefix.endswith(" ") else "")}\
 ## My Team
-The ${data["myTeam"].team_info.team_name} \
+The ${data["myTeam"].team_info.team_city} ${data["myTeam"].team_info.team_name} \
 ## Result
 %if result == "tie":
 ## TIE
-tied the \
+tie the \
 %elif result == "win":
 ## WIN
-defeated the \
+defeat the \
 %elif result == "loss":
 ## LOSS
-fell to the \
+fall to the \
 %else:
 ## EXCEPTION
 were supposed to play the \
 %endif
 ## Opposing Team
-${data["oppTeam"].team_info.team_name} \
+${data["oppTeam"].team_info.team_city} ${data["oppTeam"].team_info.team_name} \
 ## Score
 %if result == "tie":
 ## TIE

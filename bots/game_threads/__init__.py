@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.2.5"
+__version__ = "1.2.6"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -3611,7 +3611,10 @@ class Bot(object):
         self.log.debug(
             f"myteam league seasondateinfo: {self.myTeam['league']['seasonDateInfo']}"
         )
-        if self.myTeam["league"]["seasonDateInfo"].get(
+        if self.settings.get("MLB", {}).get("SEASON_STATE_OVERRIDE"):
+            self.log.debug("Overriding season state per SEASON_STATE_OVERRIDE setting")
+            return self.settings["MLB"]["SEASON_STATE_OVERRIDE"]
+        elif self.myTeam["league"]["seasonDateInfo"].get(
             "preSeasonStartDate"
         ) and datetime.strptime(
             self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],

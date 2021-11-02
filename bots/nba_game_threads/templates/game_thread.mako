@@ -1,6 +1,10 @@
 <%
-    away_score = data["game"]["summary"].box_score_summary.away_team.score
-    home_score = data["game"]["summary"].box_score_summary.home_team.score
+    if data["game"]["live"] and hasattr(data["game"]["live"], "game"):
+        away_score = data["game"]["live"].game.away_team.score
+        home_score = data["game"]["live"].game.home_team.score
+    else:
+        away_score = data["game"]["summary"].box_score_summary.away_team.score
+        home_score = data["game"]["summary"].box_score_summary.home_team.score
     away_team = data["game"]["summary"].box_score_summary.away_team
     home_team = data["game"]["summary"].box_score_summary.home_team
     if data["gameStatus"] >= 3:
@@ -45,9 +49,7 @@ ${'##'} [${away_team.team_city} ${away_team.team_name}](${data["teamSubs"].get(a
 
 <%include file="game_info.mako" />
 
-%if data["gameStatus"] == 1:
-${'##'} Game Status: Pre-game, tip-off scheduled for ${data["gameTime"]["myTeam"].strftime("%I:%M %p %Z")}
-%elif data["gameStatus"] == 2:
+%if data["gameStatus"] == 2:
 ${'##'} Game Status: \
 %   if data["game"]["live"]:
 ${data["gameStatusText"]}
@@ -72,6 +74,8 @@ ${max(int(away_score), int(home_score))}-${min(int(away_score), int(home_score))
 <%include file="matchup_history.mako" />
 
 <%include file="inactives.mako" />
+
+<%include file="boxscore.mako" />
 
 <%include file="pregame_charts.mako" />
 

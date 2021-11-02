@@ -1,6 +1,10 @@
 <%
-    away_score = data["game"]["summary"].box_score_summary.away_team.score
-    home_score = data["game"]["summary"].box_score_summary.home_team.score
+    if data["game"]["live"] and hasattr(data["game"]["live"], "game"):
+        away_score = data["game"]["live"].game.away_team.score
+        home_score = data["game"]["live"].game.home_team.score
+    else:
+        away_score = data["game"]["summary"].box_score_summary.away_team.score
+        home_score = data["game"]["summary"].box_score_summary.home_team.score
     away_team = data["game"]["summary"].box_score_summary.away_team
     home_team = data["game"]["summary"].box_score_summary.home_team
     result = (

@@ -6,12 +6,13 @@
         return
 %>\
 ${'##'} Matchup History
-|Date|Location|Winner|Loser|Score|
+|Date|Location|Result|
 |:--|:--|:--|:--|:--|
 %for m in prior_meetings:
 <%
     w = m.away_team if m.away_team.score > m.home_team.score else m.home_team
     l = m.away_team if w == m.home_team else m.home_team
+    r = "Win" if w.team_id == data["myTeam"].team_info.team_id else "Loss"
     d = convert_timezone(  # Convert Zulu to my team TZ
         datetime.strptime(
             m.game_time_utc,
@@ -20,5 +21,5 @@ ${'##'} Matchup History
         team_timezone,
     )
 %>\
-|${d.strftime("%m/%d/%Y")}|${m.home_team.team_city}|${w.team_name} (${w.wins}-${w.losses})|${l.team_name} (${l.wins}-${l.losses})|${w.score}-${l.score}|
+|${d.strftime("%m/%d/%Y")}|${m.home_team.team_city}|${r} ${w.score}-${l.score}|
 %endfor
