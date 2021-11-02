@@ -46,7 +46,7 @@ ${max(int(away_score), int(home_score))}-${min(int(away_score), int(home_score))
 
 <%include file="boxscore.mako" />
 
-## <%include file="postgame_charts.mako" />
+<%include file="standings.mako" />
 
 <%include file="division_scoreboard.mako" />
 
