@@ -1,4 +1,180 @@
 {
+    "Off Day Thread": [
+        {
+            "key": "ENABLED",
+            "description": "Enable posting of off day threads.",
+            "type": "bool",
+            "val": true,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "FLAIR",
+            "description": "Flair to add to off day thread post.",
+            "type": "str",
+            "val": "Off Day Thread",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "LIVE_DISCUSSION",
+            "description": "Submit posts as `live discussions` instead of traditional comment threads on new Reddit (old Reddit will still show traditional comment threads).",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "FOOTER",
+            "description": "Footer text to include at the bottom of the thread.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "POST_TIME",
+            "description": "Time of day when off day thread should be posted. Include zero-padded hour and minute in 24 hour time, e.g. 08:00 or 14:30.",
+            "type": "str",
+            "val": "05:00",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "SCOREBOARD_TYPE",
+            "description": "Scope of games that should be included in the scordboard.",
+            "type": "str",
+            "val": "Conference",
+            "options": [
+                "None",
+                "Division",
+                "Conference",
+                "League"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "STANDINGS_NUM_TO_SHOW",
+            "description": "Maximum number of teams to show in the standings.",
+            "type": "int",
+            "val": 8,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "STANDINGS_TYPE",
+            "description": "Scope of teams that should be included in the standings.",
+            "type": "str",
+            "val": "Conference",
+            "options": [
+                "None",
+                "Division",
+                "Conference",
+                "League"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "SUGGESTED_SORT",
+            "description": "Suggested sort to set on the off day thread post.",
+            "type": "str",
+            "val": "new",
+            "options": [
+                "",
+                "confidence",
+                "top",
+                "new",
+                "controversial",
+                "old",
+                "random",
+                "qa"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "THREAD_TEMPLATE",
+            "description": "Template for the thread body. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nba_game_threads/templates/",
+            "type": "str",
+            "val": "off_thread.mako",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "TITLE_PREFIX",
+            "description": "Prefix to include at the beginning of the thread title. Trailing space will be added.",
+            "type": "str",
+            "val": "Off Day Thread:",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "TITLE_TEMPLATE",
+            "description": "Template for the post title. Don't modify the standard template file because your changes will be lost when updating. Make a copy instead and put the filename here. Path: /redball/bots/nba_game_threads/templates/",
+            "type": "str",
+            "val": "off_title.mako",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "UPDATE_INTERVAL",
+            "description": "Number of minutes between off day thread updates.",
+            "type": "int",
+            "val": 5,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "UPDATE_UNTIL",
+            "description": "Keep updating the thread until the selected threshold is reached.",
+            "type": "str",
+            "val": "All conference games are final",
+            "options": [
+                "Do not update",
+                "All division games are final",
+                "All conference games are final",
+                "All NBA games are final"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "WEBHOOK_URL",
+            "description": "URL to call when thread is posted.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "WEBHOOK_TEMPLATE",
+            "description": "Template to parse for body of call to WEBHOOK_URL.",
+            "type": "str",
+            "val": "off_webhook.mako",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ],
     "Tailgate Thread": [
         {
             "key": "RESTRICT_SELF_POSTS",
@@ -60,6 +236,43 @@
             "type": "str",
             "val": "05:00",
             "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "SCOREBOARD_TYPE",
+            "description": "Scope of games that should be included in the scordboard.",
+            "type": "str",
+            "val": "Conference",
+            "options": [
+                "None",
+                "Division",
+                "Conference",
+                "League"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "STANDINGS_NUM_TO_SHOW",
+            "description": "Maximum number of teams to show in the standings.",
+            "type": "int",
+            "val": 8,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "STANDINGS_TYPE",
+            "description": "Scope of teams that should be included in the standings.",
+            "type": "str",
+            "val": "Conference",
+            "options": [
+                "None",
+                "Division",
+                "Conference",
+                "League"
+            ],
             "subkeys": [],
             "parent_key": null
         },
@@ -135,6 +348,7 @@
                 "Do not update",
                 "Game thread is posted",
                 "All division games are final",
+                "All conference games are final",
                 "All NBA games are final"
             ],
             "subkeys": [],
@@ -245,6 +459,43 @@
             "parent_key": null
         },
         {
+            "key": "SCOREBOARD_TYPE",
+            "description": "Scope of games that should be included in the scordboard.",
+            "type": "str",
+            "val": "Conference",
+            "options": [
+                "None",
+                "Division",
+                "Conference",
+                "League"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "STANDINGS_NUM_TO_SHOW",
+            "description": "Maximum number of teams to show in the standings.",
+            "type": "int",
+            "val": 8,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "STANDINGS_TYPE",
+            "description": "Scope of teams that should be included in the standings.",
+            "type": "str",
+            "val": "Conference",
+            "options": [
+                "None",
+                "Division",
+                "Conference",
+                "League"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
             "key": "SUGGESTED_SORT",
             "description": "Suggested sort to set on the game thread post.",
             "type": "str",
@@ -311,11 +562,12 @@
             "key": "UPDATE_UNTIL",
             "description": "Keep updating the thread until the selected threshold is reached.",
             "type": "str",
-            "val": "All division games are final",
+            "val": "My team's game is final",
             "options": [
                 "Do not update",
                 "My team's game is final",
                 "All division games are final",
+                "All conference games are final",
                 "All NBA games are final"
             ],
             "subkeys": [],
@@ -546,6 +798,43 @@
             "parent_key": ""
         },
         {
+            "key": "SCOREBOARD_TYPE",
+            "description": "Scope of games that should be included in the scordboard.",
+            "type": "str",
+            "val": "Conference",
+            "options": [
+                "None",
+                "Division",
+                "Conference",
+                "League"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "STANDINGS_NUM_TO_SHOW",
+            "description": "Maximum number of teams to show in the standings.",
+            "type": "int",
+            "val": 8,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "STANDINGS_TYPE",
+            "description": "Scope of teams that should be included in the standings.",
+            "type": "str",
+            "val": "Conference",
+            "options": [
+                "None",
+                "Division",
+                "Conference",
+                "League"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
             "key": "SUGGESTED_SORT",
             "description": "Suggested sort to set on the post game thread post.",
             "type": "str",
@@ -603,11 +892,12 @@
             "key": "UPDATE_UNTIL",
             "description": "Keep updating the thread until the selected threshold is reached.",
             "type": "str",
-            "val": "An hour after thread is posted",
+            "val": "All conference games are final",
             "options": [
                 "Do not update",
                 "An hour after thread is posted",
                 "All division games are final",
+                "All conference games are final",
                 "All NBA games are final"
             ],
             "subkeys": [],

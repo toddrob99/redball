@@ -81,10 +81,9 @@ ${data["oppTeam"]["teamName"]}
 %if data["game"]["gameData"]["status"]["abstractGameState"] == "Preview":
 <%include file="skaters.mako" />
 
-
+%endif
 <%include file="scratches.mako" />
 
-%endif
 %if data["game"]["gameData"]["status"]["abstractGameState"] in ["Live", "Final"]:
 <%include file="game_stats.mako" />
 

@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 DATA_LOCK = threading.Lock()
 
@@ -234,6 +234,15 @@ class Bot(object):
             ]
             self.log.debug(f"{self.otherDivisionTeamIds=}")
 
+            # Other conference teams
+            self.otherConferenceTeamIds = [
+                t.teamid
+                for t in standings.standings
+                if t.conference == self.myTeam.team_info.team_conference
+                and t.teamid != self.myTeam.team_info.team_id
+            ]
+            self.log.debug(f"{self.otherConferenceTeamIds=}")
+
             # Get today's games
             todayScoreboard = self.nba.scoreboard(self.today["Y-m-d"])
             todayMyGames = [
@@ -248,6 +257,15 @@ class Bot(object):
                 and (
                     x.away_team.team_id in self.otherDivisionTeamIds
                     or x.home_team.team_id in self.otherDivisionTeamIds
+                )
+            ]
+            todayOtherConferenceGames = [
+                x
+                for x in todayScoreboard.scoreboard.games
+                if x.game_id not in [g.game_id for g in todayMyGames]
+                and (
+                    x.away_team.team_id in self.otherConferenceTeamIds
+                    or x.home_team.team_id in self.otherConferenceTeamIds
                 )
             ]
             todayAllOtherGames = [
@@ -268,26 +286,38 @@ class Bot(object):
             self.allData = {
                 "myTeam": self.myTeam,
                 "otherDivisionTeamIds": self.otherDivisionTeamIds,
+                "otherConferenceTeamIds": self.otherConferenceTeamIds,
                 "todayMyGames": todayMyGames,
                 "todayAllOtherGames": todayAllOtherGames,
                 "todayOtherDivisionGames": todayOtherDivisionGames,
+                "todayOtherConferenceGames": todayOtherConferenceGames,
                 "teamSubs": self.teamSubs,
                 "teamSubsById": self.teamSubsById,
             }
             # Initialize vars to hold data about reddit and process threads
-            self.stopFlags = {"tailgate": False, "game": False, "post": False}
+            self.stopFlags = {}
             """ Holds flags to indicate when reddit threads should stop updating """
-            self.THREADS = {"tailgate": None, "game": None, "post": None}
+            self.THREADS = {"off": None, "tailgate": None, "game": None, "post": None}
             """ Holds process threads that will post/monitor/update each reddit thread """
-            self.threadCache = {"tailgate": {}, "game": {}, "post": {}}
+            self.threadCache = {"off": {}, "tailgate": {}, "game": {}, "post": {}}
             """ Holds reddit threads and related data """
 
             if not len(todayMyGames):
                 # It's not a game day
                 self.log.info("No games today!")
+                self.stopFlags.update({"off": False})
+                self.allData.update({"game_id": "off"})
+                self.off_day()
                 if redball.SIGNAL is not None or self.bot.STOP:
                     break
             else:
+                self.stopFlags.update(
+                    {
+                        "tailgate": False,
+                        "game": False,
+                        "post": False,
+                    }
+                )
                 game_id = todayMyGames[0].game_id
                 self.log.info("IT'S GAME DAY!")
                 self.log.debug(f"Gathering initial data for game_id [{game_id}]...")
@@ -669,6 +699,311 @@ class Bot(object):
             },
         }
 
+    def off_day(self):
+        skipFlag = None  # Will be set later if off thread edit should be skipped
+
+        # Check/wait for time to submit off thread
+        self.threadCache["off"].update(
+            {
+                "postTime_local": datetime.strptime(
+                    datetime.today().strftime(
+                        "%Y-%m-%d "
+                        + self.settings.get("Off Day Thread", {}).get(
+                            "POST_TIME", "05:00"
+                        )
+                    ),
+                    "%Y-%m-%d %H:%M",
+                )
+            }
+        )
+        self.log.debug(
+            "Off Day thread post time: {}".format(
+                self.threadCache["off"]["postTime_local"]
+            )
+        )
+        while (
+            datetime.today() < self.threadCache["off"]["postTime_local"]
+            and redball.SIGNAL is None
+            and not self.bot.STOP
+        ):
+            if (
+                self.threadCache["off"]["postTime_local"] - datetime.today()
+            ).total_seconds() > 3600:
+                self.log.info(
+                    "Off Day thread should not be posted for a long time ({}). Sleeping for an hour...".format(
+                        self.threadCache["off"]["postTime_local"]
+                    )
+                )
+                self.sleep(3600)
+            elif (
+                self.threadCache["off"]["postTime_local"] - datetime.today()
+            ).total_seconds() > 1800:
+                self.log.info(
+                    "Off Day thread post time is still more than 30 minutes away ({}). Sleeping for a half hour...".format(
+                        self.threadCache["off"]["postTime_local"]
+                    )
+                )
+                self.sleep(1800)
+            else:
+                self.log.info(
+                    "Off Day thread post time is approaching ({}). Sleeping until then...".format(
+                        self.threadCache["off"]["postTime_local"]
+                    )
+                )
+                self.sleep(
+                    (
+                        self.threadCache["off"]["postTime_local"] - datetime.today()
+                    ).total_seconds()
+                )
+
+        if redball.SIGNAL is not None or self.bot.STOP:
+            self.log.debug("Caught a stop signal...")
+            return
+
+        # Unsticky stale threads
+        if self.settings.get("Reddit", {}).get("STICKY", False):
+            if len(self.staleThreads):
+                self.unsticky_threads(self.staleThreads)
+                self.staleThreads = []
+
+        # Check if off thread already posted (record in threads table with type='off' for today's game_id)
+        tgq = f"select * from {self.dbTablePrefix}threads where type='off' and gameId = 'off' and gameDate = '{self.today['Y-m-d']}' and deleted=0;"
+        tgThread = rbdb.db_qry(tgq, closeAfter=True, logg=self.log)
+
+        offThread = None
+        if len(tgThread) > 0:
+            self.log.info(f"Off Day thread found in database [{tgThread[0]['id']}].")
+            offThread = self.reddit.submission(tgThread[0]["id"])
+            if not offThread.author:
+                self.log.warning("Off Day thread appears to have been deleted.")
+                q = "update {}threads set deleted=1 where id='{}';".format(
+                    self.dbTablePrefix, offThread.id
+                )
+                u = rbdb.db_qry(q, commit=True, closeAfter=True, logg=self.log)
+                if isinstance(u, str):
+                    self.log.error(
+                        "Error marking thread as deleted in database: {}".format(u)
+                    )
+
+                offThread = None
+            else:
+                if offThread.selftext.find("\n\n^^^Last ^^^Updated") != -1:
+                    offThreadText = offThread.selftext[
+                        0 : offThread.selftext.find("\n\n^^^Last ^^^Updated:")
+                    ]
+                elif offThread.selftext.find("\n\n^^^Posted") != -1:
+                    offThreadText = offThread.selftext[
+                        0 : offThread.selftext.find("\n\n^^^Posted:")
+                    ]
+                else:
+                    offThreadText = offThread.selftext
+
+                self.threadCache["off"].update(
+                    {
+                        "text": offThreadText,
+                        "thread": offThread,
+                        "title": offThread.title
+                        if offThread not in [None, False]
+                        else None,
+                    }
+                )
+                # Only sticky when posting the thread
+                # if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(offThread)
+
+        if not offThread:
+            # Submit off thread
+            (offThread, offThreadText) = self.prep_and_post(
+                "off",
+                postFooter="""
+
+^^^Posted: ^^^"""
+                + self.convert_timezone(
+                    datetime.utcnow(),
+                    self.team_timezone,
+                ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
+                + ", ^^^Update ^^^Interval: ^^^{} ^^^Minutes".format(
+                    self.settings.get("Off Day Thread", {}).get("UPDATE_INTERVAL", 5)
+                ),
+            )
+            self.threadCache["off"].update(
+                {
+                    "text": offThreadText,
+                    "thread": offThread,
+                    "title": offThread.title
+                    if offThread not in [None, False]
+                    else None,
+                }
+            )
+            skipFlag = True
+        else:
+            self.threadCache["off"].update({"thread": offThread})
+
+        while (
+            not self.stopFlags["off"] and redball.SIGNAL is None and not self.bot.STOP
+        ):
+            # Keep off thread updated
+            if skipFlag:
+                # Skip check/edit since skip flag is set
+                skipFlag = None
+                self.log.debug(
+                    "Skip flag is set, off thread was just submitted/edited and does not need to be checked."
+                )
+            else:
+                try:
+                    # Update data
+                    self.collect_data()
+                    # self.log.debug('data passed into render_template: {}'.format(self.allData))#debug
+                    text = self.render_template(
+                        thread="off",
+                        templateType="thread",
+                        data=self.allData,
+                        settings=self.settings,
+                        convert_timezone=self.convert_timezone,
+                    )
+                    self.log.debug("Rendered off thread text: {}".format(text))
+                    if text != self.threadCache["off"].get("text") and text != "":
+                        self.threadCache["off"].update({"text": text})
+                        text += (
+                            """
+
+^^^Last ^^^Updated: ^^^"""
+                            + self.convert_timezone(
+                                datetime.utcnow(),
+                                self.team_timezone,
+                            ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
+                            + ", ^^^Update ^^^Interval: ^^^{} ^^^Minutes".format(
+                                self.settings.get("Off Day Thread", {}).get(
+                                    "UPDATE_INTERVAL", 5
+                                )
+                            )
+                        )
+                        self.threadCache["off"]["thread"].edit(text)
+                        self.log.info("Off Day thread edits submitted.")
+                        self.count_check_edit(
+                            self.threadCache["off"]["thread"].id, "NA", edit=True
+                        )
+                        self.log_last_updated_date_in_db(
+                            self.threadCache["off"]["thread"].id
+                        )
+                    elif text == "":
+                        self.log.info(
+                            "Skipping off thread edit since thread text is blank..."
+                        )
+                    else:
+                        self.log.info("No changes to off thread.")
+                        self.count_check_edit(
+                            self.threadCache["off"]["thread"].id, "NA", edit=False
+                        )
+                except Exception as e:
+                    self.log.error("Error editing off thread: {}".format(e))
+                    self.error_notification("Error editing off thread")
+
+            update_off_thread_until = self.settings.get("Off Day Thread", {}).get(
+                "UPDATE_UNTIL", "Game thread is posted"
+            )
+            if update_off_thread_until not in [
+                "Do not update",
+                "All division games are final",
+                "All conference games are final",
+                "All NBA games are final",
+            ]:
+                # Unsupported value, use default
+                update_off_thread_until = "Game thread is posted"
+
+            if (
+                update_off_thread_until == "Game thread is posted"
+                and not self.settings.get("Game Thread", {}).get("ENABLED", True)
+            ):
+                # Off Day thread UPDATE_UNTIL will never be met
+                self.log.warning(
+                    "Off Day thread set to update until game thread is posted, but game thread is disabled! Off Day thread will not be updated."
+                )
+                update_off_thread_until = "Do not update"
+
+            if not self.settings.get("Off Day Thread", {}).get("ENABLED", True):
+                # Off Day thread is already posted, but disabled. Don't update it.
+                self.log.info(
+                    "Stopping off thread update loop because off thread is disabled."
+                )
+                self.stopFlags.update({"off": True})
+                break
+            elif update_off_thread_until == "Do not update":
+                # Setting says not to update
+                self.log.info(
+                    "Stopping off thread update loop per UPDATE_UNTIL setting."
+                )
+                self.stopFlags.update({"off": True})
+                break
+            elif update_off_thread_until == "All division games are final":
+                if not next(  # All division games are final
+                    (
+                        True
+                        for x in self.allData["todayOtherDivisionGames"]
+                        if x.game_status < 3
+                    ),
+                    False,
+                ):
+                    # Division games are all final
+                    self.log.info(
+                        "All division games are final. Stopping off thread update loop per UPDATE_UNTIL setting."
+                    )
+                    self.stopFlags.update({"off": True})
+                    break
+            elif update_off_thread_until == "All conference games are final":
+                if not next(  # All conference games are final
+                    (
+                        True
+                        for x in self.allData["todayOtherConferenceGames"]
+                        if x.game_status < 3
+                    ),
+                    False,
+                ):
+                    # Conference games are all final
+                    self.log.info(
+                        "All conference games are final. Stopping off thread update loop per UPDATE_UNTIL setting."
+                    )
+                    self.stopFlags.update({"off": True})
+                    break
+            elif update_off_thread_until == "All NBA games are final":
+                if not next(  # All NBA games are final
+                    (
+                        True
+                        for x in self.allData["todayAllOtherGames"]
+                        if x.game_status < 3
+                    ),
+                    False,
+                ):
+                    # NBA games are all final
+                    self.log.info(
+                        "All NBA games are final. Stopping off thread update loop per UPDATE_UNTIL setting."
+                    )
+                    self.stopFlags.update({"off": True})
+                    break
+
+            self.log.debug(
+                "Off Day thread stop criteria not met ({}).".format(
+                    update_off_thread_until
+                )
+            )  # debug - need this to tell if logic is working
+
+            # Update interval is in minutes (seconds for game thread only)
+            tgtWait = self.settings.get("off Thread", {}).get("UPDATE_INTERVAL", 5)
+            if tgtWait < 1:
+                tgtWait = 1
+            self.log.info("Sleeping for {} minutes...".format(tgtWait))
+            self.sleep(tgtWait * 60)
+
+        if redball.SIGNAL is not None or self.bot.STOP:
+            self.log.debug("Caught a stop signal...")
+            return
+
+        # Mark off thread as stale
+        if self.threadCache["off"].get("thread"):
+            self.staleThreads.append(self.threadCache["off"]["thread"])
+
+        self.log.debug("Ending off update thread...")
+        return
+
     def tailgate_thread_update_loop(self):
         skipFlag = None  # Will be set later if tailgate thread edit should be skipped
 
@@ -878,6 +1213,7 @@ class Bot(object):
                 "Do not update",
                 "Game thread is posted",
                 "All division games are final",
+                "All conference games are final",
                 "All NBA games are final",
             ]:
                 # Unsupported value, use default
@@ -921,7 +1257,7 @@ class Bot(object):
                 ) and not next(  # And all division games are final
                     (
                         True
-                        for x in self.allData["todayOtherDivisisionGames"]
+                        for x in self.allData["todayOtherDivisionGames"]
                         if x.game_status < 3
                     ),
                     False,
@@ -929,6 +1265,23 @@ class Bot(object):
                     # Division games are all final
                     self.log.info(
                         "All division games are final. Stopping tailgate thread update loop per UPDATE_UNTIL setting."
+                    )
+                    self.stopFlags.update({"tailgate": True})
+                    break
+            elif update_tailgate_thread_until == "All conference games are final":
+                if (  # This game is final
+                    self.game_status() >= 3
+                ) and not next(  # And all conference games are final
+                    (
+                        True
+                        for x in self.allData["todayOtherConferenceGames"]
+                        if x.game_status < 3
+                    ),
+                    False,
+                ):
+                    # Conference games are all final
+                    self.log.info(
+                        "All conference games are final. Stopping tailgate thread update loop per UPDATE_UNTIL setting."
                     )
                     self.stopFlags.update({"tailgate": True})
                     break
@@ -1242,6 +1595,7 @@ class Bot(object):
                 "Do not update",
                 "My team's game is final",
                 "All division games are final",
+                "All conference games are final",
                 "All NBA games are final",
             ]:
                 # Unsupported value, use default
@@ -1276,6 +1630,23 @@ class Bot(object):
                     # Division games are all final
                     self.log.info(
                         "All division games are final. Stopping game thread update loop per UPDATE_UNTIL setting."
+                    )
+                    self.stopFlags.update({"game": True})
+                    break
+            elif update_game_thread_until == "All conference games are final":
+                if (  # This game is final
+                    self.game_status() >= 3
+                ) and not next(  # And all conference games are final
+                    (
+                        True
+                        for x in self.allData["todayOtherConferenceGames"]
+                        if x.game_status < 3
+                    ),
+                    False,
+                ):
+                    # Conference games are all final
+                    self.log.info(
+                        "All conference games are final. Stopping game thread update loop per UPDATE_UNTIL setting."
                     )
                     self.stopFlags.update({"game": True})
                     break
@@ -1528,6 +1899,7 @@ class Bot(object):
                 "Do not update",
                 "An hour after thread is posted",
                 "All division games are final",
+                "All conference games are final",
                 "All NBA games are final",
             ]:
                 # Unsupported value, use default
@@ -1571,6 +1943,23 @@ class Bot(object):
                     # Division games are all final
                     self.log.info(
                         "All division games are final. Stopping post game thread update loop per UPDATE_UNTIL setting."
+                    )
+                    self.stopFlags.update({"post": True})
+                    break
+            elif update_postgame_thread_until == "All conference games are final":
+                if (  # This game is final
+                    self.game_status() >= 3
+                ) and not next(  # And all conference games are final
+                    (
+                        True
+                        for x in self.allData["todayOtherConferenceGames"]
+                        if x.game_status < 3
+                    ),
+                    False,
+                ):
+                    # Conference games are all final
+                    self.log.info(
+                        "All conference games are final. Stopping post game thread update loop per UPDATE_UNTIL setting."
                     )
                     self.stopFlags.update({"post": True})
                     break
@@ -1654,60 +2043,82 @@ class Bot(object):
                     or x.home_team.team_id in self.otherDivisionTeamIds
                 )
             ]
+            todayOtherConferenceGames = [
+                x
+                for x in todayScoreboard.scoreboard.games
+                if x.game_id not in [g.game_id for g in todayMyGames]
+                and (
+                    x.away_team.team_id in self.otherConferenceTeamIds
+                    or x.home_team.team_id in self.otherConferenceTeamIds
+                )
+            ]
             todayAllOtherGames = [
                 x
                 for x in todayScoreboard.scoreboard.games
                 if self.myTeamId not in [x.away_team.team_id, x.home_team.team_id]
             ]
-            self.log.debug(f"Gathering data for game_id [{self.allData['game_id']}]...")
-            box_summary = self.nba.boxscore_summary(self.allData["game_id"])
-            box_traditional = self.nba.boxscore_traditional(self.allData["game_id"])
-            try:
-                box_live = self.nba.api.from_url(
-                    f"https://cdn.nba.com/static/json/liveData/boxscore/boxscore_{self.allData['game_id']}.json"
+            if self.allData["game_id"] != "off":
+                self.log.debug(
+                    f"Gathering data for game_id [{self.allData['game_id']}]..."
                 )
-            except Exception as e:
-                self.log.debug(f"Exception retrieving live box from cdn: {e}")
-                box_live = None
-            boxscore = {
-                "summary": box_summary,
-                "traditional": box_traditional,
-                "live": box_live,
-            }
-            homeAway = (
-                "home"
-                if boxscore["summary"].box_score_summary.home_team_id == self.myTeamId
-                else "away"
-                if boxscore["summary"].box_score_summary.away_team_id == self.myTeamId
-                else None
-            )
-            oppHomeAway = "home" if homeAway == "away" else "away"
-            self.log.debug(f"My team is [{homeAway}] (homeAway)")
-            oppTeam = self.nba.team(
-                boxscore["summary"].box_score_summary.home_team_id
-                if homeAway == "away"
-                else boxscore["summary"].box_score_summary.away_team_id
-            )
-            oppTeamId = oppTeam.team_info.team_id
-            self.log.debug(f"oppTeamId: {oppTeamId}")
-            self.log.debug(f"oppTeam: {str(oppTeam)}")
-            gameTime = self.convert_timezone(  # Convert Zulu to my team TZ
-                datetime.strptime(
-                    boxscore["summary"].box_score_summary.game_time_utc,
-                    "%Y-%m-%dT%H:%M:%SZ",
-                ),
-                self.team_timezone,
-            )
-            gameTime_local = self.convert_timezone(  # Convert Zulu to my team TZ
-                datetime.strptime(
-                    boxscore["summary"].box_score_summary.game_time_utc,
-                    "%Y-%m-%dT%H:%M:%SZ",
-                ),
-                "local",
-            )
-            self.log.debug(
-                f"gameTime (my team TZ): {gameTime}; gameTime_local: {gameTime_local}"
-            )
+                box_summary = self.nba.boxscore_summary(self.allData["game_id"])
+                box_traditional = self.nba.boxscore_traditional(self.allData["game_id"])
+                try:
+                    box_live = self.nba.api.from_url(
+                        f"https://cdn.nba.com/static/json/liveData/boxscore/boxscore_{self.allData['game_id']}.json"
+                    )
+                except Exception as e:
+                    self.log.debug(f"Exception retrieving live box from cdn: {e}")
+                    box_live = None
+                boxscore = {
+                    "summary": box_summary,
+                    "traditional": box_traditional,
+                    "live": box_live,
+                }
+                homeAway = (
+                    "home"
+                    if boxscore["summary"].box_score_summary.home_team_id
+                    == self.myTeamId
+                    else "away"
+                    if boxscore["summary"].box_score_summary.away_team_id
+                    == self.myTeamId
+                    else None
+                )
+                oppHomeAway = "home" if homeAway == "away" else "away"
+                self.log.debug(f"My team is [{homeAway}] (homeAway)")
+                oppTeam = self.nba.team(
+                    boxscore["summary"].box_score_summary.home_team_id
+                    if homeAway == "away"
+                    else boxscore["summary"].box_score_summary.away_team_id
+                )
+                oppTeamId = oppTeam.team_info.team_id
+                self.log.debug(f"oppTeamId: {oppTeamId}")
+                self.log.debug(f"oppTeam: {str(oppTeam)}")
+                gameTime = self.convert_timezone(  # Convert Zulu to my team TZ
+                    datetime.strptime(
+                        boxscore["summary"].box_score_summary.game_time_utc,
+                        "%Y-%m-%dT%H:%M:%SZ",
+                    ),
+                    self.team_timezone,
+                )
+                gameTime_local = self.convert_timezone(  # Convert Zulu to my team TZ
+                    datetime.strptime(
+                        boxscore["summary"].box_score_summary.game_time_utc,
+                        "%Y-%m-%dT%H:%M:%SZ",
+                    ),
+                    "local",
+                )
+                self.log.debug(
+                    f"gameTime (my team TZ): {gameTime}; gameTime_local: {gameTime_local}"
+                )
+            else:
+                self.log.debug(
+                    "It's an off day, so skipping game-related data retrieval."
+                )
+                homeAway = ""
+                oppTeam = oppTeamId = oppHomeAway = gameTime_local = gameTime = None
+                boxscore = None
+
             standings = self.nba.standings(self.today["season"])
 
             # Initialize var to hold game data throughout the day
@@ -1724,6 +2135,7 @@ class Bot(object):
                     },
                     "game": boxscore,
                     "todayOtherDivisionGames": todayOtherDivisionGames,
+                    "todayOtherConferenceGames": todayOtherConferenceGames,
                     "todayAllOtherGames": todayAllOtherGames,
                     "standings": standings,
                 }
@@ -1828,7 +2240,7 @@ class Bot(object):
         return True
 
     def prep_and_post(self, thread, postFooter=None):
-        # thread = ['tailgate', 'game', 'post']
+        # thread = ['off', 'tailgate', 'game', 'post']
         # postFooter = text to append to post body, but not to include in return text value
         #   (normally contains a timestamp that would prevent comparison next time to check for changes)
 
@@ -1854,7 +2266,9 @@ class Bot(object):
         )
         flairMode = self.settings.get("Reddit", {}).get("FLAIR_MODE", "none")
         flair = (
-            self.settings.get("Tailgate Thread", {}).get("FLAIR", "")
+            self.settings.get("Off Day Thread", {}).get("FLAIR", "")
+            if thread == "off"
+            else self.settings.get("Tailgate Thread", {}).get("FLAIR", "")
             if thread == "tailgate"
             else self.settings.get("Game Thread", {}).get("FLAIR", "")
             if thread == "game"
@@ -1863,7 +2277,9 @@ class Bot(object):
             else ""
         )
         sort = (
-            self.settings.get("Tailgate Thread", {}).get("SUGGESTED_SORT", "new")
+            self.settings.get("Off Day Thread", {}).get("SUGGESTED_SORT", "")
+            if thread == "off"
+            else self.settings.get("Tailgate Thread", {}).get("SUGGESTED_SORT", "new")
             if thread == "tailgate"
             else self.settings.get("Game Thread", {}).get("SUGGESTED_SORT", "new")
             if thread == "game"
@@ -1872,7 +2288,9 @@ class Bot(object):
             else "new"
         )
         liveDiscussion = (
-            self.settings.get("Tailgate Thread", {}).get("LIVE_DISCUSSION", False)
+            self.settings.get("Off Day Thread", {}).get("LIVE_DISCUSSION", False)
+            if thread == "off"
+            else self.settings.get("Tailgate Thread", {}).get("LIVE_DISCUSSION", False)
             if thread == "tailgate"
             else self.settings.get("Game Thread", {}).get("LIVE_DISCUSSION", False)
             if thread == "game"
@@ -1882,7 +2300,7 @@ class Bot(object):
         )
         lockPrevious = (
             False
-            if thread == "tailgate"
+            if thread in ["off", "tailgate"]
             else self.settings.get("Game Thread", {}).get("LOCK_TAILGATE_THREAD", False)
             if thread == "game"
             else self.settings.get("Post Game Thread", {}).get(
@@ -1991,7 +2409,11 @@ class Bot(object):
             for w in range(0, 10):
                 s = "" if w == 0 else str(w)
                 webhook_url = (
-                    self.settings.get("Tailgate Thread", {}).get(
+                    self.settings.get("Off Day Thread", {}).get(
+                        "WEBHOOK{}_URL".format(s)
+                    )
+                    if thread == "off"
+                    else self.settings.get("Tailgate Thread", {}).get(
                         "WEBHOOK{}_URL".format(s)
                     )
                     if thread == "tailgate"
@@ -2072,6 +2494,8 @@ class Bot(object):
                 if thread == "game":
                     message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam.team_info.team_name.replace(' ','')}"""
                 elif thread == "tailgate":
+                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam.team_info.team_name.replace(' ','')}"""
+                elif thread == "off":
                     message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam.team_info.team_name.replace(' ','')}"""
                 elif thread == "post":
                     message = f"""{theThread.title} - The discussion continues: {theThread.shortlink} #{self.myTeam.team_info.team_name.replace(' ','')}"""
@@ -2338,7 +2762,9 @@ class Bot(object):
     def render_template(self, thread, templateType, **kwargs):
         setting = "{}_TEMPLATE".format(templateType.upper())
         templateFilename = (
-            self.settings.get("Tailgate Thread", {}).get(setting, "")
+            self.settings.get("Off Day Thread", {}).get(setting, "")
+            if thread == "off"
+            else self.settings.get("Tailgate Thread", {}).get(setting, "")
             if thread == "tailgate"
             else self.settings.get("Game Thread", {}).get(setting, "")
             if thread == "game"
@@ -2675,6 +3101,8 @@ class Bot(object):
     }
 
     def game_status(self):
+        if self.allData["game_id"] == "off":
+            return 0
         if self.allData.get("game", {}).get("live"):
             return self.allData["game"]["live"].game.game_status
         elif len(self.allData.get("todayMyGames", [])):
@@ -2685,6 +3113,8 @@ class Bot(object):
             return -1
 
     def game_status_text(self):
+        if self.allData["game_id"] == "off":
+            return 0
         if self.allData.get("game", {}).get("live"):
             return self.allData["game"]["live"].game.game_status_text.strip()
         elif len(self.allData.get("todayMyGames", [])):
@@ -2739,10 +3169,39 @@ class Bot(object):
                     if self.threadCache.get("tailgate", {}).get("thread")
                     else None,
                 },
+                "offThread": {
+                    "enabled": self.settings.get("Off Day Thread", {}).get(
+                        "ENABLED", True
+                    ),
+                    "postTime": self.threadCache.get("off", {})
+                    .get("postTime_local")
+                    .strftime("%m/%d/%Y %I:%M:%S %p")
+                    if isinstance(
+                        self.threadCache.get("off", {}).get("postTime_local"),
+                        datetime,
+                    )
+                    else "",
+                    "posted": True
+                    if self.threadCache.get("off", {}).get("thread")
+                    else False,
+                    "id": self.threadCache.get("off", {}).get("thread").id
+                    if self.threadCache.get("off", {}).get("thread")
+                    else None,
+                    "url": self.threadCache.get("off", {}).get("thread").shortlink
+                    if self.threadCache.get("off", {}).get("thread")
+                    else None,
+                    "title": self.threadCache.get("off", {}).get("title")
+                    if self.threadCache.get("off", {}).get("thread")
+                    else None,
+                },
                 "game": {
-                    "gameId": self.allData.get("game_id"),
+                    "gameId": self.allData.get("game_id")
+                    if self.allData.get("game_id") != "off"
+                    else None,
                     "status": self.game_status(),
-                    "oppTeam": deepcopy(self.allData.get("oppTeam")),
+                    "oppTeam": deepcopy(self.allData.get("oppTeam"))
+                    if self.allData.get("oppTeam")
+                    else None,
                     "homeAway": self.allData.get("homeAway"),
                     "gameTime": self.allData["gameTime"]["myTeam"].strftime(
                         "%I:%M %p %Z"
@@ -2915,6 +3374,39 @@ class Bot(object):
                 botStatus["summary"]["text"] += "\n\nNo game today."
                 botStatus["summary"]["html"] += "<br /><br />No game today."
                 botStatus["summary"]["markdown"] += "\n\nNo game today."
+
+                if not botStatus["offThread"]["enabled"]:
+                    # Off Day thread is disabled
+                    botStatus["summary"]["text"] += "\n\nOff Day thread disabled."
+                    botStatus["summary"][
+                        "html"
+                    ] += "<br /><br /><strong>Off Day thread</strong> disabled."
+                    botStatus["summary"][
+                        "markdown"
+                    ] += "\n\n**Off Day thread** disabled."
+                else:
+                    if not botStatus["offThread"]["posted"]:
+                        # Thread is not posted (could be error)
+                        botStatus["summary"][
+                            "text"
+                        ] += f"\n\nOff Day thread post time: {botStatus['offThread']['postTime']}"
+                        botStatus["summary"][
+                            "html"
+                        ] += f"<br /><br /><strong>Off Day thread</strong> post time: {botStatus['offThread']['postTime']}"
+                        botStatus["summary"][
+                            "markdown"
+                        ] += f"\n\n**Off Day thread** post time: {botStatus['offThread']['postTime']}"
+                    else:
+                        # Thread is posted
+                        botStatus["summary"][
+                            "text"
+                        ] += f"\n\nOff Day thread: {botStatus['offThread']['title']} ({botStatus['offThread']['id']} - {botStatus['offThread']['url']})"
+                        botStatus["summary"][
+                            "html"
+                        ] += f"<br /><br /><strong>Off Day thread</strong>: {botStatus['offThread']['title']} (<a href=\"{botStatus['offThread']['url']}\" target=\"_blank\">{botStatus['offThread']['id']}</a>)"
+                        botStatus["summary"][
+                            "markdown"
+                        ] += f"\n\n**Off Day thread**: {botStatus['offThread']['title']} ([{botStatus['offThread']['id']}]({botStatus['offThread']['url']}))"
 
             botStatus["summary"]["text"] += "\n\nLast Updated: {}".format(
                 botStatus["lastUpdated"]

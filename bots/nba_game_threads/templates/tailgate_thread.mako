@@ -1,5 +1,4 @@
 <%
-    prefix = settings.get("Tailgate Thread", {}).get("TITLE_PREFIX","Tailgate Thread:")
     home_team_record = f" ({data['game']['summary'].box_score_summary.home_team.team_wins}-{data['game']['summary'].box_score_summary.home_team.team_losses})"
     away_team_record = f" ({data['game']['summary'].box_score_summary.away_team.team_wins}-{data['game']['summary'].box_score_summary.away_team.team_losses})"
 %>\
@@ -17,9 +16,21 @@ ${'##'} [${data["game"]["summary"].box_score_summary.away_team.team_city} ${data
 
 <%include file="pregame_charts.mako" />
 
-<%include file="standings.mako" />
+% if settings.get("Tailgate Thread", {}).get("STANDINGS_TYPE","Conference") == "Division":
+<%include file="division_standings.mako" args="num_to_show=settings.get('Tailgate Thread',{}).get('STANDINGS_NUM_TO_SHOW', 8)" />
+% elif settings.get("Tailgate Thread", {}).get("STANDINGS_TYPE","Conference") == "Conference":
+<%include file="conference_standings.mako" args="num_to_show=settings.get('Tailgate Thread',{}).get('STANDINGS_NUM_TO_SHOW', 8)" />
+% elif settings.get("Tailgate Thread", {}).get("STANDINGS_TYPE","Conference") == "League":
+<%include file="league_standings.mako" args="num_to_show=settings.get('Tailgate Thread',{}).get('STANDINGS_NUM_TO_SHOW', 8)" />
+% endif
 
+% if settings.get("Tailgate Thread", {}).get("SCOREBOARD_TYPE","Conference") == "Division":
 <%include file="division_scoreboard.mako" />
+% elif settings.get("Tailgate Thread", {}).get("SCOREBOARD_TYPE","Conference") == "Conference":
+<%include file="conference_scoreboard.mako" />
+% elif settings.get("Tailgate Thread", {}).get("SCOREBOARD_TYPE","Conference") == "League":
+<%include file="league_scoreboard.mako" />
+% endif
 
 ## Configurable footer text
 ${settings.get('Tailgate Thread',{}).get('FOOTER','')}

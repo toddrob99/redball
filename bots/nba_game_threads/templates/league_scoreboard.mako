@@ -4,11 +4,11 @@
     def subLink(t):
         return f"[{t.team_city} {t.team_name}]({data['teamSubs'].get(t.team_tricode, '')})"
 %>\
-% if len(data["todayOtherDivisionGames"]):
-${'##'} ${data["myTeam"].team_info.team_division} Division Scoreboard
+% if len(data["todayAllOtherGames"]):
+${'##'} League Scoreboard
 |Away|Score|Home|Status|
 |--:|:-:|:--|:--|
-% for game in data["todayOtherDivisionGames"]:
+% for game in data["todayAllOtherGames"]:
 <%
     if game.game_status > 1:
         s = f"{game.away_team.score}-{game.home_team.score}"
@@ -17,4 +17,4 @@ ${'##'} ${data["myTeam"].team_info.team_division} Division Scoreboard
 %>\
 |${subLink(game.away_team)}|${s}|${subLink(game.home_team)}|${game.game_status_text.strip()}|
 % endfor
-% endif  # if len(divGames)
+% endif
