@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 DATA_LOCK = threading.Lock()
 
@@ -2410,9 +2410,10 @@ class Bot(object):
             else ""
         )
         self.log.debug(f"templateFilename: {templateFilename}")
+        text = ""
         try:
             template = self.LOOKUP.get_template(templateFilename)
-            return template.render(**kwargs)
+            text = template.render(**kwargs)
         except Exception:
             self.log.error(
                 "Error rendering template [{}] for {} {}. Falling back to default template. Error: {}".format(
@@ -2429,7 +2430,7 @@ class Bot(object):
                 template = self.LOOKUP.get_template(
                     "{}_{}.mako".format(thread, templateType)
                 )
-                return template.render(**kwargs)
+                text = template.render(**kwargs)
             except Exception:
                 self.log.error(
                     "Error rendering default template for thread [{}] and type [{}]: {}".format(
@@ -2442,7 +2443,11 @@ class Bot(object):
                     f"Error rendering default {thread} {templateType} template [{template.filename}]"
                 )
 
-        return ""
+        if self.settings.get("Bot", {}).get("NO_CAPS_AGAINST_CAPS") and self.allData.get("oppTeam", {}).get("teamName") == "Capitals":
+            self.log.debug("no caps!")
+            text = text.lower()
+
+        return text
 
     def sticky_thread(self, thread):
         self.log.info("Stickying thread [{}]...".format(thread.id))
