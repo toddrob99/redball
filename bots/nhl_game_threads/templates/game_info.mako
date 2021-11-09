@@ -7,34 +7,25 @@
     awayRadio = [x for x in data['todayGames'][0].get('radioBroadcasts', []) if x.get('type')=='away']
     homeTv = [x for x in data['todayGames'][0].get('broadcasts', []) if x.get('type')=='home']
     homeRadio = [x for x in data['todayGames'][0].get('radioBroadcasts', []) if x.get('type')=='home']
+    nationalTv = [x for x in data['todayGames'][0].get('broadcasts', []) if x.get('type')=='national']
+    nationalRadio = [x for x in data['todayGames'][0].get('radioBroadcasts', []) if x.get('type')=='home']
 %>\
 * TV: \
 <%
     tv = ''
     flag = False
-    if len(awayTv):
-        if flag: tv += ', '
-        flag = True
-        tv += '**{}**:'.format(data["game"]["gameData"]["teams"]["away"]["teamName"])
-        used = []
-        while len(awayTv):
-            r = awayTv.pop()
-            if r['name'] not in used:
-                tv += ' {}{}'.format(r['name'],' (' + r['language'] + ')' if r.get('language', 'en')!='en' else '')
-                used.append(r['name'])
-                if len(awayTv) and awayTv[0]['name'] not in used: tv += ','
-
-    if len(homeTv):
-        if flag: tv += ', '
-        flag = None
-        tv += '**{}**:'.format(data["game"]["gameData"]["teams"]["home"]["teamName"])
-        used = []
-        while len(homeTv):
-            r = homeTv.pop()
-            if r['name'] not in used:
-                tv += ' {}{}'.format(r['name'],' (' + r['language'] + ')' if r.get('language', 'en')!='en' else '')
-                used.append(r['name'])
-                if len(homeTv) and homeTv[0]['name'] not in used: tv += ','
+    for info in [(nationalTv, "National"), (awayTv, data["game"]["gameData"]["teams"]["away"]["teamName"]), (homeTv, data["game"]["gameData"]["teams"]["home"]["teamName"])]:
+        if len(info[0]):
+            if flag: tv += ', '
+            flag = True
+            tv += '**{}**:'.format(info[1])
+            used = []
+            while len(info[0]):
+                r = info[0].pop()
+                if r['name'] not in used:
+                    tv += ' {}{}'.format(r['name'],' (' + r['language'] + ')' if r.get('language', 'en')!='en' else '')
+                    used.append(r['name'])
+                    if len(info[0]) and info[0][0]['name'] not in used: tv += ','
 
     if tv == '': tv = 'None'
 %>\

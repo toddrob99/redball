@@ -24,7 +24,6 @@
     ) if data["todayGames"][0]["teams"][oppHomeAway].get("leagueRecord") else ""
 %>\
 ## Visiting Team
-## Visiting Team
 ${'##'} [${data["game"]["gameData"]["teams"]["away"]["name"]}](${data["teamSubs"][data["game"]["gameData"]["teams"]["away"]["abbreviation"]]})${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
 @ \
 ## Home Team

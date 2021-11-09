@@ -36,7 +36,7 @@ ${'##'} [${data["game"]["gameData"]["teams"]["away"]["name"]}](${data["teamSubs"
 %if data["game"]["gameData"]["status"]["abstractGameState"] == "Live":
 ${'##'} Game Status - \
 %   if data["game"]["liveData"]["linescore"]["hasShootout"]:
-Shootout! ${data["game"]["gameData"]["teams"]["away"]["teamName"]}: ${data["game"]["liveData"]["linescore"]["shootoutInfo"]["away"]["scores"]}/${data["game"]["liveData"]["linescore"]["shootoutInfo"]["away"]["attempts"]}, ${data["game"]["gameData"]["teams"]["home"]["teamName"]}: ${data["game"]["liveData"]["linescore"]["shootoutInfo"]["home"]["scores"]}/${data["game"]["liveData"]["linescore"]["shootoutInfo"]["home"]["attempts"]}}
+Shootout! ${data["game"]["gameData"]["teams"]["away"]["teamName"]}: ${data["game"]["liveData"]["linescore"]["shootoutInfo"]["away"]["scores"]}/${data["game"]["liveData"]["linescore"]["shootoutInfo"]["away"]["attempts"]}, ${data["game"]["gameData"]["teams"]["home"]["teamName"]}: ${data["game"]["liveData"]["linescore"]["shootoutInfo"]["home"]["scores"]}/${data["game"]["liveData"]["linescore"]["shootoutInfo"]["home"]["attempts"]}
 %   elif data["game"]["liveData"]["linescore"]["intermissionInfo"].get("inIntermission"):
 Intermission, ${str(timedelta(seconds=int(data["game"]["liveData"]["linescore"]["intermissionInfo"]["intermissionTimeRemaining"])))[-5:]} Remaining
 %   else:
@@ -81,10 +81,9 @@ ${data["oppTeam"]["teamName"]}
 %if data["game"]["gameData"]["status"]["abstractGameState"] == "Preview":
 <%include file="skaters.mako" />
 
-
+%endif
 <%include file="scratches.mako" />
 
-%endif
 %if data["game"]["gameData"]["status"]["abstractGameState"] in ["Live", "Final"]:
 <%include file="game_stats.mako" />
 
