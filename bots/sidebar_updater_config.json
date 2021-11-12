@@ -1,0 +1,415 @@
+{
+    "Logging": [
+        {
+            "key": "CONSOLE_LOG_LEVEL",
+            "description": "Console Log Level",
+            "type": "str",
+            "val": "INFO",
+            "options": [
+                "DEBUG",
+                "INFO",
+                "WARNING",
+                "ERROR"
+            ],
+            "subkeys": [],
+            "parent_key": "LOG_TO_CONSOLE"
+        },
+        {
+            "key": "FILE_LOG_LEVEL",
+            "description": "File Log Level",
+            "type": "str",
+            "val": "DEBUG",
+            "options": [
+                "DEBUG",
+                "INFO",
+                "WARNING",
+                "ERROR"
+            ],
+            "subkeys": [],
+            "parent_key": "LOG_TO_FILE"
+        },
+        {
+            "key": "LOG_TO_CONSOLE",
+            "description": "Log to Console",
+            "type": "bool",
+            "val": true,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [
+                "CONSOLE_LOG_LEVEL"
+            ],
+            "parent_key": ""
+        },
+        {
+            "key": "LOG_TO_FILE",
+            "description": "Log to File",
+            "type": "bool",
+            "val": true,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [
+                "FILE_LOG_LEVEL",
+                "LOG_RETENTION"
+            ],
+            "parent_key": ""
+        },
+        {
+            "key": "LOG_RETENTION",
+            "description": "Log File Retention (Days)",
+            "type": "int",
+            "val": 7,
+            "options": [],
+            "subkeys": [],
+            "parent_key": "LOG_TO_FILE"
+        },
+        {
+            "key": "PROPAGATE",
+            "description": "Propagate Logs",
+            "type": "bool",
+            "val": false,
+            "options": [true, false],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ],
+    "MLB": [
+        {
+            "key": "TEAM",
+            "description": "My Team",
+            "type": "str",
+            "val": "",
+            "options": [
+                "",
+                "Arizona Diamondbacks|109",
+                "Atlanta Braves|144",
+                "Baltimore Orioles|110",
+                "Boston Red Sox|111",
+                "Chicago Cubs|112",
+                "Chicago White Sox|145",
+                "Cincinnati Reds|113",
+                "Cleveland Indians|114",
+                "Colorado Rockies|115",
+                "Detroit Tigers|116",
+                "Houston Astros|117",
+                "Kansas City Royals|118",
+                "Los Angeles Angels|108",
+                "Los Angeles Dodgers|119",
+                "Miami Marlins|146",
+                "Milwaukee Brewers|158",
+                "Minnesota Twins|142",
+                "New York Mets|121",
+                "New York Yankees|147",
+                "Oakland Athletics|133",
+                "Philadelphia Phillies|143",
+                "Pittsburgh Pirates|134",
+                "San Diego Padres|135",
+                "San Francisco Giants|137",
+                "Seattle Mariners|136",
+                "St. Louis Cardinals|138",
+                "Tampa Bay Rays|139",
+                "Texas Rangers|140",
+                "Toronto Blue Jays|141",
+                "Washington Nationals|120",
+                "American League All-Stars|159",
+                "National League All-Stars|160"
+            ],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ],
+    "NBA": [
+        {
+            "key": "TEAM",
+            "description": "My Team",
+            "type": "str",
+            "val": "",
+            "options": [
+                "",
+                "Atlanta Hawks|1610612737",
+                "Boston Celtics|1610612738",
+                "Brooklyn Nets|1610612751",
+                "Charlotte Hornets|1610612766",
+                "Chicago Bulls|1610612741",
+                "Cleveland Cavaliers|1610612739",
+                "Dallas Mavericks|1610612742",
+                "Denver Nuggets|1610612743",
+                "Detroit Pistons|1610612765",
+                "Golden State Warriors|1610612744",
+                "Houston Rockets|1610612745",
+                "Indiana Pacers|1610612754",
+                "LA Clippers|1610612746",
+                "Los Angeles Lakers|1610612747",
+                "Memphis Grizzlies|1610612763",
+                "Miami Heat|1610612748",
+                "Milwaukee Bucks|1610612749",
+                "Minnesota Timberwolves|1610612750",
+                "New Orleans Pelicans|1610612740",
+                "New York Knicks|1610612752",
+                "Oklahoma City Thunder|1610612760",
+                "Orlando Magic|1610612753",
+                "Philadelphia 76ers|1610612755",
+                "Phoenix Suns|1610612756",
+                "Portland Trail Blazers|1610612757",
+                "Sacramento Kings|1610612758",
+                "San Antonio Spurs|1610612759",
+                "Toronto Raptors|1610612761",
+                "Utah Jazz|1610612762",
+                "Washington Wizards|1610612764"
+            ],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ],
+    "NFL": [
+        {
+            "key": "TEAM",
+            "description": "My Team",
+            "type": "str",
+            "val": "",
+            "options": [
+                "",
+                "Arizona Cardinals|ARI",
+                "Atlanta Falcons|ATL",
+                "Baltimore Ravens|BAL",
+                "Buffalo Bills|BUF",
+                "Carolina Panthers|CAR",
+                "Chicago Bears|CHI",
+                "Cincinnati Bengals|CIN",
+                "Cleveland Browns|CLE",
+                "Dallas Cowboys|DAL",
+                "Denver Broncos|DEN",
+                "Detroit Lions|DET",
+                "Green Bay Packers|GB",
+                "Houston Texans|HOU",
+                "Indianapolis Colts|IND",
+                "Jacksonville Jaguars|JAX",
+                "Kansas City Chiefs|KC",
+                "Los Angeles Rams|LA",
+                "Los Angeles Chargers|LAC",
+                "Las Vegas Raiders|LV",
+                "Miami Dolphins|MIA",
+                "Minnesota Vikings|MIN",
+                "New England Patriots|NE",
+                "New Orleans Saints|NO",
+                "New York Giants|NYG",
+                "New York Jets|NYJ",
+                "Philadelphia Eagles|PHI",
+                "Pittsburgh Steelers|PIT",
+                "Seattle Seahawks|SEA",
+                "San Francisco 49ers|SF",
+                "Tampa Bay Buccaneers|TB",
+                "Tennessee Titans|TEN",
+                "Washington Football Team|WAS",
+                "AFC Pro Bowl Team|AFC",
+                "NFC Pro Bowl Team|NFC"
+            ],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ],
+    "NHL": [
+        {
+            "key": "TEAM",
+            "description": "My Team",
+            "type": "str",
+            "val": "",
+            "options": [
+                "",
+                "Anaheim Ducks|24",
+                "Arizona Coyotes|53",
+                "Boston Bruins|6",
+                "Buffalo Sabres|7",
+                "Calgary Flames|20",
+                "Carolina Hurricanes|12",
+                "Chicago Blackhawks|16",
+                "Colorado Avalanche|21",
+                "Columbus Blue Jackets|29",
+                "Dallas Stars|25",
+                "Detroit Red Wings|17",
+                "Edmonton Oilers|22",
+                "Florida Panthers|13",
+                "Los Angeles Kings|26",
+                "Minnesota Wild|30",
+                "Montréal Canadiens|8",
+                "Nashville Predators|18",
+                "New Jersey Devils|1",
+                "New York Islanders|2",
+                "New York Rangers|3",
+                "Ottawa Senators|9",
+                "Philadelphia Flyers|4",
+                "Pittsburgh Penguins|5",
+                "San Jose Sharks|28",
+                "Seattle Kraken|55",
+                "St. Louis Blues|19",
+                "Tampa Bay Lightning|14",
+                "Toronto Maple Leafs|10",
+                "Vancouver Canucks|23",
+                "Vegas Golden Knights|54",
+                "Washington Capitals|15",
+                "Winnipeg Jets|52"
+            ],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ],
+    "New Reddit": [
+        {
+            "key": "STANDINGS_ENABLED",
+            "description": "Enable updating of new reddit sidebar widget for Standings.",
+            "type": "bool",
+            "val": false,
+            "options": [true, false],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "STANDINGS_NUM_TO_SHOW",
+            "description": "Maximum number of teams to show in the standings.",
+            "type": "int",
+            "val": 99,
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "STANDINGS_TEMPLATE",
+            "description": "Filename of custom template to use for standings data (leave blank for default: <sport>_standings.mako).",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "STANDINGS_WIDGET_BG_COLOR",
+            "description": "Hex code for sidebar widget background color. Only used if widget has to be created by the bot.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "STANDINGS_WIDGET_HEADER_COLOR",
+            "description": "Hex code for sidebar widget header color. Only used if widget has to be created by the bot.",
+            "type": "str",
+            "val": "#014980",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "STANDINGS_WIDGET_NAME",
+            "description": "Name of sidebar widget to update with standings data. Default: 'Standings'",
+            "type": "str",
+            "val": "Standings",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        }
+    ],
+    "Old Reddit": [
+        {
+            "key": "STANDINGS_ENABLED",
+            "description": "Enable updating of standings data in old reddit sidebar wiki.",
+            "type": "bool",
+            "val": false,
+            "options": [true, false],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "STANDINGS_NUM_TO_SHOW",
+            "description": "Maximum number of teams to show in the standings.",
+            "type": "int",
+            "val": 99,
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "STANDINGS_TEMPLATE",
+            "description": "Filename of custom template to use for standings data (leave blank for default: <sport>_standings.mako).",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        }
+    ],
+    "Bot": [
+        {
+            "key": "TEMPLATE_PATH",
+            "description": "Path where custom templates are stored (defaults to the same path as the standard templates).",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "SPORT",
+            "description": "Sport to use for the data source. Configure additional settings in the <SPORT> section.",
+            "type": "str",
+            "val": "",
+            "options": [
+                "",
+                "MLB",
+                "NBA",
+                "NFL",
+                "NHL"
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "SUBREDDIT",
+            "description": "Subreddit to update.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "UPDATE_INTERVAL",
+            "description": "Number of minutes between sidebar updates.",
+            "type": "int",
+            "val": 60,
+            "options": [],
+            "subkeys": [],
+            "parent_key": null
+        }
+    ],
+    "Prowl" : [
+        {
+            "key": "ERROR_API_KEY",
+            "description": "API Key for sending error notifications to Prowl.",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": ["ERROR_PRIORITY"],
+            "parent_key": ""
+        },
+        {
+            "key": "ERROR_PRIORITY",
+            "description": "Priority when sending error notifications to Prowl (leave blank to disable).",
+            "type": "str",
+            "val": "",
+            "options": [
+                "",
+                "-2",
+                "-1",
+                "0",
+                "1",
+                "2"
+            ],
+            "subkeys": [],
+            "parent_key": "ERROR_API_KEY"
+        }
+    ]
+}

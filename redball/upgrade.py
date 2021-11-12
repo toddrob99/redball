@@ -424,4 +424,15 @@ upgradeScripts = {
             time.time()
         ),
     ],
+    12: [
+        # Add Sidebar Updater bot type
+        """INSERT OR IGNORE INTO rb_botTypes (name, description, moduleName)
+            VALUES
+            ('sidebar-updater', 'Sidebar Updater', 'sidebar_updater')
+        ;""",
+        # Update DB version to 11
+        "UPDATE rb_meta SET val='12', lastUpdate='{}' WHERE key='dbVersion';".format(
+            time.time()
+        ),
+    ],
 }
