@@ -27,7 +27,7 @@ from ..nba_game_threads import pynbaapi
 from ..nhl_game_threads import pynhlapi
 from ..nfl_game_threads import mynflapi
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 def run(bot, settings):
@@ -371,10 +371,12 @@ class SidebarUpdaterBot:
                 "Standings text is blank, skipping widget update/creation."
             )
             return
+        subreddit_widgets = self.subreddit.widgets
+        subreddit_widgets.refresh()
         standings_widget = next(
             (
                 x
-                for x in self.subreddit.widgets.sidebar
+                for x in subreddit_widgets.sidebar
                 if x.shortName == standings_widget_name
             ),
             None,
@@ -385,6 +387,7 @@ class SidebarUpdaterBot:
             )
             try:
                 standings_widget.mod.update(text=standings_text)
+                self.log.debug("Finished updating new reddit.")
             except Exception as e:
                 self.log.error(f"Error updating standings widget: {e}")
         else:
@@ -403,6 +406,7 @@ class SidebarUpdaterBot:
                     ),
                 },
             )
+            self.log.debug("Finished updating new reddit (created new widget).")
 
     def update_old_reddit_standings(
         self, my_team, standings, team_subs, all_teams, current_week=None
@@ -439,6 +443,7 @@ class SidebarUpdaterBot:
             new_sidebar_text = f"{full_sidebar_text}\n\n{standings_text}"
         try:
             wiki_page.edit(content=new_sidebar_text, reason="Standings")
+            self.log.debug("Finished updating old reddit.")
         except Exception as e:
             self.log.error(f"Error updating old reddit sidebar wiki: {e}")
 
