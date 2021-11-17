@@ -27,7 +27,7 @@ from ..nba_game_threads import pynbaapi
 from ..nhl_game_threads import pynhlapi
 from ..nfl_game_threads import mynflapi
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 
 def run(bot, settings):
@@ -608,8 +608,8 @@ class SidebarUpdaterBot:
 
     nba_team_subs = {
         1610612737: "/r/atlantahawks",
-        1610612738: "/r/gonets",
-        1610612751: "/r/bostonceltics",
+        1610612751: "/r/gonets",
+        1610612738: "/r/bostonceltics",
         1610612766: "/r/charlottehornets",
         1610612741: "/r/chicagobulls",
         1610612739: "/r/clevelandcavs",

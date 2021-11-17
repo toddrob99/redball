@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 DATA_LOCK = threading.Lock()
 
@@ -3069,8 +3069,8 @@ class Bot(object):
 
     teamSubsById = {
         1610612737: "/r/atlantahawks",
-        1610612738: "/r/gonets",
-        1610612751: "/r/bostonceltics",
+        1610612751: "/r/gonets",
+        1610612738: "/r/bostonceltics",
         1610612766: "/r/charlottehornets",
         1610612741: "/r/chicagobulls",
         1610612739: "/r/clevelandcavs",
