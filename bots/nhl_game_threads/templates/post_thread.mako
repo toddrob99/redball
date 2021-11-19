@@ -1,6 +1,7 @@
 <%
     result = (
-        "tie" if data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"] == data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]
+        "postponed" if data["game"]["gameData"]["status"]["statusCode"] == "9"
+        else "tie" if data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"] == data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]
         else "win" if (
             data["homeAway"] == "home" and data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"] > data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"]
             or data["homeAway"] == "away" and data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"] > data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]
@@ -29,7 +30,9 @@ ${'##'} [${data["game"]["gameData"]["teams"]["away"]["name"]}](${data["teamSubs"
 ## Home Team
 [${data["game"]["gameData"]["teams"]["home"]["name"]}](${data["teamSubs"][data["game"]["gameData"]["teams"]["home"]["abbreviation"]]})${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
 
-%if result != "":
+%if result == "postponed":
+${'##'} Game Status: Postponed
+%elif result != "":
 ${'##'} Final${f'/{data["game"]["liveData"]["linescore"]["currentPeriodOrdinal"]}' if data["game"]["liveData"]["linescore"]["currentPeriod"] > 3 else ""}: \
 ${max(int(data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"]), int(data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]))}\
 -\
@@ -47,14 +50,16 @@ ${data["oppTeam"]["teamName"]}
 <%include file="decisions.mako" />
 %endif
 
+%if result != "postponed":
 <%include file="linescore.mako" />
-
-<%include file="game_stats.mako" />
 
 <%include file="scoring_summary.mako" />
 
 <%include file="penalties.mako" />
 
+<%include file="game_stats.mako" />
+
+%endif
 <%include file="standings.mako" />
 
 <%include file="division_scoreboard.mako" />

@@ -23,7 +23,10 @@ ${'##'} ${data["myTeam"]["division"]["nameShort"]} Division Scoreboard
     toTz = pytz.timezone(settings.get("Bot", {}).get("TEAM_TIMEZONE", "America/New_York"))
     formattedGameTime = dt.astimezone(toTz).strftime("%I:%M %p")
 %>\
-% if game["status"]["abstractGameState"] == "Final":
+% if game["status"]["statusCode"] == "9":
+${next((subLink(t) for t in data["allTeams"] if t["id"] == game["teams"]["away"]["team"]["id"]), "Unknown Team")} @ \
+${next((subLink(t) for t in data["allTeams"] if t["id"] == game["teams"]["home"]["team"]["id"]), "Unknown Team")} - PPD
+% elif game["status"]["abstractGameState"] == "Final":
 ${next((subLink(t) for t in data["allTeams"] if t["id"] == game["teams"]["away"]["team"]["id"]), "Unknown Team")} (${game["teams"]["away"]["score"]}) @ \
 (${game["teams"]["home"]["score"]}) ${next((subLink(t) for t in data["allTeams"] if t["id"] == game["teams"]["home"]["team"]["id"]), "Unknown Team")} - Final
 % elif game["status"]["abstractGameState"] == "Live":

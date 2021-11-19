@@ -1,5 +1,9 @@
+% if data["game"]["gameData"]["status"]["statusCode"] == "9":
+* Game Time: POSTPONED
+% else:
 ## Date/Time
 * Game Time: ${data["gameTime"]["myTeam"].strftime(settings.get("Game Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y @ %I:%M %p %Z"))}
+% endif
 ## Venue
 * Venue: ${data["game"]["gameData"].get("venue", {}).get("name")}
 <%

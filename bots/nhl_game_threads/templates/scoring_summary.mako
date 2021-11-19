@@ -25,12 +25,12 @@ ${'##'} Scoring Summary
 |${f"{p['about']['ordinalNum']}{(' ' + p['about']['periodTime']) if p['about']['periodType'] != 'SHOOTOUT' else ''}"}|\
 [${p['team']['triCode']}](${data['teamSubsById'].get(p['team']['id'], '')})|\
 ${f"{p['result']['strength']['code']} - " if p['result']['strength']['code'] != 'EVEN' else ''}\
-${f"Empty Net - " if p['result']['emptyNet'] else ''}\
+${f"Empty Net - " if p['result'].get('emptyNet') else ''}\
 [${p['result']['description']}](${hdLink})|\
 %       if p['about']['periodType'] != "SHOOTOUT":
 ${str(max(p['about']['goals']['away'],p['about']['goals']['home']))+'-'+str(min(p['about']['goals']['away'],p['about']['goals']['home']))}${(' ' + data['game']['gameData']['teams']['away']['abbreviation'] if p['about']['goals']['away'] > p['about']['goals']['home'] else ' ' + data['game']['gameData']['teams']['home']['abbreviation']) if p['about']['goals']['away']!=p['about']['goals']['home'] else ''}\
 %       else:
-SHOOTOUT\
+SO\
 %       endif
 |
 %   endfor

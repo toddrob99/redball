@@ -1,7 +1,8 @@
 <%
     prefix = settings.get("Post Game Thread", {}).get("TITLE_PREFIX","Post Game Thread:")
     result = (
-        "tie" if data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"] == data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]
+        "postponed" if data["game"]["gameData"]["status"]["statusCode"] == "9"
+        else "tie" if data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"] == data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]
         else "win" if (
             data["homeAway"] == "home" and data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"] > data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"]
             or data["homeAway"] == "away" and data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"] > data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]
@@ -29,6 +30,8 @@ defeated the \
 %elif result == "loss":
 ## LOSS
 fell to the \
+%elif result == "postponed":
+will have to wait to play the \
 %else:
 ## EXCEPTION
 were supposed to play the \
@@ -51,5 +54,10 @@ with a final score of ${maxScore} to ${minScore} \
 ## EXCEPTION
 %endif
 - \
+% if data["game"]["gameData"]["status"]["statusCode"] == "9":
+## Postponed
+POSTPONED
+% else:
 ## Date/Time
 ${data["gameTime"]["myTeam"].strftime(settings.get("Post Game Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y @ %I:%M %p %Z"))}
+% endif

@@ -18,5 +18,10 @@ ${data["game"]["gameData"]["teams"]["away"]["name"]}${myTeamRecord if data["home
 ## Home Team
 ${data["game"]["gameData"]["teams"]["home"]["name"]}${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord} \
 - \
+% if data["game"]["gameData"]["status"]["statusCode"] == "9":
+## Postponed
+POSTPONED
+% else:
 ## Date/Time
 ${data["gameTime"]["myTeam"].strftime(settings.get("Game Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y @ %I:%M %p %Z"))}
+% endif

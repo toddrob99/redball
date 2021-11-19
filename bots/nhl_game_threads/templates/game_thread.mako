@@ -13,6 +13,8 @@
             )
             else ""
         )
+    elif data["game"]["gameData"]["status"]["statusCode"] == "9":
+        result = "postponed"
     else:
         result = None
     oppHomeAway = "away" if data["homeAway"] == "home" else "home"
@@ -54,6 +56,8 @@ ${data["game"]["liveData"]["linescore"]["currentPeriodOrdinal"]}${' Period' if d
 %   endif
 % endif
 
+%elif result == "postponed":
+${'##'} Game Status: Postponed
 %elif result:
 ${'##'} Final${f'/{data["game"]["liveData"]["linescore"]["currentPeriodOrdinal"]}' if data["game"]["liveData"]["linescore"]["currentPeriod"] > 3 else ""}: \
 ${max(int(data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"]), int(data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]))}\
@@ -77,21 +81,22 @@ ${data["oppTeam"]["teamName"]}
 ## Only include the line score if the game has already started
 <%include file="linescore.mako" />
 
-%endif
-%if data["game"]["gameData"]["status"]["abstractGameState"] == "Preview":
-<%include file="skaters.mako" />
-
-%endif
-<%include file="scratches.mako" />
-
-%if data["game"]["gameData"]["status"]["abstractGameState"] in ["Live", "Final"]:
-<%include file="game_stats.mako" />
-
-%endif
-%if data["game"]["gameData"]["status"]["abstractGameState"] != "Preview":
 <%include file="scoring_summary.mako" />
 
 <%include file="penalties.mako" />
+
+%endif
+%if data["game"]["gameData"]["status"]["abstractGameState"] == "Preview" and data["game"]["gameData"]["status"]["statusCode"] != "9":
+<%include file="skaters.mako" />
+
+%endif
+%if data["game"]["gameData"]["status"]["statusCode"] != "9":
+<%include file="scratches.mako" />
+
+%endif
+
+%if data["game"]["gameData"]["status"]["abstractGameState"] in ["Live", "Final"]:
+<%include file="game_stats.mako" />
 
 %endif
 <%include file="division_scoreboard.mako" />

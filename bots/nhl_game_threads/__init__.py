@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 DATA_LOCK = threading.Lock()
 
@@ -917,11 +917,14 @@ class Bot(object):
                 if (  # This game is final
                     self.allData["game"]["gameData"]["status"]["abstractGameState"]
                     == "Final"
+                    or self.allData["game"]["gameData"]["status"]["statusCode"]
+                    == "9"  # Postponed
                 ) and not next(  # And all division games are final
                     (
                         True
                         for x in self.allData["todayOtherGames"]
                         if x["status"]["abstractGameState"] != "Final"
+                        and x["status"]["statusCode"] != "9"  # Postponed
                         and any(
                             (
                                 True
@@ -946,11 +949,14 @@ class Bot(object):
                 if (  # This game is final
                     self.allData["game"]["gameData"]["status"]["abstractGameState"]
                     == "Final"
+                    or self.allData["game"]["gameData"]["status"]["statusCode"]
+                    == "9"  # Postponed
                 ) and not next(  # All NHL games are final
                     (
                         True
                         for x in self.allData["todayOtherGames"]
                         if x["status"]["abstractGameState"] != "Final"
+                        and x["status"]["statusCode"] != "9"  # Postponed
                     ),
                     False,
                 ):
@@ -1079,6 +1085,8 @@ class Bot(object):
                 if (
                     self.allData["game"]["gameData"]["status"]["abstractGameState"]
                     == "Final"
+                    or self.allData["game"]["gameData"]["status"]["statusCode"]
+                    == "9"  # Postponed
                 ):
                     if not self.settings.get("Post Game Thread", {}).get(
                         "ENABLED", True
@@ -1280,6 +1288,8 @@ class Bot(object):
                 if (
                     self.allData["game"]["gameData"]["status"]["abstractGameState"]
                     == "Final"
+                    or self.allData["game"]["gameData"]["status"]["statusCode"]
+                    == "9"  # Postponed
                 ):
                     # My team's game is final
                     self.log.info(
@@ -1291,11 +1301,14 @@ class Bot(object):
                 if (  # This game is final
                     self.allData["game"]["gameData"]["status"]["abstractGameState"]
                     == "Final"
+                    or self.allData["game"]["gameData"]["status"]["statusCode"]
+                    == "9"  # Postponed
                 ) and not next(  # And all division games are final
                     (
                         True
                         for x in self.allData["todayOtherGames"]
                         if x["status"]["abstractGameState"] != "Final"
+                        and x["status"]["statusCode"] != "9"  # Postponed
                         and any(
                             (
                                 True
@@ -1320,11 +1333,14 @@ class Bot(object):
                 if (  # This game is final
                     self.allData["game"]["gameData"]["status"]["abstractGameState"]
                     == "Final"
+                    or self.allData["game"]["gameData"]["status"]["statusCode"]
+                    == "9"  # Postponed
                 ) and not next(  # All NHL games are final
                     (
                         True
                         for x in self.allData["todayOtherGames"]
                         if x["status"]["abstractGameState"] != "Final"
+                        and x["status"]["statusCode"] != "9"  # Postponed
                     ),
                     False,
                 ):
@@ -1393,6 +1409,8 @@ class Bot(object):
             if (
                 self.allData["game"]["gameData"]["status"]["abstractGameState"]
                 == "Final"
+                or self.allData["game"]["gameData"]["status"]["statusCode"]
+                == "9"  # Postponed
             ):
                 # Game is over
                 self.log.info(
@@ -1608,11 +1626,14 @@ class Bot(object):
                 if (  # This game is final
                     self.allData["game"]["gameData"]["status"]["abstractGameState"]
                     == "Final"
+                    or self.allData["game"]["gameData"]["status"]["statusCode"]
+                    == "9"  # Postponed
                 ) and not next(  # And all division games are final
                     (
                         True
                         for x in self.allData["todayOtherGames"]
                         if x["status"]["abstractGameState"] != "Final"
+                        and x["status"]["statusCode"] != "9"  # Postponed
                         and any(
                             (
                                 True
@@ -1637,11 +1658,14 @@ class Bot(object):
                 if (  # This game is final
                     self.allData["game"]["gameData"]["status"]["abstractGameState"]
                     == "Final"
+                    or self.allData["game"]["gameData"]["status"]["statusCode"]
+                    == "9"  # Postponed
                 ) and not next(  # All NHL games are final
                     (
                         True
                         for x in self.allData["todayOtherGames"]
                         if x["status"]["abstractGameState"] != "Final"
+                        and x["status"]["statusCode"] != "9"  # Postponed
                     ),
                     False,
                 ):
@@ -2443,7 +2467,10 @@ class Bot(object):
                     f"Error rendering default {thread} {templateType} template [{template.filename}]"
                 )
 
-        if self.settings.get("Bot", {}).get("NO_CAPS_AGAINST_CAPS") and self.allData.get("oppTeam", {}).get("teamName") == "Capitals":
+        if (
+            self.settings.get("Bot", {}).get("NO_CAPS_AGAINST_CAPS")
+            and self.allData.get("oppTeam", {}).get("teamName") == "Capitals"
+        ):
             self.log.debug("no caps!")
             text = text.lower()
 
