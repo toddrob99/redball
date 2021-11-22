@@ -2708,7 +2708,10 @@ class Bot(object):
             )
             self.log.info("Restarted logger with new settings")
 
-        if self.prevSettings["Reddit Auth"] != self.settings["Reddit Auth"]:
+        if (
+            self.prevSettings["Reddit Auth"] != self.settings["Reddit Auth"]
+            or self.prevSettings["Reddit"] != self.settings["Reddit"]
+        ):
             self.log.info(
                 "Detected new Reddit Authorization info. Re-initializing Reddit API..."
             )
