@@ -101,8 +101,8 @@ Venue: ${game["venue"]["name"]}
 <%include file="game_stats.mako" />
 
 <%include file="standings.mako" />
-##
-##<%include file="division_scoreboard.mako" />  ## This is not available because game status is not available in v2 game endpoint
+
+<%include file="division_scoreboard.mako" />
 
 ## Configurable footer text
 ${settings.get('Post Game Thread',{}).get('FOOTER','')}

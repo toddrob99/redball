@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "2.2.4"
+__version__ = "2.2.5"
 
 DATA_LOCK = threading.Lock()
 
@@ -293,6 +293,37 @@ class Bot(object):
             )
             self.log.debug(f"My team's game id for today: {myTeamTodayGameId}")
 
+            otherTodayGamesDetails = {}
+            for g in [g for g in todayGames if g["id"] != myTeamTodayGameId]:
+                try:
+                    g_did = next(
+                        (
+                            x["id"]
+                            for x in g["externalIds"]
+                            if x["source"] == "gamedetail"
+                        ),
+                        0,
+                    )
+                    g_details = self.nfl.shieldQuery(
+                        f"query%7Bviewer%7BgameDetail(id%3A%22{g_did}%22)%7Bid%20attendance%20distance%20down%20gameClock%20goalToGo%20homePointsOvertime%20homePointsTotal%20homePointsQ1%20homePointsQ2%20homePointsQ3%20homePointsQ4%20homeTeam%7Babbreviation%20nickName%7DhomeTimeoutsUsed%20homeTimeoutsRemaining%20period%20phase%20playReview%20possessionTeam%7Babbreviation%20nickName%7Dredzone%20stadium%20startTime%20visitorPointsOvertime%20visitorPointsOvertimeTotal%20visitorPointsQ1%20visitorPointsQ2%20visitorPointsQ3%20visitorPointsQ4%20visitorPointsTotal%20visitorTeam%7Babbreviation%20nickName%7DvisitorTimeoutsUsed%20visitorTimeoutsRemaining%20homePointsOvertimeTotal%20visitorPointsOvertimeTotal%20possessionTeam%7BnickName%7Dweather%7BcurrentFahrenheit%20location%20longDescription%20shortDescription%20currentRealFeelFahrenheit%7DyardLine%20yardsToGo%7D%7D%7D"
+                    )
+                    g_details = (
+                        g_details.get("data", {})
+                        .get("viewer", {})
+                        .get("gameDetail", {})
+                    )
+                except Exception as e:
+                    if "404" in str(e):
+                        self.log.debug(
+                            f"Game detail id is not active in shield API yet for other today game [{g['id']}]: {e}"
+                        )
+                    else:
+                        self.log.debug(
+                            f"Unknown error retrieving game details for other today game [{g['id']}]: {e}"
+                        )
+                    g_details = {}
+                otherTodayGamesDetails.update({g["id"]: g_details})
+
             # (Re-)Initialize dict to hold game data
             self.allData = {
                 "myTeam": self.myTeam,
@@ -301,6 +332,7 @@ class Bot(object):
                 "todayGames": todayGames,
                 "gameId": myTeamTodayGameId,
                 "otherDivisionTeams": self.otherDivisionTeams,
+                "otherTodayGamesDetails": otherTodayGamesDetails,
             }
             # Initialize vars to hold data about reddit and process threads
             self.stopFlags = {"tailgate": False, "game": False, "post": False}
@@ -985,13 +1017,19 @@ class Bot(object):
                     (
                         True
                         for x in self.allData["todayGames"]
-                        if x["gameStatus"]["phase"] in ["PREGAME", "INGAME", "HALFTIME"]
+                        if self.allData["otherTodayGamesDetails"]
+                        .get(x["id"], {})
+                        .get("PHASE")
+                        in ["PREGAME", "INGAME", "HALFTIME"]
                         and any(
                             (
                                 True
                                 for divTeam in self.otherDivisionTeams
-                                if divTeam["id"]
-                                in [x["awayTeam"]["id"], x["homeTeam"]["id"]]
+                                if divTeam["abbreviation"]
+                                in [
+                                    x["visitorTeam"]["abbreviation"],
+                                    x["homeTeam"]["abbreviation"],
+                                ]
                             )
                         )
                     ),
@@ -1004,11 +1042,17 @@ class Bot(object):
                     self.stopFlags.update({"tailgate": True})
                     break
             elif update_tailgate_thread_until == "All NFL games are final":
-                if not next(  # All NFL games are final
+                if (  # This game is final
+                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
+                ) and not next(  # All NFL games are final
                     (
                         True
                         for x in self.allData["todayGames"]
-                        if x["gameStatus"]["phase"] in ["PREGAME", "INGAME", "HALFTIME"]
+                        if self.allData["otherTodayGamesDetails"]
+                        .get(x["id"], {})
+                        .get("PHASE")
+                        in ["PREGAME", "INGAME", "HALFTIME"]
                     ),
                     False,
                 ):
@@ -1355,13 +1399,19 @@ class Bot(object):
                     (
                         True
                         for x in self.allData["todayGames"]
-                        if x["gameStatus"]["phase"] in ["PREGAME", "INGAME", "HALFTIME"]
+                        if self.allData["otherTodayGamesDetails"]
+                        .get(x["id"], {})
+                        .get("PHASE")
+                        in ["PREGAME", "INGAME", "HALFTIME"]
                         and any(
                             (
                                 True
                                 for divTeam in self.otherDivisionTeams
-                                if divTeam["id"]
-                                in [x["awayTeam"]["id"], x["homeTeam"]["id"]]
+                                if divTeam["abbreviation"]
+                                in [
+                                    x["visitorTeam"]["abbreviation"],
+                                    x["homeTeam"]["abbreviation"],
+                                ]
                             )
                         )
                     ),
@@ -1374,11 +1424,17 @@ class Bot(object):
                     self.stopFlags.update({"game": True})
                     break
             elif update_game_thread_until == "All NFL games are final":
-                if not next(  # All NFL games are final
+                if (  # This game is final
+                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
+                ) and not next(  # All NFL games are final
                     (
                         True
                         for x in self.allData["todayGames"]
-                        if x["gameStatus"]["phase"] in ["PREGAME", "INGAME", "HALFTIME"]
+                        if self.allData["otherTodayGamesDetails"]
+                        .get(x["id"], {})
+                        .get("PHASE")
+                        in ["PREGAME", "INGAME", "HALFTIME"]
                     ),
                     False,
                 ):
@@ -1679,13 +1735,19 @@ class Bot(object):
                     (
                         True
                         for x in self.allData["todayGames"]
-                        if x["gameStatus"]["phase"] in ["PREGAME", "INGAME", "HALFTIME"]
+                        if self.allData["otherTodayGamesDetails"]
+                        .get(x["id"], {})
+                        .get("PHASE")
+                        in ["PREGAME", "INGAME", "HALFTIME"]
                         and any(
                             (
                                 True
                                 for divTeam in self.otherDivisionTeams
-                                if divTeam["id"]
-                                in [x["awayTeam"]["id"], x["homeTeam"]["id"]]
+                                if divTeam["abbreviation"]
+                                in [
+                                    x["visitorTeam"]["abbreviation"],
+                                    x["homeTeam"]["abbreviation"],
+                                ]
                             )
                         )
                     ),
@@ -1698,11 +1760,17 @@ class Bot(object):
                     self.stopFlags.update({"post": True})
                     break
             elif update_postgame_thread_until == "All NFL games are final":
-                if not next(  # All NFL games are final
+                if (  # This game is final
+                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
+                ) and not next(  # All NFL games are final
                     (
                         True
                         for x in self.allData["todayGames"]
-                        if x["gameStatus"]["phase"] in ["PREGAME", "INGAME", "HALFTIME"]
+                        if self.allData["otherTodayGamesDetails"]
+                        .get(x["id"], {})
+                        .get("PHASE")
+                        in ["PREGAME", "INGAME", "HALFTIME"]
                     ),
                     False,
                 ):
@@ -1795,6 +1863,36 @@ class Bot(object):
             self.log.debug(
                 f"self.allData['gameId']: {self.allData['gameId']}; gameDetailId: {gameDetailId}"
             )
+            otherTodayGamesDetails = {}
+            for g in [g for g in todayGames if g["id"] != self.allData["gameId"]]:
+                try:
+                    g_did = next(
+                        (
+                            x["id"]
+                            for x in g["externalIds"]
+                            if x["source"] == "gamedetail"
+                        ),
+                        0,
+                    )
+                    g_details = self.nfl.shieldQuery(
+                        f"query%7Bviewer%7BgameDetail(id%3A%22{g_did}%22)%7Bid%20attendance%20distance%20down%20gameClock%20goalToGo%20homePointsOvertime%20homePointsTotal%20homePointsQ1%20homePointsQ2%20homePointsQ3%20homePointsQ4%20homeTeam%7Babbreviation%20nickName%7DhomeTimeoutsUsed%20homeTimeoutsRemaining%20period%20phase%20playReview%20possessionTeam%7Babbreviation%20nickName%7Dredzone%20stadium%20startTime%20visitorPointsOvertime%20visitorPointsOvertimeTotal%20visitorPointsQ1%20visitorPointsQ2%20visitorPointsQ3%20visitorPointsQ4%20visitorPointsTotal%20visitorTeam%7Babbreviation%20nickName%7DvisitorTimeoutsUsed%20visitorTimeoutsRemaining%20homePointsOvertimeTotal%20visitorPointsOvertimeTotal%20possessionTeam%7BnickName%7Dweather%7BcurrentFahrenheit%20location%20longDescription%20shortDescription%20currentRealFeelFahrenheit%7DyardLine%20yardsToGo%7D%7D%7D"
+                    )
+                    g_details = (
+                        g_details.get("data", {})
+                        .get("viewer", {})
+                        .get("gameDetail", {})
+                    )
+                except Exception as e:
+                    if "404" in str(e):
+                        self.log.debug(
+                            f"Game detail id is not active in shield API yet for other today game [{g['id']}]: {e}"
+                        )
+                    else:
+                        self.log.debug(
+                            f"Unknown error retrieving game details for other today game [{g['id']}]: {e}"
+                        )
+                    g_details = {}
+                otherTodayGamesDetails.update({g["id"]: g_details})
             try:
                 gameDetails = self.nfl.gameDetails(
                     gameDetailId=next(
@@ -1819,6 +1917,7 @@ class Bot(object):
                     "gameDetails": gameDetails.get("data", {})
                     .get("viewer", {})
                     .get("gameDetail", {}),
+                    "otherTodayGamesDetails": otherTodayGamesDetails,
                 }
             )
             gameInsights = self.nfl.gameInsights(gameId=self.allData["gameId"])["data"][

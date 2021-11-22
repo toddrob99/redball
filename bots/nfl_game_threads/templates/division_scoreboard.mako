@@ -21,20 +21,22 @@
         9: "OT5",
         10: "OT6",
     }
-    divGames = [x for x in data["todayGames"] if data["myTeam"]["division"]["abbr"] in [x["visitorTeam"]["division"]["abbr"], x["homeTeam"]["division"]["abbr"]] and data["myTeam"]["id"] not in [x["visitorTeam"]["id"], x["homeTeam"]["id"]]]
+    otherDivisionTeamIds = [divTeam["id"] for divTeam in data["otherDivisionTeams"]]
+    divGames = [x for x in data["todayGames"] if x["awayTeam"]["id"] in otherDivisionTeamIds or x["homeTeam"]["id"] in otherDivisionTeamIds and data["myTeam"]["id"] not in [x["awayTeam"]["id"], x["homeTeam"]["id"]]]
 %>\
 % if len(divGames):
 ${'##'} Division Scoreboard
 % for game in divGames:
 <%
-    dt = datetime.strptime(game["gameTime"], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=pytz.utc)
+    dt = datetime.strptime(game["time"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=pytz.utc)
     toTz = pytz.timezone(settings.get("Bot", {}).get("TEAM_TIMEZONE", "America/New_York"))
     formattedGameTime = dt.astimezone(toTz).strftime("%I:%M %p")
+    gd = data["otherTodayGamesDetails"].get(game["id"], {})
 %>\
-|${qtrDesc[game["gameStatus"]["period"]] if game["gameStatus"]["period"] else ""} ${game["gameStatus"]["gameClock"] if game["gameStatus"]["phase"] == "INGAME" else gameStatusDesc[game["gameStatus"]["phase"]] if game["gameStatus"]["phase"] != "PREGAME" else formattedGameTime}||
+|${qtrDesc[gd["period"]] if gd.get("period") else ""} ${gd["gameClock"] if gd.get("phase") == "INGAME" else gameStatusDesc[gd["phase"]] if gd.get("phase") != "PREGAME" else formattedGameTime}||
 |:--|:--|
-|${game["visitorTeam"]["abbr"]}${" &#127944;" if game["gameStatus"]["period"] and game["gameStatus"]["possessionTeam"] and game["gameStatus"]["possessionTeam"]["abbr"] == game["visitorTeam"]["abbr"] else ""}|${game['visitorTeamScore'].get('pointsTotal', 0) if game["gameStatus"]["phase"] != "PREGAME" else ""}|
-|${game["homeTeam"]["abbr"]}${" &#127944;" if game["gameStatus"]["period"] and game["gameStatus"]["possessionTeam"] and game["gameStatus"]["possessionTeam"]["abbr"] == game["homeTeam"]["abbr"] else ""}|${game['homeTeamScore'].get('pointsTotal', 0) if game["gameStatus"]["phase"] != "PREGAME" else ""}|
+|${gd["visitorTeam"]["abbreviation"]}${" &#127944;" if gd.get("period") and gd.get("possessionTeam") and gd["possessionTeam"]["abbreviation"] == gd["visitorTeam"]["abbreviation"] else ""}|${gd.get('visitorPointsTotal', 0) if gd["phase"] != "PREGAME" else ""}|
+|${gd["homeTeam"]["abbreviation"]}${" &#127944;" if gd.get("period") and gd.get("possessionTeam") and gd["possessionTeam"]["abbreviation"] == gd["homeTeam"]["abbreviation"] else ""}|${gd.get('homePointsTotal', 0) if gd["phase"] != "PREGAME" else ""}|
 
 % endfor
 % endif  # if len(divGames)

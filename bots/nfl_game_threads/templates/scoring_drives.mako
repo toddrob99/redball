@@ -8,20 +8,19 @@
 ${'##'} Scoring Summary
 |Qtr|Team|Type|Description|Score|
 |:--|:--|:--|:--|:--|
-%for x in gameDetails["scoringSummaries"]:
+%   for x in gameDetails["scoringSummaries"]:
 <%
-play = next((p for p in gameDetails["plays"] if p["playId"] == x["playId"] and p["scoringPlay"]), None)
+        play = next((p for p in gameDetails["plays"] if p["playId"] == x["playId"] and p["scoringPlay"]), None)
 %>\
-%if play:
-##* Q${play["quarter"]} ${play["scoringTeam"]["abbreviation"]} ${play["shortDescription"]} - Score: ${max(x["visitorScore"], x["homeScore"])}-${min(x["visitorScore"], x["homeScore"])} \
+%       if play:
 |${play["quarter"]}|${play["scoringTeam"]["abbreviation"]}|${play["scoringPlayType"]}|${x["playDescription"]}|${max(x["visitorScore"], x["homeScore"])}-${min(x["visitorScore"], x["homeScore"])} \
-%if x["visitorScore"] > x["homeScore"]:
+%           if x["visitorScore"] > x["homeScore"]:
 ${awayTeam["abbreviation"]}|
-%elif x["homeScore"] > x["visitorScore"]:
+%           elif x["homeScore"] > x["visitorScore"]:
 ${homeTeam["abbreviation"]}|
-%else:
+%           else:
 |
-%endif
-%endif
-%endfor
+%           endif
+%       endif
+%   endfor
 %endif
