@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 DATA_LOCK = threading.Lock()
 
@@ -899,7 +899,7 @@ class Bot(object):
                     self.error_notification("Error editing off thread")
 
             update_off_thread_until = self.settings.get("Off Day Thread", {}).get(
-                "UPDATE_UNTIL", "Game thread is posted"
+                "UPDATE_UNTIL", "All conference games are final"
             )
             if update_off_thread_until not in [
                 "Do not update",
@@ -908,17 +908,7 @@ class Bot(object):
                 "All NBA games are final",
             ]:
                 # Unsupported value, use default
-                update_off_thread_until = "Game thread is posted"
-
-            if (
-                update_off_thread_until == "Game thread is posted"
-                and not self.settings.get("Game Thread", {}).get("ENABLED", True)
-            ):
-                # Off Day thread UPDATE_UNTIL will never be met
-                self.log.warning(
-                    "Off Day thread set to update until game thread is posted, but game thread is disabled! Off Day thread will not be updated."
-                )
-                update_off_thread_until = "Do not update"
+                update_off_thread_until = "All conference games are final"
 
             if not self.settings.get("Off Day Thread", {}).get("ENABLED", True):
                 # Off Day thread is already posted, but disabled. Don't update it.
@@ -939,7 +929,7 @@ class Bot(object):
                     (
                         True
                         for x in self.allData["todayOtherDivisionGames"]
-                        if x.game_status < 3
+                        if x.game_status < 3 and "PPD" not in x.game_status_text
                     ),
                     False,
                 ):
@@ -954,7 +944,7 @@ class Bot(object):
                     (
                         True
                         for x in self.allData["todayOtherConferenceGames"]
-                        if x.game_status < 3
+                        if x.game_status < 3 and "PPD" not in x.game_status_text
                     ),
                     False,
                 ):
@@ -969,7 +959,7 @@ class Bot(object):
                     (
                         True
                         for x in self.allData["todayAllOtherGames"]
-                        if x.game_status < 3
+                        if x.game_status < 3 and "PPD" not in x.game_status_text
                     ),
                     False,
                 ):
@@ -1253,12 +1243,12 @@ class Bot(object):
                     break
             elif update_tailgate_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.game_status() >= 3
+                    self.game_status() >= 3 or "PPD" in self.game_status_text()
                 ) and not next(  # And all division games are final
                     (
                         True
                         for x in self.allData["todayOtherDivisionGames"]
-                        if x.game_status < 3
+                        if x.game_status < 3 and "PPD" not in x.game_status_text
                     ),
                     False,
                 ):
@@ -1270,12 +1260,12 @@ class Bot(object):
                     break
             elif update_tailgate_thread_until == "All conference games are final":
                 if (  # This game is final
-                    self.game_status() >= 3
+                    self.game_status() >= 3 or "PPD" in self.game_status_text()
                 ) and not next(  # And all conference games are final
                     (
                         True
                         for x in self.allData["todayOtherConferenceGames"]
-                        if x.game_status < 3
+                        if x.game_status < 3 and "PPD" not in x.game_status_text
                     ),
                     False,
                 ):
@@ -1287,12 +1277,12 @@ class Bot(object):
                     break
             elif update_tailgate_thread_until == "All NBA games are final":
                 if (  # This game is final
-                    self.game_status() >= 3
+                    self.game_status() >= 3 or "PPD" in self.game_status_text()
                 ) and not next(  # All NBA games are final
                     (
                         True
                         for x in self.allData["todayAllOtherGames"]
-                        if x.game_status < 3
+                        if x.game_status < 3 and "PPD" not in x.game_status_text
                     ),
                     False,
                 ):
@@ -1609,7 +1599,7 @@ class Bot(object):
                 self.stopFlags.update({"game": True})
                 break
             elif update_game_thread_until == "My team's game is final":
-                if self.game_status() >= 3:
+                if self.game_status() >= 3 or "PPD" in self.game_status_text():
                     # My team's game is final
                     self.log.info(
                         "My team's game is final. Stopping game thread update loop per UPDATE_UNTIL setting."
@@ -1618,12 +1608,12 @@ class Bot(object):
                     break
             elif update_game_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.game_status() >= 3
+                    self.game_status() >= 3 or "PPD" in self.game_status_text()
                 ) and not next(  # And all division games are final
                     (
                         True
                         for x in self.allData["todayOtherDivisionGames"]
-                        if x.game_status < 3
+                        if x.game_status < 3 and "PPD" not in x.game_status_text
                     ),
                     False,
                 ):
@@ -1635,12 +1625,12 @@ class Bot(object):
                     break
             elif update_game_thread_until == "All conference games are final":
                 if (  # This game is final
-                    self.game_status() >= 3
+                    self.game_status() >= 3 or "PPD" in self.game_status_text()
                 ) and not next(  # And all conference games are final
                     (
                         True
                         for x in self.allData["todayOtherConferenceGames"]
-                        if x.game_status < 3
+                        if x.game_status < 3 and "PPD" not in x.game_status_text
                     ),
                     False,
                 ):
@@ -1652,12 +1642,12 @@ class Bot(object):
                     break
             elif update_game_thread_until == "All NBA games are final":
                 if (  # This game is final
-                    self.game_status() >= 3
+                    self.game_status() >= 3 or "PPD" in self.game_status_text()
                 ) and not next(  # All NBA games are final
                     (
                         True
                         for x in self.allData["todayAllOtherGames"]
-                        if x.game_status < 3
+                        if x.game_status < 3 and "PPD" not in x.game_status_text
                     ),
                     False,
                 ):
@@ -1931,12 +1921,12 @@ class Bot(object):
                     break
             elif update_postgame_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.game_status() >= 3
+                    self.game_status() >= 3 or "PPD" in self.game_status_text()
                 ) and not next(  # And all division games are final
                     (
                         True
                         for x in self.allData["todayOtherDivisionGames"]
-                        if x.game_status < 3
+                        if x.game_status < 3 and "PPD" not in x.game_status_text
                     ),
                     False,
                 ):
@@ -1948,12 +1938,12 @@ class Bot(object):
                     break
             elif update_postgame_thread_until == "All conference games are final":
                 if (  # This game is final
-                    self.game_status() >= 3
+                    self.game_status() >= 3 or "PPD" in self.game_status_text()
                 ) and not next(  # And all conference games are final
                     (
                         True
                         for x in self.allData["todayOtherConferenceGames"]
-                        if x.game_status < 3
+                        if x.game_status < 3 and "PPD" not in x.game_status_text
                     ),
                     False,
                 ):
@@ -1965,12 +1955,12 @@ class Bot(object):
                     break
             elif update_postgame_thread_until == "All NBA games are final":
                 if (  # This game is final
-                    self.game_status() >= 3
+                    self.game_status() >= 3 or "PPD" in self.game_status_text()
                 ) and not next(  # All NBA games are final
                     (
                         True
                         for x in self.allData["todayAllOtherGames"]
-                        if x.game_status < 3
+                        if x.game_status < 3 and "PPD" not in x.game_status_text
                     ),
                     False,
                 ):
