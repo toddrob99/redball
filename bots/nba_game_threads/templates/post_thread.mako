@@ -30,14 +30,17 @@ ${'##'} [${away_team.team_city} ${away_team.team_name}](${data["teamSubs"].get(a
 
 <%include file="game_info.mako" />
 
+%   if "PPD" in data["gameStatusText"]:
+${'##'} Game Status - ${data["gameStatusText"]}
+%   else:
 ${'##'} Game Status - ${data["gameStatusText"]}: \
-%   if result == "tie":
+%       if result == "tie":
 TIE @ \
-%   elif result == "win":
+%       elif result == "win":
 ${data["myTeam"].team_info.team_name} Win \
-%   elif result == "loss":
+%       elif result == "loss":
 ${data["oppTeam"].team_info.team_name} Win \
-%   endif
+%       endif
 ${max(int(away_score), int(home_score))}-${min(int(away_score), int(home_score))}
 
 <%include file="linescore.mako" />
@@ -45,6 +48,7 @@ ${max(int(away_score), int(home_score))}-${min(int(away_score), int(home_score))
 <%include file="inactives.mako" />
 
 <%include file="boxscore.mako" />
+%   endif
 
 % if settings.get("Post Game Thread", {}).get("STANDINGS_TYPE","Conference") == "Division":
 <%include file="division_standings.mako" args="num_to_show=settings.get('Post Game Thread',{}).get('STANDINGS_NUM_TO_SHOW', 8)" />

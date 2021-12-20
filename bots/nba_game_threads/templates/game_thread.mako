@@ -67,7 +67,8 @@ ${data["myTeam"].team_info.team_name} Win \
 ${data["oppTeam"].team_info.team_name} Win \
 %   endif
 ${max(int(away_score), int(home_score))}-${min(int(away_score), int(home_score))}
-
+%elif "PPD" in data["gameStatusText"]:
+${'##'} Game Status: ${data["gameStatusText"]}
 %endif
 
 %if data["gameStatus"] == 1:
@@ -79,13 +80,13 @@ ${max(int(away_score), int(home_score))}-${min(int(away_score), int(home_score))
 
 <%include file="pregame_charts.mako" />
 
-% if settings.get("Game Thread", {}).get("STANDINGS_TYPE","Conference") == "Division":
+%   if settings.get("Game Thread", {}).get("STANDINGS_TYPE","Conference") == "Division":
 <%include file="division_standings.mako" args="num_to_show=settings.get('Game Thread',{}).get('STANDINGS_NUM_TO_SHOW', 8)" />
-% elif settings.get("Game Thread", {}).get("STANDINGS_TYPE","Conference") == "Conference":
+%   elif settings.get("Game Thread", {}).get("STANDINGS_TYPE","Conference") == "Conference":
 <%include file="conference_standings.mako" args="num_to_show=settings.get('Game Thread',{}).get('STANDINGS_NUM_TO_SHOW', 8)" />
-% elif settings.get("Game Thread", {}).get("STANDINGS_TYPE","Conference") == "League":
+%   elif settings.get("Game Thread", {}).get("STANDINGS_TYPE","Conference") == "League":
 <%include file="league_standings.mako" args="num_to_show=settings.get('Game Thread',{}).get('STANDINGS_NUM_TO_SHOW', 8)" />
-% endif
+%   endif
 
 %else:
 <%include file="linescore.mako" />

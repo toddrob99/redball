@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 
 DATA_LOCK = threading.Lock()
 
@@ -1408,7 +1408,7 @@ class Bot(object):
                 and not self.bot.STOP
                 and not self.threadCache["game"].get("thread")
             ):
-                if self.game_status() >= 3:
+                if self.game_status() >= 3 or "PPD" in self.game_status_text():
                     if not self.settings.get("Post Game Thread", {}).get(
                         "ENABLED", True
                     ):
@@ -1710,7 +1710,7 @@ class Bot(object):
         )
 
         while redball.SIGNAL is None and not self.bot.STOP:
-            if self.game_status() >= 3:
+            if self.game_status() >= 3 or "PPD" in self.game_status_text():
                 # Game is over
                 self.log.info(
                     "Game is over ({}). Proceeding with post game thread...".format(
