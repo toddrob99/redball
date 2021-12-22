@@ -22,7 +22,7 @@
         10: "OT6",
     }
     otherDivisionTeamIds = [divTeam["id"] for divTeam in data["otherDivisionTeams"]]
-    divGames = [x for x in data["todayGames"] if x["awayTeam"]["id"] in otherDivisionTeamIds or x["homeTeam"]["id"] in otherDivisionTeamIds and data["myTeam"]["id"] not in [x["awayTeam"]["id"], x["homeTeam"]["id"]]]
+    divGames = [x for x in data["todayGames"] if (x["awayTeam"]["id"] in otherDivisionTeamIds or x["homeTeam"]["id"] in otherDivisionTeamIds) and data["myTeam"]["id"] not in [x["awayTeam"]["id"], x["homeTeam"]["id"]] and data["otherTodayGamesDetails"].get(x["id"])]
 %>\
 % if len(divGames):
 ${'##'} Division Scoreboard

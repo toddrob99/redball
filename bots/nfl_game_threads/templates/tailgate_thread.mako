@@ -62,8 +62,8 @@ Game Time: ${data["gameTime"]["myTeam"].strftime(settings.get("Tailgate Thread",
 <%include file="standings.mako" />
 
 <%include file="inactives.mako" />
-##
-##<%include file="division_scoreboard.mako" />  ## Not working due to game status data not in v2 endpoint
+
+<%include file="division_scoreboard.mako" />
 
 ## Configurable footer text
 ${settings.get('Tailgate Thread',{}).get('FOOTER','')}
