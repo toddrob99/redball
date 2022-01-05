@@ -1,5 +1,7 @@
 <%
     from datetime import datetime
+    if not standings.get(my_team['division']['id']):
+        return
 %>\
 [](/redball/standings)\
 ## Standings for myTeam's division only:

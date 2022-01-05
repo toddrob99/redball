@@ -27,7 +27,7 @@ from ..nba_game_threads import pynbaapi
 from ..nhl_game_threads import pynhlapi
 from ..nfl_game_threads import mynflapi
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 
 def run(bot, settings):
@@ -496,7 +496,10 @@ class SidebarUpdaterBot:
                 self.bot.STOP = True
                 return
             nfl = mynflapi.APISession(self.get_nfl_token())
-            all_teams = nfl.teams(datetime.now().strftime("%Y"))["teams"]
+            current_week = nfl.weekByDate(datetime.now().strftime("%Y-%m-%d"))
+            all_teams = nfl.teams(
+                current_week.get("season", datetime.now().strftime("%Y"))
+            ).get("teams", [])
             my_team = next(
                 (
                     x
@@ -508,7 +511,6 @@ class SidebarUpdaterBot:
             if self.settings.get("Old Reddit", {}).get(
                 "STANDINGS_ENABLED"
             ) or self.settings.get("New Reddit", {}).get("STANDINGS_ENABLED"):
-                current_week = nfl.weekByDate(datetime.now().strftime("%Y-%m-%d"))
                 standings = (
                     nfl.standings(
                         season=current_week["season"],
@@ -519,7 +521,6 @@ class SidebarUpdaterBot:
                     .get("standings", [])
                 )
             else:
-                current_week = None
                 standings = None
             team_subs = self.nfl_team_subs
         elif self.sport == "NHL":
