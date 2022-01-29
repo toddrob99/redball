@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "2.2.5.1"
+__version__ = "2.2.5.2"
 
 DATA_LOCK = threading.Lock()
 
@@ -413,14 +413,20 @@ class Bot(object):
                 self.log.debug(
                     f"gameTime (my team TZ): {gameTime}; gameTime_local: {gameTime_local}"
                 )
-                standings = self.nfl.standings(
-                    season=currentWeek["season"],
-                    seasonType=currentWeek["seasonType"],
-                    week=currentWeek["week"],
-                )
-                if len(standings["weeks"]) and standings["weeks"][0].get("standings"):
-                    standings = standings["weeks"][0]["standings"]
-                else:
+                try:
+                    standings = self.nfl.standings(
+                        season=currentWeek["season"],
+                        seasonType=currentWeek["seasonType"],
+                        week=currentWeek["week"],
+                    )
+                    if len(standings["weeks"]) and standings["weeks"][0].get(
+                        "standings"
+                    ):
+                        standings = standings["weeks"][0]["standings"]
+                    else:
+                        standings = []
+                except Exception as e:
+                    self.log.error(f"Error retrieving standings: {e}")
                     standings = []
                 # Initialize var to hold game data throughout the day
                 self.allData.update(
@@ -1952,14 +1958,18 @@ class Bot(object):
             self.log.debug(
                 f"gameTime (my team TZ): {gameTime}; gameTime_local: {gameTime_local}"
             )
-            standings = self.nfl.standings(
-                season=self.allData["currentWeek"]["season"],
-                seasonType=self.allData["currentWeek"]["seasonType"],
-                week=self.allData["currentWeek"]["week"],
-            )
-            if len(standings["weeks"]) and standings["weeks"][0].get("standings"):
-                standings = standings["weeks"][0]["standings"]
-            else:
+            try:
+                standings = self.nfl.standings(
+                    season=self.allData["currentWeek"]["season"],
+                    seasonType=self.allData["currentWeek"]["seasonType"],
+                    week=self.allData["currentWeek"]["week"],
+                )
+                if len(standings["weeks"]) and standings["weeks"][0].get("standings"):
+                    standings = standings["weeks"][0]["standings"]
+                else:
+                    standings = []
+            except Exception as e:
+                self.log.error(f"Error retrieving standings: {e}")
                 standings = []
             self.allData.update(
                 {

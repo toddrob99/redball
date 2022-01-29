@@ -27,7 +27,7 @@ from ..nba_game_threads import pynbaapi
 from ..nhl_game_threads import pynhlapi
 from ..nfl_game_threads import mynflapi
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 
 
 def run(bot, settings):
@@ -480,12 +480,17 @@ class SidebarUpdaterBot:
             nba = pynbaapi.nba.NBA(
                 f"RedditSidebarUpdater/{__version__} (platform; redball/{redball.__version__})"
             )
-            all_teams = nba.all_teams()
+            season = (
+                datetime.today().strftime("%Y")
+                if int(datetime.today().strftime("%m")) >= 8
+                else str(int(datetime.today().strftime("%Y")) - 1)
+            )
+            all_teams = nba.all_teams(season)
             my_team = nba.team(int(self.settings["NBA"]["TEAM"].split("|")[1]))
             if self.settings.get("Old Reddit", {}).get(
                 "STANDINGS_ENABLED"
             ) or self.settings.get("New Reddit", {}).get("STANDINGS_ENABLED"):
-                standings = nba.standings()
+                standings = nba.standings(season=season)
             else:
                 standings = None
             team_subs = self.nba_team_subs
@@ -514,8 +519,12 @@ class SidebarUpdaterBot:
                 standings = (
                     nfl.standings(
                         season=current_week["season"],
-                        seasonType=current_week["seasonType"],
-                        week=current_week["week"],
+                        seasonType="REG",
+                        week=current_week["week"]
+                        if current_week["seasonType"] == "REG"
+                        else 17
+                        if current_week["seasonType"] == "POST"
+                        else 1,
                     )
                     .get("weeks", [{}])[0]
                     .get("standings", [])
