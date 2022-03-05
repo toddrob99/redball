@@ -4,6 +4,7 @@ import logging
 from .constants import APP_NAME, API_URL
 from .api.api import API
 from .api.models.base import NestedAPIObject
+from typing import Union
 
 from .__version__ import __version__
 
@@ -92,3 +93,30 @@ class NBA:
 
         setattr(self, "_all_teams_cache", teams)
         return self._all_teams_cache
+
+    def next_game(
+        self,
+        team_id: int,
+        season: str = datetime.now().strftime("%Y"),
+        after_datetime: datetime = datetime.now(),
+    ) -> Union[NestedAPIObject, None]:
+        sched = self.schedule(season)
+        game_date_gen = (
+            x
+            for x in sched.league_schedule.game_dates
+            if datetime.strptime(x.game_date, "%m/%d/%Y %H:%M:%S %p")
+            >= after_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
+        )
+        for d in game_date_gen:
+            if next_game := next(
+                (
+                    g
+                    for g in d.games
+                    if team_id in [g.away_team.team_id, g.home_team.team_id]
+                    and g.game_status == 1
+                    and "PPD" not in g.game_status_text
+                ),
+                None,
+            ):
+                return next_game
+        return None

@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "1.0.6"
+__version__ = "1.1"
 
 DATA_LOCK = threading.Lock()
 
@@ -205,6 +205,7 @@ class Bot(object):
                 "Y-m-d": todayObj.strftime("%Y-%m-%d"),
                 "Ymd": todayObj.strftime("%Y%m%d"),
                 "Y": todayObj.strftime("%Y"),
+                "obj": todayObj,
             }
             self.today.update(
                 {
@@ -284,6 +285,7 @@ class Bot(object):
 
             # (Re-)Initialize dict to hold game data
             self.allData = {
+                "today": self.today,
                 "myTeam": self.myTeam,
                 "otherDivisionTeamIds": self.otherDivisionTeamIds,
                 "otherConferenceTeamIds": self.otherConferenceTeamIds,
@@ -306,7 +308,14 @@ class Bot(object):
                 # It's not a game day
                 self.log.info("No games today!")
                 self.stopFlags.update({"off": False})
-                self.allData.update({"game_id": "off"})
+                self.allData.update(
+                    {
+                        "game_id": "off",
+                        "next_game": self.nba.next_game(
+                            self.myTeamId, self.today["season"], self.today["obj"]
+                        ),
+                    }
+                )
                 self.off_day()
                 if redball.SIGNAL is not None or self.bot.STOP:
                     break
@@ -2136,6 +2145,16 @@ class Bot(object):
                     "gameStatusText": self.game_status_text(),
                 }
             )
+            if self.allData["gameStatus"] >= 3 or "PPD" in str(
+                self.allData["gameStatusText"]
+            ):
+                self.allData.update(
+                    {
+                        "next_game": self.nba.next_game(
+                            self.myTeamId, self.today["season"], self.today["obj"]
+                        )
+                    }
+                )
 
         if redball.DEV:
             self.log.debug(

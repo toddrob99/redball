@@ -9,4 +9,4 @@ ${data["myTeam"].team_info.team_city} ${data["myTeam"].team_info.team_name} \
 Off Day \
 Discussion Thread\
 ## Date/Time
-${(" - " + datetime.now().strftime(settings.get("Off Day Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y"))) if settings.get("Off Day Thread", {}).get("TITLE_DATE_FORMAT") != "" else ""}
+${(" - " + data["today"]["obj"].strftime(settings.get("Off Day Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y"))) if settings.get("Off Day Thread", {}).get("TITLE_DATE_FORMAT") != "" else ""}

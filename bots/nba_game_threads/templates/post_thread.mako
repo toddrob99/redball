@@ -66,5 +66,7 @@ ${max(int(away_score), int(home_score))}-${min(int(away_score), int(home_score))
 <%include file="league_scoreboard.mako" />
 % endif
 
+<%include file="next_game.mako" />
+
 ## Configurable footer text
 ${settings.get('Post Game Thread',{}).get('FOOTER','')}

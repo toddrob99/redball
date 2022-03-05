@@ -17,5 +17,7 @@
 <%include file="league_scoreboard.mako" />
 % endif
 
+<%include file="next_game.mako" />
+
 ## Configurable footer text
 ${settings.get('Off Day Thread',{}).get('FOOTER','')}
