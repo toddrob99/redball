@@ -435,4 +435,14 @@ upgradeScripts = {
             time.time()
         ),
     ],
+    13: [
+        # Update Washington Commanders name in NFL Game Thread bot settings
+        """UPDATE rb_botConfig set val=REPLACE(val, 'Football Team', 'Commanders'), options=REPLACE(options, 'Football Team', 'Commanders') WHERE category='NFL' and key='TEAM';""",
+        # Update Cleveland Guardians name in MLB Game Thread bot settings
+        """UPDATE rb_botConfig set val=REPLACE(val, 'Indians', 'Guardians'), options=REPLACE(options, 'Indians', 'Guardians') WHERE category='MLB' and key='TEAM';""",
+        # Update DB version to 13
+        "UPDATE rb_meta SET val='13', lastUpdate='{}' WHERE key='dbVersion';".format(
+            time.time()
+        ),
+    ],
 }

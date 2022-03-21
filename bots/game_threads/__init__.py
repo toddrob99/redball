@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.2.7"
+__version__ = "1.2.8"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -4990,7 +4990,12 @@ class Bot(object):
                 "p": str(
                     gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["pitchesThrown"]
+                    ]["stats"]["pitching"].get(
+                        "pitchesThrown",
+                        gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
+                            "ID" + pitcherId
+                        ]["stats"]["pitching"].get("numberOfPitches", 0),
+                    )
                 ),
                 "s": str(
                     gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
@@ -5089,7 +5094,12 @@ class Bot(object):
                 "p": str(
                     gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["pitchesThrown"]
+                    ]["stats"]["pitching"].get(
+                        "pitchesThrown",
+                        gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
+                            "ID" + pitcherId
+                        ]["stats"]["pitching"].get("numberOfPitches", 0),
+                    )
                 ),
                 "s": str(
                     gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
@@ -6230,7 +6240,7 @@ class Bot(object):
         145: "/r/WhiteSox",
         116: "/r/MotorCityKitties",
         118: "/r/KCRoyals",
-        114: "/r/ClevelandIndians",
+        114: "/r/ClevelandGuardians",
         140: "/r/TexasRangers",
         117: "/r/Astros",
         133: "/r/OaklandAthletics",

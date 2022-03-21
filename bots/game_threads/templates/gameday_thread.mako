@@ -5,7 +5,7 @@ ${'#' + data[pk]['schedule']['seriesDescription'] + ' '}\
 ${'Game ' + str(data[pk]['schedule']['seriesGameNumber']) + ' - ' if data[pk]['schedule'].get('seriesGameNumber') and data[pk]['schedule'].get('gamesInSeries',1) > 1 else '- '}\
 % else:
 ${'###'}\
-% endif\
+% endif
 <%include file="matchup.mako" args="gamePk=pk,dateFormat='%I:%M %p %Z'" />
 
 ## Game status: show detailed state and then list first pitch time if game hasn't started yet and isn't final

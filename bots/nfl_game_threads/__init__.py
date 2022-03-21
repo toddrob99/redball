@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "2.2.5.2"
+__version__ = "2.2.6"
 
 DATA_LOCK = threading.Lock()
 
@@ -2881,7 +2881,7 @@ class Bot(object):
         "SF": "r/49ers",
         "TB": "r/buccaneers",
         "TEN": "r/Tennesseetitans",
-        "WAS": "r/washingtonNFL",
+        "WAS": "r/Commanders",
         0: "r/NFL",
         "nfl": "r/NFL",
     }

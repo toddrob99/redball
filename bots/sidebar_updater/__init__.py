@@ -27,7 +27,7 @@ from ..nba_game_threads import pynbaapi
 from ..nhl_game_threads import pynhlapi
 from ..nfl_game_threads import mynflapi
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 
 def run(bot, settings):
@@ -588,7 +588,7 @@ class SidebarUpdaterBot:
         145: "/r/WhiteSox",
         116: "/r/MotorCityKitties",
         118: "/r/KCRoyals",
-        114: "/r/ClevelandIndians",
+        114: "/r/ClevelandGuardians",
         140: "/r/TexasRangers",
         117: "/r/Astros",
         133: "/r/OaklandAthletics",
@@ -681,7 +681,7 @@ class SidebarUpdaterBot:
         "SF": "/r/49ers",
         "TB": "/r/buccaneers",
         "TEN": "/r/Tennesseetitans",
-        "WAS": "/r/washingtonNFL",
+        "WAS": "/r/Commanders",
         0: "/r/NFL",
         "nfl": "/r/NFL",
         "NFL": "/r/NFL",
