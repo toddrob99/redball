@@ -25,11 +25,10 @@ jobs:
               for line in ver_file:
                   if line.startswith("VERSION = "):
                       ver = line[len("VERSION = "):].replace('"', '')
-                      print("VERSION", ver)
+                      print("Found version:", ver)
                       break
-          print(f"VERSION_TAG={rb_ver}")
           with open(os.getenv("GITHUB_ENV"), "a") as env_file:
-            env_file.write(f"VERSION_TAG={rb_ver}")
+            env_file.write(f"VERSION_TAG={ver}")
         shell: python
       -
         name: Print Version
