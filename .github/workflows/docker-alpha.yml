@@ -1,4 +1,4 @@
-name: Docker Build & Push
+name: Docker Build & Push - Alpha
 
 on:
   push:
@@ -9,30 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       -
-        name: Checkout
-        uses: actions/checkout@v2
-      -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       -
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-      - 
-        name: Get Version
-        run: |
-          import os
-          with open(os.path.join("${{github.workspace}}", "redball", "version.py"), "r") as ver_file:
-              for line in ver_file:
-                  if line.startswith("VERSION = "):
-                      ver = line[len("VERSION = "):].replace('"', '')
-                      print("Found version:", ver)
-                      break
-          with open(os.getenv("GITHUB_ENV"), "a") as env_file:
-            env_file.write(f"VERSION_TAG={ver}")
-        shell: python
-      -
-        name: Print Version
-        run: echo ${{env.VERSION_TAG}}
       -
         name: Login to DockerHub
         uses: docker/login-action@v1 
@@ -45,4 +26,4 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: toddrob/redball:${{env.VERSION_TAG}},toddrob/redball:alpha
+          tags: toddrob/redball:alpha
