@@ -18,7 +18,7 @@ jobs:
         name: Get Version
         run: |
           import os
-          with open(os.path.join("${{process.env.GITHUB_WORKSPACE}}", "redball", "version.py"), "r") as ver_file:
+          with open(os.path.join("${{github.workspace}}", "redball", "version.py"), "r") as ver_file:
               for line in ver_file:
                   if line.startswith("VERSION = "):
                       ver = line[len("VERSION = "):].replace('"', '')
