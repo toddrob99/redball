@@ -2,7 +2,7 @@ name: Docker Build & Push
 
 on:
   push:
-    branches: [master]
+    branches: [alpha]
 
 jobs:
   docker:
@@ -45,4 +45,4 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: toddrob/redball:${{env.VERSION_TAG}},toddrob/redball:latest
+          tags: toddrob/redball:${{env.VERSION_TAG}},toddrob/redball:alpha
