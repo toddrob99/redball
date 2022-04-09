@@ -43,9 +43,9 @@
 % for i in range(0,len(awayBatters)):
 <%
     a = next((x for x in data[gamePk]['awayBattersVsProb'] if x['id']==awayBatters[i]),{})
-    aStats = next((s['splits'][0]['stat'] for s in a.get('stats',{}) if s['type']['displayName']=='vsPlayerTotal' and s['group']['displayName']=='hitting'),{})
+    aStats = next((s['splits'][0]['stat'] for s in a.get('stats',{}) if s['type']['displayName']=='vsPlayerTotal' and s['group']['displayName']=='hitting' and s['totalSplits'] > 0),{})
     h = next((x for x in data[gamePk]['homeBattersVsProb'] if x['id']==homeBatters[i]),{})
-    hStats = next((s['splits'][0]['stat'] for s in h.get('stats',{}) if s['type']['displayName']=='vsPlayerTotal' and s['group']['displayName']=='hitting'),{})
+    hStats = next((s['splits'][0]['stat'] for s in h.get('stats',{}) if s['type']['displayName']=='vsPlayerTotal' and s['group']['displayName']=='hitting' and s['totalSplits'] > 0),{})
 %>\
 % if awayBatters[i] != 0:
 |${i+1} ${playerLink(data[gamePk]['gumbo']["gameData"]["players"]['ID'+str(awayBatters[i])]['boxscoreName'],awayBatters[i]) + ' - ' + data[gamePk]['gumbo']['liveData']['boxscore']['teams']['away']['players']['ID'+str(awayBatters[i])]['position']['abbreviation']}|\
@@ -80,7 +80,7 @@ ${'||||||||' if not homeLineupOnly else '||'}
 % for i in range(0,len(awayBatters)):
 <%
     a = next((x for x in data[gamePk]['awayBattersVsProb'] if x['id']==awayBatters[i]),{})
-    aStats = next((s['splits'][0]['stat'] for s in a.get('stats',{}) if s['type']['displayName']=='vsPlayerTotal' and s['group']['displayName']=='hitting'),{})
+    aStats = next((s['splits'][0]['stat'] for s in a.get('stats',{}) if s['type']['displayName']=='vsPlayerTotal' and s['group']['displayName']=='hitting' and s['totalSplits'] > 0),{})
 %>\
 % if awayBatters[i] != 0:
 |${i+1} ${playerLink(data[gamePk]['gumbo']["gameData"]["players"]['ID'+str(awayBatters[i])]['boxscoreName'],awayBatters[i]) + ' - ' + data[gamePk]['gumbo']['liveData']['boxscore']['teams']['away']['players']['ID'+str(awayBatters[i])]['position']['abbreviation']}|\
@@ -103,7 +103,7 @@ ${str(aStats.get('strikeOuts','-')) if not awayLineupOnly else ''}|
 % for i in range(0,len(homeBatters)):
 <%
     h = next((x for x in data[gamePk]['homeBattersVsProb'] if x['id']==homeBatters[i]),{})
-    hStats = next((s['splits'][0]['stat'] for s in h.get('stats',{}) if s['type']['displayName']=='vsPlayerTotal' and s['group']['displayName']=='hitting'),{})
+    hStats = next((s['splits'][0]['stat'] for s in h.get('stats',{}) if s['type']['displayName']=='vsPlayerTotal' and s['group']['displayName']=='hitting' and s['totalSplits'] > 0),{})
 %>\
 % if homeBatters[i] != 0:
 |${i+1} ${playerLink(data[gamePk]['gumbo']["gameData"]["players"]['ID'+str(homeBatters[i])]['boxscoreName'],homeBatters[i]) + ' - ' + data[gamePk]['gumbo']['liveData']['boxscore']['teams']['home']['players']['ID'+str(homeBatters[i])]['position']['abbreviation']}|\
