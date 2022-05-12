@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.2.9"
+__version__ = "1.2.10"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -4076,12 +4076,6 @@ class Bot(object):
                                         ).replace(tzinfo=pytz.utc),
                                         self.myTeam["venue"]["timeZone"]["id"],
                                     ),
-                                    "homeTeam": self.convert_timezone(
-                                        datetime.strptime(
-                                            x["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
-                                        ).replace(tzinfo=pytz.utc),
-                                        x["venue"]["timeZone"]["id"],
-                                    ),
                                     "bot": self.convert_timezone(
                                         datetime.strptime(
                                             x["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
@@ -4094,6 +4088,31 @@ class Bot(object):
                                 }
                             }
                         )
+                        if x["venue"].get("timezone", {}).get("id"):
+                            x["gameTime"].update(
+                                {
+                                    "homeTeam": self.convert_timezone(
+                                        datetime.strptime(
+                                            x["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
+                                        ).replace(tzinfo=pytz.utc),
+                                        self.myTeam["venue"]["timeZone"]["id"],
+                                    ),
+                                }
+                            )
+                        else:
+                            self.log.warn(
+                                f"Game {x['gamePk']} has no venue timezone. Using myTeam timezone in place of home team timezone."
+                            )
+                            x["gameTime"].update(
+                                {
+                                    "homeTeam": self.convert_timezone(
+                                        datetime.strptime(
+                                            x["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
+                                        ).replace(tzinfo=pytz.utc),
+                                        x["venue"]["timeZone"]["id"],
+                                    ),
+                                }
+                            )
                         pkData["leagueSchedule"].append(x)
                 else:
                     self.log.debug("There are no games at all today.")
