@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.3"
+__version__ = "1.3.1"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -2417,6 +2417,15 @@ class Bot(object):
         )
 
         while redball.SIGNAL is None and not self.bot.STOP:
+            if not self.settings.get("Game Thread", {}).get("ENABLED", True):
+                # Game thread is disabled, so ensure we have fresh data
+                self.log.info(
+                    f"Game thread is disabled for game {pk}, so updating data... current status: (abstractGameCode: {self.commonData[pk]['schedule']['status']['abstractGameCode']}, codedGameState: {self.commonData[pk]['schedule']['status']['codedGameState']})"
+                )
+                # Update generic data
+                self.collect_data(0)
+                # Update data for this game
+                self.collect_data(pk)
             if self.commonData[pk]["schedule"]["status"][
                 "abstractGameCode"
             ] == "F" or self.commonData[pk]["schedule"]["status"]["codedGameState"] in [
@@ -2435,8 +2444,10 @@ class Bot(object):
                     )
                 )
                 break
-            elif self.activeGames[pk]["STOP_FLAG"]:
-                # Game thread process has stopped, but game status isn't final yet... get fresh data!
+            elif self.activeGames[pk]["STOP_FLAG"] and self.settings.get(
+                "Game Thread", {}
+            ).get("ENABLED", True):
+                # Game thread process is enabled and has stopped, but game status isn't final yet... get fresh data!
                 self.log.info(
                     f"Game {pk} thread process has ended, but cached game status is still (abstractGameCode: {self.commonData[pk]['schedule']['status']['abstractGameCode']}, codedGameState: {self.commonData[pk]['schedule']['status']['codedGameState']}). Refreshing data..."
                 )
@@ -6764,8 +6775,11 @@ class Bot(object):
                 for x in botStatus["games"]:
                     for k, v in x.items():
                         botStatus["summary"]["text"] += "{}".format(
-                            "\n\n{}:\nGame thread{}{}".format(
+                            "\n\n{} ({}):\nGame thread{}{}".format(
                                 k,
+                                v.get("status", {}).get(
+                                    "detailedState", "Unknown Status"
+                                ),
                                 " disabled."
                                 if not v["threads"]["game"]["enabled"]
                                 else " skipped"
@@ -6802,8 +6816,11 @@ class Bot(object):
                 for x in botStatus["games"]:
                     for k, v in x.items():
                         botStatus["summary"]["html"] += "{}".format(
-                            "<br /><br /><strong>{}</strong>:<br /><strong>Game thread</strong>{}{}".format(
+                            "<br /><br /><strong>{}</strong> ({}):<br /><strong>Game thread</strong>{}{}".format(
                                 k,
+                                v.get("status", {}).get(
+                                    "detailedState", "Unknown Status"
+                                ),
                                 " disabled."
                                 if not v["threads"]["game"]["enabled"]
                                 else " skipped"
@@ -6840,8 +6857,11 @@ class Bot(object):
                 for x in botStatus["games"]:
                     for k, v in x.items():
                         botStatus["summary"]["markdown"] += "{}".format(
-                            "\n\n**{}**:\n\n**Game thread**{}{}".format(
+                            "\n\n**{}** ({}):\n\n**Game thread**{}{}".format(
                                 k,
+                                v.get("status", {}).get(
+                                    "detailedState", "Unknown Status"
+                                ),
                                 " disabled."
                                 if not v["threads"]["game"]["enabled"]
                                 else " skipped"
