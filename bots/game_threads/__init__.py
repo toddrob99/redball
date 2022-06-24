@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.2.10"
+__version__ = "1.3"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -2521,7 +2521,50 @@ class Bot(object):
                 # Only sticky when posting the thread
                 # if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(self.activeGames[pk]['postGameThread'])
 
-        if not postGameThread:
+        game_result = (
+            "EXCEPTION"
+            if self.commonData[pk]["schedule"]["status"]["codedGameState"]
+            in ["C", "D", "U", "T"]  # Suspended: U, T; Cancelled: C, Postponed: D
+            else "TIE"
+            if self.commonData[pk]["schedule"]["teams"]["home"]["score"]
+            == self.commonData[pk]["schedule"]["teams"]["away"]["score"]
+            else "WIN"
+            if (
+                (
+                    self.commonData[pk]["schedule"]["teams"]["home"]["score"]
+                    > self.commonData[pk]["schedule"]["teams"]["away"]["score"]
+                    and self.commonData[pk]["homeAway"] == "home"
+                )
+                or (
+                    self.commonData[pk]["schedule"]["teams"]["home"]["score"]
+                    < self.commonData[pk]["schedule"]["teams"]["away"]["score"]
+                    and self.commonData[pk]["homeAway"] == "away"
+                )
+            )
+            else "LOSS"
+            if (
+                (
+                    self.commonData[pk]["schedule"]["teams"]["home"]["score"]
+                    < self.commonData[pk]["schedule"]["teams"]["away"]["score"]
+                    and self.commonData[pk]["homeAway"] == "home"
+                )
+                or (
+                    self.commonData[pk]["schedule"]["teams"]["home"]["score"]
+                    > self.commonData[pk]["schedule"]["teams"]["away"]["score"]
+                    and self.commonData[pk]["homeAway"] == "away"
+                )
+            )
+            else "EXCEPTION"
+        )
+        wanted_results = self.settings.get("Post Game Thread", {}).get(
+            "ONLY_IF_THESE_RESULTS", ["ALL"]
+        )
+        if "ALL" not in wanted_results and game_result not in wanted_results:
+            self.log.info(
+                f"Game result: [{game_result}] is not in the list of wanted results (Post Game Thread > ONLY_IF_THESE_RESULTS): {wanted_results}, skipping post game thread..."
+            )
+            self.activeGames[pk].update({"POST_STOP_FLAG": True})
+        elif not postGameThread:
             # Submit post game thread
             (postGameThread, postGameThreadText) = self.prep_and_post(
                 "post",
@@ -5904,7 +5947,7 @@ class Bot(object):
                     self.log.info("Submission flaired...")
                 except Exception:
                     self.log.error(
-                        "Failed to set flair on thread {post.id} (check mod privileges or change FLAIR_MODE to submitter), continuing..."
+                        f"Failed to set flair on thread {post.id} (check mod privileges or change FLAIR_MODE to submitter), continuing..."
                     )
                     self.error_notification(
                         "Failed to set flair (check mod privileges or change FLAIR_MODE to submitter)"
