@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.3.1"
+__version__ = "1.3.2"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -5535,6 +5535,39 @@ class Bot(object):
             if thread == "post"
             else False
         )
+        title_mod = (
+            self.settings.get("Weekly Thread", {}).get("TITLE_MOD", False)
+            if thread == "weekly"
+            else self.settings.get("Off Day Thread", {}).get("TITLE_MOD", False)
+            if thread == "off"
+            else self.settings.get("Game Day Thread", {}).get("TITLE_MOD", False)
+            if thread == "gameday"
+            else self.settings.get("Game Thread", {}).get("TITLE_MOD", False)
+            if thread == "game"
+            else self.settings.get("Post Game Thread", {}).get("TITLE_MOD", False)
+            if thread == "post"
+            else False
+        )
+        if "upper" in title_mod.lower():
+            title = title.upper()
+            self.log.info(
+                f"Converted {thread} title to upper case per TITLE_MOD setting: [{title}]"
+            )
+        if "lower" in title_mod.lower():
+            title = title.lower()
+            self.log.info(
+                f"Converted {thread} title to lower case per TITLE_MOD setting: [{title}]"
+            )
+        if "title" in title_mod.lower():
+            title = title.title()
+            self.log.info(
+                f"Converted {thread} title to title case per TITLE_MOD setting: [{title}]"
+            )
+        if "nospaces" in title_mod.lower():
+            title = title.replace(" ", "")
+            self.log.info(
+                f"Removed spaces from {thread} title per TITLE_MOD setting: [{title}]"
+            )
 
         # Check if post already exists
         theThread = None
