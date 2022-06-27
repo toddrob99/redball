@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.3.2"
+__version__ = "1.3.3"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -5536,17 +5536,17 @@ class Bot(object):
             else False
         )
         title_mod = (
-            self.settings.get("Weekly Thread", {}).get("TITLE_MOD", False)
+            self.settings.get("Weekly Thread", {}).get("TITLE_MOD", "")
             if thread == "weekly"
-            else self.settings.get("Off Day Thread", {}).get("TITLE_MOD", False)
+            else self.settings.get("Off Day Thread", {}).get("TITLE_MOD", "")
             if thread == "off"
-            else self.settings.get("Game Day Thread", {}).get("TITLE_MOD", False)
+            else self.settings.get("Game Day Thread", {}).get("TITLE_MOD", "")
             if thread == "gameday"
-            else self.settings.get("Game Thread", {}).get("TITLE_MOD", False)
+            else self.settings.get("Game Thread", {}).get("TITLE_MOD", "")
             if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get("TITLE_MOD", False)
+            else self.settings.get("Post Game Thread", {}).get("TITLE_MOD", "")
             if thread == "post"
-            else False
+            else ""
         )
         if "upper" in title_mod.lower():
             title = title.upper()
