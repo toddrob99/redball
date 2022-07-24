@@ -107,3 +107,8 @@ ${radio}
 % else:
 * ${f"[Savant Gamefeed](https://baseballsavant.mlb.com/gamefeed?gamePk={gamePk})"}
 % endif
+% for n in range(1, 6):
+%   if settings.get('Game Thread',{}).get(f'LINK_{n}',''):
+* [${settings['Game Thread'][f'LINK_{n}'].split("|")[0]}](${settings['Game Thread'][f'LINK_{n}'].split("|")[1].replace('gamePk', str(gamePk))})
+%   endif
+% endfor

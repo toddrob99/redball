@@ -27,6 +27,10 @@ due to ${data[gamePk]['schedule']['status']['reason']} \
 
 <%include file="linescore.mako" />
 
+% if not settings.get('Post Game Thread',{}).get('SUPPRESS_DECISIONS', False):
+<%include file="decisions.mako" />
+
+% endif
 % if data[0]['myTeam'].get('division'):  # will skip for All Star teams
 % if data[0]['myTeam']['seasonState'].startswith('post'):
 ## league scoreboard during post season

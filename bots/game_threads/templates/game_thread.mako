@@ -108,7 +108,10 @@ ${ondeck} is on deck\
 
 <%include file="linescore.mako" />
 % endif
+% if data[gamePk]['schedule']['status']['abstractGameCode'] == 'F' and not settings.get('Game Thread',{}).get('SUPPRESS_DECISIONS', False):
+<%include file="decisions.mako" />
 
+% endif
 % if data[0]['myTeam'].get('division'):  # will skip for All Star teams
 % if data[0]['myTeam']['seasonState'] != 'post:in':
 ## division scoreboard
