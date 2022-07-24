@@ -100,8 +100,10 @@ ${ondeck} is on deck\
 % if (data[gamePk]['schedule']['status']['abstractGameCode'] == 'L' and data[gamePk]['schedule']['status']['statusCode'] != 'PW') or data[gamePk]['schedule']['status']['abstractGameCode'] == 'F':
 <%include file="boxscore.mako" args="boxStyle=settings.get('Game Thread',{}).get('BOXSCORE_STYLE','wide')" />
 
+% if not settings.get('Game Thread',{}).get('SUPPRESS_SCORING_PLAYS', False):
 <%include file="scoring_plays.mako" />
 
+% endif
 <%include file="highlights.mako" />
 
 <%include file="linescore.mako" />

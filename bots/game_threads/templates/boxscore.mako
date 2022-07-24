@@ -285,7 +285,7 @@ ${homePitchingBox}
 % endif
 
 ## Include game info if game is final
-% if data[gamePk]['schedule']['status']['abstractGameCode'] == 'F':
+% if data[gamePk]['schedule']['status']['abstractGameCode'] == 'F' and boxStyle.lower() != 'none':
     % if len(data[gamePk]['boxscore']['gameBoxInfo']):
 |Game Info|
 |:--|
