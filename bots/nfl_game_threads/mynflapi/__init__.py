@@ -16,8 +16,10 @@ method of obtaining an access token, this API wrapper will be useless.
 """
 
 from datetime import datetime
+from json import dumps
 import logging
 import requests
+from urllib.parse import unquote
 
 from . import version
 
@@ -198,7 +200,14 @@ class APISession(object):
         while not success and attempts >= 1:
             result = self.api_call(
                 ENDPOINTS["shield"],
-                query=f"?query={query}&variables={variables or 'null'}",
+                data=dumps(
+                    {
+                        "query": unquote(query),
+                        "variables": variables or "null",
+                    }
+                ),
+                headers={"Content-Type": "application/json"},
+                method="POST",
             )
             logger.debug(f"Shield query result: {result}")
             if not result.get("code"):
@@ -247,14 +256,16 @@ class APISession(object):
         if not query:
             query = QUERIES["shield"]["teamById"].format(param_teamId=teamId)
         return self.api_call(
-            ENDPOINTS["shield"], query=f"?query={query}&variables=null",
+            ENDPOINTS["shield"],
+            query=f"?query={query}&variables=null",
         )
 
     def team_roster(self, propertyId, query=None):
         if not query:
             query = QUERIES["shield"]["teamRoster"].format(param_propertyId=propertyId)
         return self.api_call(
-            ENDPOINTS["shield"], query=f"?query={query}&variables=null",
+            ENDPOINTS["shield"],
+            query=f"?query={query}&variables=null",
         )
 
     def standings(self, season, seasonType, week, limit=100):
@@ -267,7 +278,8 @@ class APISession(object):
         if not query:
             query = QUERIES["shield"]["gameById"].format(param_gameId=gameId)
         return self.api_call(
-            ENDPOINTS["shield"], query=f"?query={query}&variables=null",
+            ENDPOINTS["shield"],
+            query=f"?query={query}&variables=null",
         )
 
     def gameDetails(self, gameDetailId, query=None):
@@ -275,9 +287,7 @@ class APISession(object):
             query = QUERIES["shield"]["gameDetails"].format(
                 param_gameDetailId=gameDetailId
             )
-        return self.api_call(
-            ENDPOINTS["shield"], query=f"?query={query}&variables=null",
-        )
+        return self.shieldQuery(query)
 
     def gameInsights(self, gameId=None, gameIds=None, query=None):
         if isinstance(gameId, str):
@@ -293,7 +303,8 @@ class APISession(object):
                 param_gameIds=formattedGameIds
             )
         return self.api_call(
-            ENDPOINTS["shield"], query=f"?query={query}&variables=null",
+            ENDPOINTS["shield"],
+            query=f"?query={query}&variables=null",
         )
 
     def gameStats(self, gameId, teamId, query=None):
@@ -302,5 +313,6 @@ class APISession(object):
                 param_gameId=gameId, param_teamId=teamId
             )
         return self.api_call(
-            ENDPOINTS["shield"], query=f"?query={query}&variables=null",
+            ENDPOINTS["shield"],
+            query=f"?query={query}&variables=null",
         )

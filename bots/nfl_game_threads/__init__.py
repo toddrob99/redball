@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "2.2.6"
+__version__ = "2.2.7"
 
 DATA_LOCK = threading.Lock()
 
@@ -302,7 +302,7 @@ class Bot(object):
                             for x in g["externalIds"]
                             if x["source"] == "gamedetail"
                         ),
-                        0,
+                        "0",
                     )
                     g_details = self.nfl.shieldQuery(
                         f"query%7Bviewer%7BgameDetail(id%3A%22{g_did}%22)%7Bid%20attendance%20distance%20down%20gameClock%20goalToGo%20homePointsOvertime%20homePointsTotal%20homePointsQ1%20homePointsQ2%20homePointsQ3%20homePointsQ4%20homeTeam%7Babbreviation%20nickName%7DhomeTimeoutsUsed%20homeTimeoutsRemaining%20period%20phase%20playReview%20possessionTeam%7Babbreviation%20nickName%7Dredzone%20stadium%20startTime%20visitorPointsOvertime%20visitorPointsOvertimeTotal%20visitorPointsQ1%20visitorPointsQ2%20visitorPointsQ3%20visitorPointsQ4%20visitorPointsTotal%20visitorTeam%7Babbreviation%20nickName%7DvisitorTimeoutsUsed%20visitorTimeoutsRemaining%20homePointsOvertimeTotal%20visitorPointsOvertimeTotal%20possessionTeam%7BnickName%7Dweather%7BcurrentFahrenheit%20location%20longDescription%20shortDescription%20currentRealFeelFahrenheit%7DyardLine%20yardsToGo%7D%7D%7D"
@@ -461,7 +461,7 @@ class Bot(object):
                                 for x in todayGames[myGameIndex]["externalIds"]
                                 if x["source"] == "gamedetail"
                             ),
-                            {},
+                            "0",
                         )
                     )
                 except Exception as e:
@@ -1864,7 +1864,7 @@ class Bot(object):
                     for x in todayGames[myGameIndex]["externalIds"]
                     if x["source"] == "gamedetail"
                 ),
-                {},
+                "0",
             )
             self.log.debug(
                 f"self.allData['gameId']: {self.allData['gameId']}; gameDetailId: {gameDetailId}"
@@ -1878,7 +1878,7 @@ class Bot(object):
                             for x in g["externalIds"]
                             if x["source"] == "gamedetail"
                         ),
-                        0,
+                        "0",
                     )
                     g_details = self.nfl.shieldQuery(
                         f"query%7Bviewer%7BgameDetail(id%3A%22{g_did}%22)%7Bid%20attendance%20distance%20down%20gameClock%20goalToGo%20homePointsOvertime%20homePointsTotal%20homePointsQ1%20homePointsQ2%20homePointsQ3%20homePointsQ4%20homeTeam%7Babbreviation%20nickName%7DhomeTimeoutsUsed%20homeTimeoutsRemaining%20period%20phase%20playReview%20possessionTeam%7Babbreviation%20nickName%7Dredzone%20stadium%20startTime%20visitorPointsOvertime%20visitorPointsOvertimeTotal%20visitorPointsQ1%20visitorPointsQ2%20visitorPointsQ3%20visitorPointsQ4%20visitorPointsTotal%20visitorTeam%7Babbreviation%20nickName%7DvisitorTimeoutsUsed%20visitorTimeoutsRemaining%20homePointsOvertimeTotal%20visitorPointsOvertimeTotal%20possessionTeam%7BnickName%7Dweather%7BcurrentFahrenheit%20location%20longDescription%20shortDescription%20currentRealFeelFahrenheit%7DyardLine%20yardsToGo%7D%7D%7D"
@@ -1907,7 +1907,7 @@ class Bot(object):
                             for x in todayGames[myGameIndex]["externalIds"]
                             if x["source"] == "gamedetail"
                         ),
-                        {},
+                        "0",
                     )
                 )
             except Exception as e:
