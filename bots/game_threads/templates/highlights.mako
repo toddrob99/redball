@@ -1,7 +1,7 @@
 ## Game Highlights
 <%
     sortedHighlights = []
-    if not data[gamePk]['schedule']['content'].get('highlights',{}).get('highlights') or data[gamePk]['schedule']['content'].get('highlights',{}).get('highlights',{}).get('items'):
+    if not data[gamePk]['schedule']['content'].get('highlights',{}).get('highlights') or not data[gamePk]['schedule']['content'].get('highlights',{}).get('highlights',{}).get('items'):
         return
     else:
         unorderedHighlights = {}
