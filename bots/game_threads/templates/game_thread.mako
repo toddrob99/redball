@@ -84,10 +84,15 @@ ${ondeck} is on deck\
 ## Broadcasts, gameday link, (strikezone map commented out since it doesn't seem to have data), (game notes commented out due to new press pass requirement)
 <%include file="game_info.mako" />
 
+<%
+    wc_standings = settings.get('Game Thread',{}).get('WILDCARD_STANDINGS', False)
+    wc_scoreboard = settings.get('Game Thread',{}).get('WILDCARD_SCOREBOARD', False)
+    wc_num = settings.get('Game Thread',{}).get('WILDCARD_NUM_TO_SHOW', 5)
+%>\
 ## Game status is not final or live (except warmup), include standings, probable pitchers, lineups if posted
 % if (data[gamePk]['schedule']['status']['abstractGameCode'] != 'L' or data[gamePk]['schedule']['status']['statusCode'] == 'PW') and data[gamePk]['schedule']['status']['abstractGameCode'] != 'F':
 % if data[0]['myTeam']['seasonState'] == 'regular' and data[gamePk]['schedule']['gameType'] == "R":
-<%include file="standings.mako" />
+<%include file="standings.mako" args="include_wc=wc_standings,wc_num=wc_num"/>
 % endif
 
 <%include file="probable_pitchers.mako" />
@@ -115,8 +120,7 @@ ${ondeck} is on deck\
 % if data[0]['myTeam'].get('division'):  # will skip for All Star teams
 % if data[0]['myTeam']['seasonState'] != 'post:in':
 ## division scoreboard
-${'###Around the Division' if any(x for x in data[0]['leagueSchedule'] if data[0]['myTeam']['division']['id'] in [x['teams']['away']['team'].get('division',{}).get('id'), x['teams']['home']['team'].get('division',{}).get('id')] and x['gamePk'] != gamePk) else 'Around the Division: There are no other division teams playing!'}
-<%include file="division_scoreboard.mako" args="gamePk=gamePk" />
+<%include file="division_scoreboard.mako" args="gamePk=gamePk,include_wc=wc_scoreboard,wc_num=wc_num" />
 % else:
 ## league scoreboard
 ${'###Around the League' if any(x for x in data[0]['leagueSchedule'] if x['gamePk'] != gamePk) else 'Around the League: There are no other games!'}

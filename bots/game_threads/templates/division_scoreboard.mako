@@ -1,4 +1,4 @@
-<%page args="gamePk=0" />
+<%page args="gamePk=0,include_wc=False,wc_num=5" />
 ## My team's division games
 <%
     from datetime import datetime
@@ -9,8 +9,47 @@
         gamePks = [x for x in gamePk]
     else:
         gamePks = [0]
-    divGames = [x for x in data[0]['leagueSchedule'] if data[0]['myTeam']['division']['id'] in [x['teams']['away']['team'].get('division',{}).get('id'), x['teams']['home']['team'].get('division',{}).get('id')] and x['gamePk'] not in gamePks]
+    if include_wc:
+        wc_teams = []
+        wc_temp = []
+        for d in data[0]['standings'].values():
+            for t in d["teams"]:
+                if t.get("wc_rank") != "-" and int(t.get("wc_rank", 0)) <= wc_num:
+                    wc_teams.append(t["team_id"])
+                    wc_temp.append({"rank": t["wc_rank"], "id": t["team_id"], "name": t["name"]})
+    divGames = [
+        x for x in data[0]['leagueSchedule'] 
+        if (
+            data[0]['myTeam']['division']['id']
+            in [
+                x['teams']['away']['team'].get('division',{}).get('id'),
+                x['teams']['home']['team'].get('division',{}).get('id')
+            ] or (
+                include_wc
+                and data[0]['myTeam']['league']['id'] in [
+                    x['teams']['away']['team'].get('league',{}).get('id'),
+                    x['teams']['home']['team'].get('league',{}).get('id')
+                ] and any(
+                    True for i in wc_teams if i in [
+                        x['teams']['away']['team'].get('id'),
+                        x['teams']['home']['team'].get('id')
+                    ]
+                )
+            )
+        ) and x['gamePk'] not in gamePks
+    ]
+    if not len(divGames):
+        if include_wc:
+            title = 'Division & Wild Card Scoreboard: There are no other games!'
+        else:
+            title = 'Around the Division: There are no other division teams playing!'
+    else:
+        if include_wc:
+            title = '###Division & Wild Card Scoreboard'
+        else:
+            title = '###Division Soreboard'
 %>\
+${title}
 % for x in divGames:
 ${x['teams']['away']['team']['abbreviation']} ${x['teams']['away'].get('score',0) if x['status']['abstractGameCode'] in ['L','F'] else ''} @ \
 ${x['teams']['home']['team']['abbreviation']} ${x['teams']['home'].get('score',0) if x['status']['abstractGameCode'] in ['L','F'] else ''} \

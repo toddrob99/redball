@@ -159,6 +159,39 @@
             "options": [],
             "subkeys": [],
             "parent_key": ""
+        },
+        {
+            "key": "WILDCARD_NUM_TO_SHOW",
+            "description": "Number of wild card teams to consider for WILDCARD_SCOREBOARD and WILDCARD_STANDINGS.",
+            "type": "int",
+            "val": 5,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "WILDCARD_SCOREBOARD",
+            "description": "Include top wildcard teams' games along with division scoreboard.",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "WILDCARD_STANDINGS",
+            "description": "Include wild card standings.",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
         }
     ],
     "Game Thread": [
@@ -365,6 +398,39 @@
             "options": [],
             "subkeys": [],
             "parent_key": ""
+        },
+        {
+            "key": "WILDCARD_NUM_TO_SHOW",
+            "description": "Number of wild card teams to consider for WILDCARD_SCOREBOARD and WILDCARD_STANDINGS.",
+            "type": "int",
+            "val": 5,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "WILDCARD_SCOREBOARD",
+            "description": "Include top wildcard teams' games along with division scoreboard.",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
+        },
+        {
+            "key": "WILDCARD_STANDINGS",
+            "description": "Include wild card standings.",
+            "type": "bool",
+            "val": false,
+            "options": [
+                true,
+                false
+            ],
+            "subkeys": [],
+            "parent_key": null
         }
     ],
     "Comments": [

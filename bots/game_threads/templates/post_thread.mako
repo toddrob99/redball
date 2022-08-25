@@ -37,9 +37,12 @@ due to ${data[gamePk]['schedule']['status']['reason']} \
 ${'###Around the League' if any(x for x in data[0]['leagueSchedule'] if x['gamePk'] != gamePk) else 'Around the League: There are no other games!'}
 <%include file="league_scoreboard.mako" args="gamePk=gamePk" />
 % else:
+<%
+    wc = settings.get('Game Thread',{}).get('WILDCARD_SCOREBOARD', False)
+    wc_num = settings.get('Game Thread',{}).get('WILDCARD_NUM_TO_SHOW', 5)
+%>\
 ## division scoreboard during pre and regular season
-${'###Around the Division' if any(x for x in data[0]['leagueSchedule'] if data[0]['myTeam']['division']['id'] in [x['teams']['away']['team'].get('division',{}).get('id'), x['teams']['home']['team'].get('division',{}).get('id')] and x['gamePk'] != gamePk) else 'Around the Division: There are no other division teams playing!'}
-<%include file="division_scoreboard.mako" args="gamePk=gamePk" />
+<%include file="division_scoreboard.mako" args="gamePk=gamePk,include_wc=wc,wc_num=wc_num" />
 % endif
 % endif
 

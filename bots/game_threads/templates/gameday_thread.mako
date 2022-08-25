@@ -26,15 +26,19 @@ due to ${data[pk]['schedule']['status']['reason']} \
 ## probable pitchers vs. teams
 % endfor
 
+<%
+    wc_standings = settings.get('Game Day Thread',{}).get('WILDCARD_STANDINGS', False)
+    wc_scoreboard = settings.get('Game Day Thread',{}).get('WILDCARD_SCOREBOARD', False)
+    wc_num = settings.get('Game Day Thread',{}).get('WILDCARD_NUM_TO_SHOW', 5)
+%>\
 % if data[0]['myTeam']['seasonState'] == 'regular' and data[pk]['schedule']['gameType'] == "R":
-<%include file="standings.mako" />
+<%include file="standings.mako" args="include_wc=wc_standings,wc_num=wc_num"/>
 % endif
 
 % if data[0]['myTeam'].get('division'):  # will skip for All Star teams
 % if data[0]['myTeam']['seasonState'] != 'post:in':
 ## division scoreboard
-${'###Around the Division' if any(x for x in data[0]['leagueSchedule'] if data[0]['myTeam']['division']['id'] in [x['teams']['away']['team'].get('division',{}).get('id'), x['teams']['home']['team'].get('division',{}).get('id')] and x['gamePk'] not in data.keys()) else 'Around the Division: There are no other division teams playing!'}
-<%include file="division_scoreboard.mako" args="gamePk=list(data.keys())" />
+<%include file="division_scoreboard.mako" args="gamePk=list(data.keys()),include_wc=wc_scoreboard,wc_num=wc_num" />
 % else:
 ## league scoreboard
 ${'###Around the League' if any(x for x in data[0]['leagueSchedule'] if x['gamePk'] not in data.keys()) else 'Around the League: There are no other games!'}
