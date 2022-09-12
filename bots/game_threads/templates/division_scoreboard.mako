@@ -47,7 +47,7 @@
         if include_wc:
             title = '###Division & Wild Card Scoreboard'
         else:
-            title = '###Division Soreboard'
+            title = '###Division Scoreboard'
 %>\
 ${title}
 % for x in divGames:
