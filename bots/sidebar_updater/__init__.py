@@ -27,7 +27,7 @@ from ..nba_game_threads import pynbaapi
 from ..nhl_game_threads import pynhlapi
 from ..nfl_game_threads import mynflapi
 
-__version__ = "1.0.6"
+__version__ = "1.1"
 
 
 def run(bot, settings):
@@ -611,7 +611,7 @@ class SidebarUpdaterBot:
         135: "/r/Padres",
         143: "/r/Phillies",
         121: "/r/NewYorkMets",
-        146: "/r/letsgofish",
+        146: "/r/MiamiMarlins",
         120: "/r/Nationals",
         144: "/r/Braves",
     }

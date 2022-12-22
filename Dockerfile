@@ -1,4 +1,4 @@
-FROM python:3.9-alpine
+FROM python:3.11-slim-buster
 
 LABEL Name=redball Version=1.0.0
 
@@ -7,10 +7,11 @@ ADD . /app
 
 EXPOSE 8087
 
-RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev openssl-dev python3-dev rust cargo
+ARG DEBIAN_FRONTEND=noninteractive
+
 RUN python3 -m pip install --upgrade pip
 RUN python3 -m pip install -r requirements.txt
-RUN apk del .build-deps gcc musl-dev libffi-dev openssl-dev python3-dev rust cargo
-RUN apk add tzdata
+
+RUN apt-get install -y tzdata
 
 CMD ["python3", "redball.py"]

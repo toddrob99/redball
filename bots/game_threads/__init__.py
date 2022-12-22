@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.4.1"
+__version__ = "1.5"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -6369,7 +6369,7 @@ class Bot(object):
         135: "/r/Padres",
         143: "/r/Phillies",
         121: "/r/NewYorkMets",
-        146: "/r/letsgofish",
+        146: "/r/MiamiMarlins",
         120: "/r/Nationals",
         144: "/r/Braves",
         0: "/MLB",
