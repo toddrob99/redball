@@ -27,7 +27,7 @@ from ..nba_game_threads import pynbaapi
 from ..nhl_game_threads import pynhlapi
 from ..nfl_game_threads import mynflapi
 
-__version__ = "1.1"
+__version__ = "1.1.1"
 
 
 def run(bot, settings):

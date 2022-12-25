@@ -16,6 +16,6 @@ ${my_team["divisionFullName"]} Standings
 |Team|W|L|T|Div|
 |:--|:-:|:-:|:-:|:-:|
 ${"\n".join([f"|[{next((t['nickName'] for t in all_teams if t['id'] == x['team']['id']), x['team']['fullName'])}]({team_subs.get(next((t['nickName'] for t in all_teams if t['id'] == x['team']['id']), 'nfl'), '/r/nfl')})|\
-{x['overall']['wins']}|{x['overall']['losses']}|{x['overall']['ties']}|{x['division']['wins']}-{x['division']['losses']}{x['division']['ties'] if x['division']['ties'] else ''}|" for x in div_standings])}
+{x['overall']['wins']}|{x['overall']['losses']}|{x['overall']['ties']}|{x['division']['wins']}-{x['division']['losses']}{('-' + str(x['division']['ties'])) if x['division']['ties'] else ''}|" for x in div_standings])}
 
 ^Updated: ^${datetime.now().strftime("%Y-%m-%d ^%H:%M")}[](/redball/standings)
