@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.5"
+__version__ = "1.5.1"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -3669,9 +3669,9 @@ class Bot(object):
             self.log.debug("Overriding season state per SEASON_STATE_OVERRIDE setting")
             return self.settings["MLB"]["SEASON_STATE_OVERRIDE"]
         elif self.myTeam["league"]["seasonDateInfo"].get(
-            "preSeasonStartDate"
+            "springStartDate"
         ) and datetime.strptime(
-            self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
+            self.myTeam["league"]["seasonDateInfo"]["springStartDate"],
             "%Y-%m-%d",
         ) <= datetime.strptime(
             self.today["Y-m-d"], "%Y-%m-%d"
@@ -3682,7 +3682,7 @@ class Bot(object):
             # Preseason (includes day or two in between pre and regular season)
             return "pre"
         elif (
-            not self.myTeam["league"]["seasonDateInfo"].get("preSeasonStartDate")
+            not self.myTeam["league"]["seasonDateInfo"].get("springStartDate")
             and datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d")
             < datetime.strptime(
                 self.myTeam["league"]["seasonDateInfo"]["regularSeasonStartDate"],
@@ -3691,7 +3691,7 @@ class Bot(object):
         ) or (
             datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d")
             < datetime.strptime(
-                self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
+                self.myTeam["league"]["seasonDateInfo"]["springStartDate"],
                 "%Y-%m-%d",
             )
         ):
@@ -3782,10 +3782,10 @@ class Bot(object):
             season = int(self.today["Y"])
             the_date = (
                 datetime.strptime(
-                    self.myTeam["league"]["seasonDateInfo"]["preSeasonStartDate"],
+                    self.myTeam["league"]["seasonDateInfo"]["springStartDate"],
                     "%Y-%m-%d",
                 )
-                if self.myTeam["league"]["seasonDateInfo"].get("preSeasonStartDate")
+                if self.myTeam["league"]["seasonDateInfo"].get("springStartDate")
                 else (
                     datetime.strptime(
                         self.myTeam["league"]["seasonDateInfo"][
