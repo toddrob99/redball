@@ -27,7 +27,7 @@ from ..nba_game_threads import pynbaapi
 from ..nhl_game_threads import pynhlapi
 from ..nfl_game_threads import mynflapi
 
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 
 
 def run(bot, settings):
@@ -522,7 +522,7 @@ class SidebarUpdaterBot:
                         seasonType="REG",
                         week=current_week["week"]
                         if current_week["seasonType"] == "REG"
-                        else 17
+                        else 18
                         if current_week["seasonType"] == "POST"
                         else 1,
                     )
