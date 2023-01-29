@@ -36,7 +36,7 @@ Wild Card Game -
 %elif data["currentWeek"]["weekType"] == "DIV":
 Divisional Playoff Game - 
 %elif data["currentWeek"]["weekType"] == "CONF":
-${data["myTeam"]["conference"]["abbr"]} Champsionship Game - 
+${data["myTeam"]["conferenceAbbr"]} Championship Game - 
 %elif data["currentWeek"]["weekType"] == "PRO":
 Pro Bowl - 
 %elif data["currentWeek"]["weekType"] == "SB":
