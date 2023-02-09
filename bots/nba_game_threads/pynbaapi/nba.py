@@ -101,10 +101,17 @@ class NBA:
         after_datetime: datetime = datetime.now(),
     ) -> Union[NestedAPIObject, None]:
         sched = self.schedule(season)
+        if not len(sched.league_schedule.game_dates):
+            return None
+        try:
+            date_format = "%m/%d/%Y %H:%M:%S %p"
+            datetime.strptime(sched.league_schedule.game_dates[0].game_date, date_format)
+        except ValueError:
+            date_format = "%m/%d/%Y %H:%M:%S"
         game_date_gen = (
             x
             for x in sched.league_schedule.game_dates
-            if datetime.strptime(x.game_date, "%m/%d/%Y %H:%M:%S %p")
+            if datetime.strptime(x.game_date, date_format)
             >= after_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
         )
         for d in game_date_gen:
