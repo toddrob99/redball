@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.5.1"
+__version__ = "1.5.2"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -4437,18 +4437,43 @@ class Bot(object):
                     # Get updated list of timestamps
                     self.log.debug("Getting timestamps for pk {}".format(pk))
                     timestamps = self.api_call("game_timestamps", {"gamePk": pk})
-                    if not self.commonData.get(pk, {}).get("gumbo") or (
-                        self.commonData[pk]["gumbo"]
-                        .get("metaData", {})
-                        .get("timeStamp", "")
-                        == ""
-                        or self.commonData[pk]["gumbo"]["metaData"]["timeStamp"]
-                        not in timestamps
-                        or len(timestamps)
-                        - timestamps.index(
-                            self.commonData[pk]["gumbo"]["metaData"]["timeStamp"]
+                    if (
+                        not self.commonData.get(pk, {}).get("gumbo")
+                        or (
+                            self.commonData[pk]["gumbo"]
+                            .get("metaData", {})
+                            .get("timeStamp", "")
+                            == ""
+                            or self.commonData[pk]["gumbo"]["metaData"]["timeStamp"]
+                            not in timestamps
+                            or len(timestamps)
+                            - timestamps.index(
+                                self.commonData[pk]["gumbo"]["metaData"]["timeStamp"]
+                            )
+                            > 3
                         )
-                        > 3
+                        or (
+                            self.settings.get("Bot", {}).get(
+                                "FULL_GUMBO_WHEN_FINAL", True
+                            )
+                            and (
+                                self.commonData.get(pk, {})
+                                .get("schedule", {})
+                                .get("status", {})
+                                .get("abstractGameCode")
+                                == "F"
+                                or self.commonData.get(pk, {})
+                                .get("schedule", {})
+                                .get("status", {})
+                                .get("codedGameState")
+                                in [
+                                    "C",
+                                    "D",
+                                    "U",
+                                    "T",
+                                ]
+                            )
+                        )
                     ):
                         # Get full gumbo
                         self.log.debug("Getting full gumbo data for pk {}".format(pk))
