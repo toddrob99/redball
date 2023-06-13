@@ -30,6 +30,7 @@ import statsapi
 import twitter
 
 import praw
+import plaw
 
 __version__ = "1.5.2"
 
@@ -80,8 +81,8 @@ class Bot(object):
         )
         self.build_tables()
 
-        # Initialize Reddit API connection
-        self.init_reddit()
+        # Initialize Lemmy API connection
+        self.init_lemmy()
 
         # Initialize scheduler
         if "SCHEDULER" in vars(self.bot):
@@ -255,7 +256,7 @@ class Bot(object):
                         len(todayGamePks), todayGamePks
                     )
                 )
-                # Initialize activeGames and THREADS dicts (will hold game info and thread reddit objects)
+                # Initialize activeGames and THREADS dicts (will hold game info and thread lemmy objects)
                 for x in todayGamePks:
                     self.activeGames.update(
                         {x: {"STOP_FLAG": False, "POST_STOP_FLAG": False}}
@@ -756,588 +757,6 @@ class Bot(object):
             },
         }
 
-    def off_day(self):
-        if (
-            self.seasonState.startswith("off") or self.seasonState == "post:out"
-        ) and self.settings.get("Off Day Thread", {}).get("SUPPRESS_OFFSEASON", True):
-            self.log.info("Suppressing off day thread during offseason.")
-            self.activeGames.update({"off": {"STOP_FLAG": True}})
-        elif not self.settings.get("Off Day Thread", {}).get("ENABLED", True):
-            self.log.info("Off day thread disabled.")
-            self.activeGames.update({"off": {"STOP_FLAG": True}})
-        else:
-            # Spawn a thread to wait for post time and then keep off day thread updated
-            self.activeGames.update(
-                {"off": {"STOP_FLAG": False}}
-            )  # Off day thread is not specific to a gamePk
-            self.THREADS.update(
-                {
-                    "OFFDAY_THREAD": threading.Thread(
-                        target=self.off_thread_update_loop,
-                        name="bot-{}-{}-offday".format(
-                            self.bot.id, self.bot.name.replace(" ", "-")
-                        ),
-                        daemon=True,
-                    )
-                }
-            )
-            self.THREADS["OFFDAY_THREAD"].start()
-            self.log.debug(
-                "Started off day thread {}.".format(self.THREADS["OFFDAY_THREAD"])
-            )
-
-        while (
-            len([{k: v} for k, v in self.activeGames.items() if not v["STOP_FLAG"]])
-            and redball.SIGNAL is None
-            and not self.bot.STOP
-        ):
-            try:
-                if not self.settings.get("Off Day Thread", {}).get("ENABLED", True):
-                    # Off day thread is disabled, so don't start an update thread...
-                    pass
-                elif (
-                    not self.activeGames["off"]["STOP_FLAG"]
-                    and self.THREADS.get("OFFDAY_THREAD")
-                    and isinstance(self.THREADS["OFFDAY_THREAD"], threading.Thread)
-                    and self.THREADS["OFFDAY_THREAD"].is_alive()
-                ):
-                    self.log.debug(
-                        "Off day update thread looks fine..."
-                    )  # debug - need this here to see if the condition is working when the thread crashes
-                    # pass
-                elif self.activeGames["off"]["STOP_FLAG"]:
-                    # Off day thread is already done
-                    pass
-                else:
-                    raise Exception("Off day thread update process is not running!")
-            except Exception as e:
-                self.log.error(
-                    "Off day thread update process is not running. Attempting to start. (Error: {})".format(
-                        e
-                    )
-                )
-                self.error_notification("Off day thread update process is not running")
-                self.THREADS.update(
-                    {
-                        "OFFDAY_THREAD": threading.Thread(
-                            target=self.off_thread_update_loop,
-                            name="bot-{}-{}-offday".format(
-                                self.bot.id, self.bot.name.replace(" ", "-")
-                            ),
-                            daemon=True,
-                        )
-                    }
-                )
-                self.THREADS["OFFDAY_THREAD"].start()
-                self.log.debug(
-                    "Started off day thread {}.".format(self.THREADS["OFFDAY_THREAD"])
-                )
-
-            if (
-                len(
-                    [
-                        {k: v}
-                        for k, v in self.activeGames.items()
-                        if not v.get("STOP_FLAG", False)
-                        or not v.get("POST_STOP_FLAG", False)
-                    ]
-                )
-                > 0
-            ):
-                # There are still active threads
-                self.log.debug(
-                    "Active games/threads: {}".format(
-                        [
-                            k
-                            for k, v in self.activeGames.items()
-                            if not v["STOP_FLAG"] or not v.get("POST_STOP_FLAG", True)
-                        ]
-                    )
-                )
-                self.log.debug(
-                    "Active threads: {}".format(
-                        [
-                            t
-                            for t in threading.enumerate()
-                            if t.name.startswith(
-                                "bot-{}-{}".format(
-                                    self.bot.id, self.bot.name.replace(" ", "-")
-                                )
-                            )
-                        ]
-                    )
-                )
-                self.sleep(30)
-            else:
-                break
-
-    def weekly_thread_wait_and_post(self):
-        weeklyDate = {
-            "Ymd": (
-                datetime.today() - timedelta(days=datetime.today().weekday())
-            ).strftime("%Y%m%d"),
-            "Y-m-d": (
-                datetime.today() - timedelta(days=datetime.today().weekday())
-            ).strftime("%Y-%m-%d"),
-            "Y": (
-                datetime.today() - timedelta(days=datetime.today().weekday())
-            ).strftime("%Y"),
-        }
-        if (
-            self.weekly.get("weeklyDate")
-            and self.weekly["weeklyDate"]["Ymd"] < weeklyDate["Ymd"]
-        ):
-            # Existing thread is from last week
-            self.staleThreads.append(self.weekly["weeklyThread"])
-            self.weekly = {}
-            self.weekly.update({"weeklyDate": weeklyDate})
-        elif not self.weekly.get("weeklyDate"):
-            self.weekly.update({"weeklyDate": weeklyDate})
-
-        if self.weekly.get("weeklyThread"):
-            self.log.info(
-                "Existing weekly thread [{}] is still current.".format(
-                    self.weekly["weeklyThread"].id
-                )
-            )
-            return
-
-        # Check DB for existing weekly thread
-        wq = "select * from {}threads where gamePk in ({}) and type='weekly' and deleted=0;".format(
-            self.dbTablePrefix,
-            ",".join(
-                [
-                    str(x)
-                    for x in range(
-                        int(self.weekly["weeklyDate"]["Ymd"]),
-                        int(datetime.today().strftime("%Y%m%d")) + 1,
-                    )
-                ]
-            ),
-        )
-        wThread = rbdb.db_qry(wq, closeAfter=True, logg=self.log)
-
-        weeklyThread = None
-        if len(wThread) > 0:
-            self.log.info(
-                "Weekly Thread found in database [{}].".format(wThread[0]["id"])
-            )
-            weeklyThread = self.reddit.submission(wThread[0]["id"])
-            if not weeklyThread.author:
-                self.log.warning("Weekly thread appears to have been deleted.")
-                q = "update {}threads set deleted=1 where id='{}';".format(
-                    self.dbTablePrefix, weeklyThread.id
-                )
-                u = rbdb.db_qry(q, commit=True, closeAfter=True, logg=self.log)
-                if isinstance(u, str):
-                    self.log.error(
-                        "Error marking thread as deleted in database: {}".format(u)
-                    )
-
-                weeklyThread = None
-            else:
-                if weeklyThread.selftext.find("\n\n^^^Last ^^^Updated") != -1:
-                    weeklyThreadText = weeklyThread.selftext[
-                        0 : weeklyThread.selftext.find("\n\n^^^Last ^^^Updated:")
-                    ]
-                elif weeklyThread.selftext.find("\n\n^^^Posted") != -1:
-                    weeklyThreadText = weeklyThread.selftext[
-                        0 : weeklyThread.selftext.find("\n\n^^^Posted:")
-                    ]
-                else:
-                    weeklyThreadText = weeklyThread.selftext
-
-                self.weekly.update(
-                    {
-                        "weeklyThreadText": weeklyThreadText,
-                        "weeklyThread": weeklyThread,
-                        "weeklyThreadTitle": weeklyThread.title
-                        if weeklyThread not in [None, False]
-                        else None,
-                    }
-                )
-                # Only sticky when posting the thread
-                # if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(weeklyThread)
-
-        if not self.weekly.get("weeklyThread"):
-            # Check/wait for time to submit weekly thread
-            self.weekly.update(
-                {
-                    "postTime_local": datetime.strptime(
-                        datetime.today().strftime(
-                            "%Y-%m-%d "
-                            + self.settings.get("Weekly Thread", {}).get(
-                                "POST_TIME", "05:00"
-                            )
-                        ),
-                        "%Y-%m-%d %H:%M",
-                    )
-                }
-            )
-            while (
-                datetime.today() < self.weekly["postTime_local"]
-                and redball.SIGNAL is None
-                and not self.bot.STOP
-            ):
-                if (
-                    self.weekly["postTime_local"] - datetime.today()
-                ).total_seconds() > 3600:
-                    self.log.info(
-                        "Weekly thread should not be posted for a long time ({}). Sleeping for an hour...".format(
-                            self.weekly["postTime_local"]
-                        )
-                    )
-                    self.sleep(3600)
-                elif (
-                    self.weekly["postTime_local"] - datetime.today()
-                ).total_seconds() > 1800:
-                    self.log.info(
-                        "Weekly thread post time is still more than 30 minutes away ({}). Sleeping for a half hour...".format(
-                            self.weekly["postTime_local"]
-                        )
-                    )
-                    self.sleep(1800)
-                else:
-                    self.log.info(
-                        "Weekly thread post time is approaching ({}). Sleeping until then...".format(
-                            self.weekly["postTime_local"]
-                        )
-                    )
-                    self.sleep(
-                        (
-                            self.weekly["postTime_local"] - datetime.today()
-                        ).total_seconds()
-                    )
-
-            if redball.SIGNAL is not None or self.bot.STOP:
-                return
-
-            # Unsticky stale threads
-            if self.settings.get("Reddit", {}).get("STICKY", False):
-                """
-                # Make sure the subreddit's sticky posts are marked as stale
-                try:
-                    sticky1 = self.subreddit.sticky(1)
-                    if sticky1.author == self.reddit.user.me() and sticky1 not in self.staleThreads:
-                        self.staleThreads.append(sticky1)
-
-                    sticky2 = self.subreddit.sticky(2)
-                    if sticky2.author == self.reddit.user.me() and sticky2 not in self.staleThreads:
-                        self.staleThreads.append(sticky2)
-                except Exception:
-                    # Exception likely due to no post being stickied (or only one), so ignore it...
-                    pass
-                """
-                if len(self.staleThreads):
-                    self.unsticky_threads(self.staleThreads)
-                    self.staleThreads = []
-
-            if not self.weekly.get("weeklyThread"):
-                (weeklyThread, weeklyThreadText) = self.prep_and_post(
-                    "weekly",
-                    postFooter="""
-
-^^^Posted: ^^^"""
-                    + self.convert_timezone(
-                        datetime.utcnow(), self.myTeam["venue"]["timeZone"]["id"]
-                    ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z"),
-                )
-                self.weekly.update(
-                    {
-                        "weeklyThreadText": weeklyThreadText,
-                        "weeklyThread": weeklyThread,
-                        "weeklyThreadTitle": weeklyThread.title
-                        if weeklyThread not in [None, False]
-                        else None,
-                    }
-                )
-
-        self.log.info("All done with weekly thread...")
-
-    def off_thread_update_loop(self):
-        skipFlag = None  # Will be set later if off day thread edit should be skipped
-
-        # Check/wait for time to submit off day thread
-        self.activeGames["off"].update(
-            {
-                "postTime_local": datetime.strptime(
-                    datetime.today().strftime(
-                        "%Y-%m-%d "
-                        + self.settings.get("Off Day Thread", {}).get(
-                            "POST_TIME", "05:00"
-                        )
-                    ),
-                    "%Y-%m-%d %H:%M",
-                )
-            }
-        )
-        while (
-            datetime.today() < self.activeGames["off"]["postTime_local"]
-            and redball.SIGNAL is None
-            and not self.bot.STOP
-        ):
-            if (
-                self.activeGames["off"]["postTime_local"] - datetime.today()
-            ).total_seconds() > 3600:
-                self.log.info(
-                    "Off day thread should not be posted for a long time ({}). Sleeping for an hour...".format(
-                        self.activeGames["off"]["postTime_local"]
-                    )
-                )
-                self.sleep(3600)
-            elif (
-                self.activeGames["off"]["postTime_local"] - datetime.today()
-            ).total_seconds() > 1800:
-                self.log.info(
-                    "Off day thread post time is still more than 30 minutes away ({}). Sleeping for a half hour...".format(
-                        self.activeGames["off"]["postTime_local"]
-                    )
-                )
-                self.sleep(1800)
-            else:
-                self.log.info(
-                    "Off day thread post time is approaching ({}). Sleeping until then...".format(
-                        self.activeGames["off"]["postTime_local"]
-                    )
-                )
-                self.sleep(
-                    (
-                        self.activeGames["off"]["postTime_local"] - datetime.today()
-                    ).total_seconds()
-                )
-
-        if redball.SIGNAL is not None or self.bot.STOP:
-            return
-
-        # Unsticky stale threads
-        if self.settings.get("Reddit", {}).get("STICKY", False):
-            """
-            # Make sure the subreddit's sticky posts are marked as stale
-            try:
-                sticky1 = self.subreddit.sticky(1)
-                if sticky1.author == self.reddit.user.me() and sticky1 not in self.staleThreads:
-                    self.staleThreads.append(sticky1)
-
-                sticky2 = self.subreddit.sticky(2)
-                if sticky2.author == self.reddit.user.me() and sticky2 not in self.staleThreads:
-                    self.staleThreads.append(sticky2)
-            except Exception:
-                # Exception likely due to no post being stickied (or only one), so ignore it...
-                pass
-            """
-            if len(self.staleThreads):
-                self.unsticky_threads(self.staleThreads)
-                self.staleThreads = []
-
-        # Check DB for existing off day thread
-        oq = "select * from {}threads where gamePk = {} and type='off' and deleted=0;".format(
-            self.dbTablePrefix, self.today["Ymd"]
-        )
-        offThread = rbdb.db_qry(oq, closeAfter=True, logg=self.log)
-
-        offDayThread = None
-        if len(offThread) > 0:
-            self.log.info(
-                "Off Day Thread found in database [{}].".format(offThread[0]["id"])
-            )
-            offDayThread = self.reddit.submission(offThread[0]["id"])
-            if not offDayThread.author:
-                self.log.warning("Off day thread appears to have been deleted.")
-                q = "update {}threads set deleted=1 where id='{}';".format(
-                    self.dbTablePrefix, offDayThread.id
-                )
-                u = rbdb.db_qry(q, commit=True, closeAfter=True, logg=self.log)
-                if isinstance(u, str):
-                    self.log.error(
-                        "Error marking thread as deleted in database: {}".format(u)
-                    )
-
-                offDayThread = None
-            else:
-                if offDayThread.selftext.find("\n\n^^^Last ^^^Updated") != -1:
-                    offDayThreadText = offDayThread.selftext[
-                        0 : offDayThread.selftext.find("\n\n^^^Last ^^^Updated:")
-                    ]
-                elif offDayThread.selftext.find("\n\n^^^Posted") != -1:
-                    offDayThreadText = offDayThread.selftext[
-                        0 : offDayThread.selftext.find("\n\n^^^Posted:")
-                    ]
-                else:
-                    offDayThreadText = offDayThread.selftext
-
-                self.activeGames["off"].update(
-                    {
-                        "offDayThreadText": offDayThreadText,
-                        "offDayThread": offDayThread,
-                        "offDayThreadTitle": offDayThread.title
-                        if offDayThread not in [None, False]
-                        else None,
-                    }
-                )
-                # Only sticky when posting the thread
-                # if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(offDayThread)
-
-        if not offDayThread:
-            (offDayThread, offDayThreadText) = self.prep_and_post(
-                "off",
-                postFooter="""
-
-^^^Posted: ^^^"""
-                + self.convert_timezone(
-                    datetime.utcnow(), self.myTeam["venue"]["timeZone"]["id"]
-                ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
-                + ", ^^^Update ^^^Interval: ^^^{} ^^^Minutes".format(
-                    self.settings.get("Off Day Thread", {}).get("UPDATE_INTERVAL", 5)
-                ),
-            )
-            self.activeGames["off"].update(
-                {
-                    "offDayThreadText": offDayThreadText,
-                    "offDayThread": offDayThread,
-                    "offDayThreadTitle": offDayThread.title
-                    if offDayThread not in [None, False]
-                    else None,
-                }
-            )
-            skipFlag = True
-
-        while (
-            not self.activeGames["off"]["STOP_FLAG"]
-            and redball.SIGNAL is None
-            and not self.bot.STOP
-        ):
-            # Keep off day thread updated
-            if skipFlag:
-                # Skip check/edit since skip flag is set
-                skipFlag = None
-                self.log.debug(
-                    "Skip flag is set, off day thread was just submitted/edited and does not need to be checked."
-                )
-            else:
-                try:
-                    # Update generic data for division games and no-no/perfect game watch
-                    self.collect_data(0)
-                    # self.log.debug('data passed into render_template: {}'.format(self.commonData))#debug
-                    text = self.render_template(
-                        thread="off",
-                        templateType="thread",
-                        data=self.commonData,
-                        settings=self.settings,
-                    )
-                    self.log.debug("Rendered off day thread text: {}".format(text))
-                    if (
-                        text != self.activeGames["off"]["offDayThreadText"]
-                        and text != ""
-                    ):
-                        self.activeGames["off"].update({"offDayThreadText": text})
-                        text += (
-                            """
-
-^^^Last ^^^Updated: ^^^"""
-                            + self.convert_timezone(
-                                datetime.utcnow(),
-                                self.myTeam["venue"]["timeZone"]["id"],
-                            ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
-                            + ", ^^^Update ^^^Interval: ^^^{} ^^^Minutes".format(
-                                self.settings.get("Off Day Thread", {}).get(
-                                    "UPDATE_INTERVAL", 5
-                                )
-                            )
-                        )
-                        offDayThread.edit(text)
-                        self.log.info("Off day thread edits submitted.")
-                        self.count_check_edit(offDayThread.id, "NA", edit=True)
-                        self.log_last_updated_date_in_db(offDayThread.id)
-                    elif text == "":
-                        self.log.info(
-                            "Skipping off day thread edit since thread text is blank..."
-                        )
-                    else:
-                        self.log.info("No changes to off day thread.")
-                        self.count_check_edit(offDayThread.id, "NA", edit=False)
-                except Exception as e:
-                    self.log.error("Error editing off day thread: {}".format(e))
-                    self.error_notification("Error editing off day thread")
-
-            update_off_thread_until = self.settings.get("Off Day Thread", {}).get(
-                "UPDATE_UNTIL", "All MLB games are final"
-            )
-            if update_off_thread_until not in [
-                "Do not update",
-                "All division games are final",
-                "All MLB games are final",
-            ]:
-                # Unsupported value, use default
-                update_off_thread_until = "All MLB games are final"
-
-            if update_off_thread_until == "Do not update":
-                # Setting says not to update
-                self.log.info(
-                    "Stopping off day thread update loop per UPDATE_UNTIL setting."
-                )
-                self.activeGames["off"].update({"STOP_FLAG": True})
-                break
-            elif update_off_thread_until == "All division games are final":
-                if not next(
-                    (
-                        True
-                        for x in self.commonData[0]["leagueSchedule"]
-                        if x["status"]["abstractGameCode"] != "F"
-                        and x["status"]["codedGameState"] not in ["C", "D", "U", "T"]
-                        and self.myTeam["division"]["id"]
-                        in [
-                            x["teams"]["away"]["team"].get("division", {}).get("id"),
-                            x["teams"]["home"]["team"].get("division", {}).get("id"),
-                        ]
-                    ),
-                    False,
-                ):
-                    # Division games are all final
-                    self.log.info(
-                        "All division games are final. Stopping off day thread update loop per UPDATE_UNTIL setting."
-                    )
-                    self.activeGames["off"].update({"STOP_FLAG": True})
-                    break
-            elif update_off_thread_until == "All MLB games are final":
-                if not next(
-                    (
-                        True
-                        for x in self.commonData[0]["leagueSchedule"]
-                        if x["status"]["abstractGameCode"] != "F"
-                        and x["status"]["codedGameState"] not in ["C", "D", "U", "T"]
-                    ),
-                    False,
-                ):
-                    # MLB games are all final
-                    self.log.info(
-                        "All MLB games are final. Stopping off day thread update loop per UPDATE_UNTIL setting."
-                    )
-                    self.activeGames["off"].update({"STOP_FLAG": True})
-                    break
-
-            self.log.debug(
-                "Off day thread stop criteria not met ({}).".format(
-                    update_off_thread_until
-                )
-            )  # debug - need this to tell if logic is working
-
-            # Update interval is in minutes (seconds for game thread only)
-            odtWait = self.settings.get("Off Day Thread", {}).get("UPDATE_INTERVAL", 5)
-            if odtWait < 1:
-                odtWait = 1
-            self.log.info("Sleeping for {} minutes...".format(odtWait))
-            self.sleep(odtWait * 60)
-
-        if redball.SIGNAL is not None or self.bot.STOP:
-            self.log.debug("Caught a stop signal...")
-
-        # Mark off day thread as stale so it will be unstickied tomorrow
-        if offDayThread:
-            self.staleThreads.append(offDayThread)
-
-        self.log.debug("Ending off day update thread...")
-        return
-
     def gameday_thread_update_loop(self, todayGamePks):
         pk = "gameday"  # Game day thread is not specific to a gamePk
         skipFlag = None  # Will be set later if game day thread edit should be skipped
@@ -1401,27 +820,27 @@ class Bot(object):
             return
 
         # Unsticky stale threads
-        if self.settings.get("Reddit", {}).get("STICKY", False):
-            """
-            # Make sure the subreddit's sticky posts are marked as stale
-            try:
-                sticky1 = self.subreddit.sticky(1)
-                if sticky1.author == self.reddit.user.me() and sticky1 not in self.staleThreads and not next((True for v in self.activeGames.values() if sticky1 in [v.get('gameThread'), v.get('postGameThread')]), None):
-                    self.log.debug('Marking {} as stale (top sticky slot).'.format(sticky1.id))
-                    self.staleThreads.append(sticky1)
+        # if self.settings.get("Reddit", {}).get("STICKY", False):
+        #     """
+        #     # Make sure the subreddit's sticky posts are marked as stale
+        #     try:
+        #         sticky1 = self.subreddit.sticky(1)
+        #         if sticky1.author == self.reddit.user.me() and sticky1 not in self.staleThreads and not next((True for v in self.activeGames.values() if sticky1 in [v.get('gameThread'), v.get('postGameThread')]), None):
+        #             self.log.debug('Marking {} as stale (top sticky slot).'.format(sticky1.id))
+        #             self.staleThreads.append(sticky1)
 
-                sticky2 = self.subreddit.sticky(2)
-                if sticky2.author == self.reddit.user.me() and sticky2 not in self.staleThreads and not next((True for v in self.activeGames.values() if sticky2 in [v.get('gameThread'), v.get('postGameThread')]), None):
-                    self.log.debug('Marking {} as stale (bottom sticky slot).'.format(sticky2.id))
-                    self.staleThreads.append(sticky2)
-            except Exception:
-                # Exception likely due to no post being stickied (or only one), so ignore it...
-                pass
-            """
+        #         sticky2 = self.subreddit.sticky(2)
+        #         if sticky2.author == self.reddit.user.me() and sticky2 not in self.staleThreads and not next((True for v in self.activeGames.values() if sticky2 in [v.get('gameThread'), v.get('postGameThread')]), None):
+        #             self.log.debug('Marking {} as stale (bottom sticky slot).'.format(sticky2.id))
+        #             self.staleThreads.append(sticky2)
+        #     except Exception:
+        #         # Exception likely due to no post being stickied (or only one), so ignore it...
+        #         pass
+        #     """
 
-            if len(self.staleThreads):
-                self.unsticky_threads(self.staleThreads)
-                self.staleThreads = []
+        #     if len(self.staleThreads):
+        #         self.unsticky_threads(self.staleThreads)
+        #         self.staleThreads = []
 
         # Check if game day thread already posted (record in threads table with gamePk and type='gameday' for any of today's gamePks)
         gdq = "select * from {}threads where type='gameday' and gamePk in ({}) and gameDate = '{}' and deleted=0;".format(
@@ -1436,8 +855,8 @@ class Bot(object):
             self.log.info(
                 "Game Day Thread found in database [{}].".format(gdThread[0]["id"])
             )
-            gameDayThread = self.reddit.submission(gdThread[0]["id"])
-            if not gameDayThread.author:
+            gameDayThread = self.lemmy.getPost(gdThread[0]["id"])
+            if not gameDayThread["creator"]["name"]:
                 self.log.warning("Game day thread appears to have been deleted.")
                 q = "update {}threads set deleted=1 where id='{}';".format(
                     self.dbTablePrefix, gameDayThread.id
@@ -1450,22 +869,22 @@ class Bot(object):
 
                 gameDayThread = None
             else:
-                if gameDayThread.selftext.find("\n\n^^^Last ^^^Updated") != -1:
-                    gameDayThreadText = gameDayThread.selftext[
-                        0 : gameDayThread.selftext.find("\n\n^^^Last ^^^Updated:")
+                if gameDayThread["post"]["body"].find("\n\n^^^Last ^^^Updated") != -1:
+                    gameDayThreadText = gameDayThread["post"]["body"][
+                        0 : gameDayThread["post"]["body"].find("\n\n^^^Last ^^^Updated:")
                     ]
-                elif gameDayThread.selftext.find("\n\n^^^Posted") != -1:
-                    gameDayThreadText = gameDayThread.selftext[
-                        0 : gameDayThread.selftext.find("\n\n^^^Posted:")
+                elif gameDayThread["post"]["body"].find("\n\n^^^Posted") != -1:
+                    gameDayThreadText = gameDayThread["post"]["body"][
+                        0 : gameDayThread["post"]["body"].find("\n\n^^^Posted:")
                     ]
                 else:
-                    gameDayThreadText = gameDayThread.selftext
+                    gameDayThreadText = gameDayThread["post"]["body"]
 
                 self.activeGames[pk].update(
                     {
                         "gameDayThreadText": gameDayThreadText,
                         "gameDayThread": gameDayThread,
-                        "gameDayThreadTitle": gameDayThread.title
+                        "gameDayThreadTitle": gameDayThread["post"]["name"]
                         if gameDayThread not in [None, False]
                         else None,
                     }
@@ -1529,7 +948,7 @@ class Bot(object):
                 {
                     "gameDayThreadText": gameDayThreadText,
                     "gameDayThread": gameDayThread,
-                    "gameDayThreadTitle": gameDayThread.title
+                    "gameDayThreadTitle": gameDayThread["post"]["name"]
                     if gameDayThread not in [None, False]
                     else None,
                 }
@@ -1759,8 +1178,8 @@ class Bot(object):
             self.log.info(
                 "Game {} Thread found in database [{}]".format(pk, gThread[0]["id"])
             )
-            gameThread = self.reddit.submission(gThread[0]["id"])
-            if not gameThread.author:
+            gameThread = self.lemmy.getPost(gThread[0]["id"])
+            if not gameThread["creator"]["name"]:
                 self.log.warning("Game thread appears to have been deleted.")
                 q = "update {}threads set deleted=1 where id='{}';".format(
                     self.dbTablePrefix, gameThread.id
@@ -1773,22 +1192,22 @@ class Bot(object):
 
                 gameThread = None
             else:
-                if gameThread.selftext.find("\n\n^^^Last ^^^Updated") != -1:
-                    gameThreadText = gameThread.selftext[
-                        0 : gameThread.selftext.find("\n\n^^^Last ^^^Updated:")
+                if gameThread["post"]["body"].find("\n\n^^^Last ^^^Updated") != -1:
+                    gameThreadText = gameThread["post"]["body"][
+                        0 : gameThread["post"]["body"].find("\n\n^^^Last ^^^Updated:")
                     ]
-                elif gameThread.selftext.find("\n\n^^^Posted") != -1:
-                    gameThreadText = gameThread.selftext[
-                        0 : gameThread.selftext.find("\n\n^^^Posted:")
+                elif gameThread["post"]["body"].find("\n\n^^^Posted") != -1:
+                    gameThreadText = gameThread["post"]["body"][
+                        0 : gameThread["post"]["body"].find("\n\n^^^Posted:")
                     ]
                 else:
-                    gameThreadText = gameThread.selftext
+                    gameThreadText = gameThread["post"]["body"]
 
                 self.activeGames[pk].update(
                     {
                         "gameThread": gameThread,
                         "gameThreadText": gameThreadText,
-                        "gameThreadTitle": gameThread.title
+                        "gameThreadTitle": gameThread["post"]["name"]
                         if gameThread not in [None, False]
                         else None,
                     }
@@ -2100,17 +1519,6 @@ class Bot(object):
                         else None,
                     }
                 )
-                if self.activeGames[pk].get("gameThread") and self.settings.get(
-                    "Game Thread", {}
-                ).get("MSG_BASEBALLBOT", False):
-                    # Send a message to BaseballBot if enabled
-                    self.log.info("Messaging game thread link to BaseballBot...")
-                    self.reddit.redditor("baseballbot").message(
-                        "Gamethread posted",
-                        self.activeGames[pk]["gameThread"].shortlink,
-                    )
-                    self.log.info("Message sent to BaseballBot...")
-
             # Thread is not posted, so don't start an update loop
             if not self.activeGames[pk].get("gameThread") and self.settings.get(
                 "Game Thread", {}
@@ -2495,7 +1903,7 @@ class Bot(object):
             self.log.info(
                 "Post Game Thread found in database [{}].".format(pgThread[0]["id"])
             )
-            postGameThread = self.reddit.submission(pgThread[0]["id"])
+            postGameThread = self.lemmy.getPost(pgThread[0]["id"])
             if not postGameThread.author:
                 self.log.warning("Post game thread appears to have been deleted.")
                 q = "update {}threads set deleted=1 where id='{}';".format(
@@ -2509,22 +1917,22 @@ class Bot(object):
 
                 postGameThread = None
             else:
-                if postGameThread.selftext.find("\n\n^^^Last ^^^Updated") != -1:
-                    postGameThreadText = postGameThread.selftext[
-                        0 : postGameThread.selftext.find("\n\n^^^Last ^^^Updated:")
+                if postGameThread["post"]["body"].find("\n\n^^^Last ^^^Updated") != -1:
+                    postGameThreadText = postGameThread["post"]["body"][
+                        0 : postGameThread["post"]["body"].find("\n\n^^^Last ^^^Updated:")
                     ]
-                elif postGameThread.selftext.find("\n\n^^^Posted") != -1:
-                    postGameThreadText = postGameThread.selftext[
-                        0 : postGameThread.selftext.find("\n\n^^^Posted:")
+                elif postGameThread["post"]["body"].find("\n\n^^^Posted") != -1:
+                    postGameThreadText = postGameThread["post"]["body"][
+                        0 : postGameThread["post"]["body"].find("\n\n^^^Posted:")
                     ]
                 else:
-                    postGameThreadText = postGameThread.selftext
+                    postGameThreadText = postGameThread["post"]["body"]
 
                 self.activeGames[pk].update(
                     {
                         "postGameThread": postGameThread,
                         "postGameThreadText": postGameThreadText,
-                        "postGameThreadTitle": postGameThread.title
+                        "postGameThreadTitle": postGameThread["post"]["name"]
                         if postGameThread not in [None, False]
                         else None,
                     }
@@ -2591,7 +1999,7 @@ class Bot(object):
                 {
                     "postGameThread": postGameThread,
                     "postGameThreadText": postGameThreadText,
-                    "postGameThreadTitle": postGameThread.title
+                    "postGameThreadTitle": postGameThread["post"]['name']
                     if postGameThread not in [None, False]
                     else None,
                 }
@@ -3251,56 +2659,6 @@ class Bot(object):
 
         self.log.info("Stopping game play monitor process.")
         return
-
-    def check_for_comment_webhooks(
-        self,
-        gamePk,
-        actionOrResult,
-        myTeamBatting,
-        atBat,
-        actionIndex,
-        eventType,
-        commentText,
-    ):
-        # Check for webhooks
-        for w in range(0, 10):
-            s = "" if w == 0 else str(w)
-            webhook_url = self.settings.get("Comments", {}).get(
-                "WEBHOOK{}_URL".format(s)
-            )
-            if webhook_url:
-                self.log.debug(
-                    "Webhook{} URL for comment: [{}].".format(s, webhook_url)
-                )
-                webhook_text = self.render_template(
-                    thread="comment",
-                    templateType="webhook",
-                    data=self.commonData,
-                    gamePk=gamePk,
-                    settings=self.settings,
-                    actionOrResult=actionOrResult,
-                    myTeamBatting=myTeamBatting,
-                    atBat=atBat,
-                    actionIndex=actionIndex,
-                    eventType=eventType,
-                    commentText=commentText,
-                )
-                self.log.debug(
-                    "Rendered comment webhook{} text: {}".format(s, webhook_text)
-                )
-                if webhook_text:
-                    webhook_result = self.post_webhook(webhook_url, webhook_text)
-                    self.log.info(
-                        "Webhook [{}] result: {}.".format(
-                            webhook_url,
-                            webhook_result
-                            if isinstance(webhook_result, str)
-                            else "success",
-                        )
-                    )
-            else:
-                # Break the loop if no more webhook urls configured
-                break
 
     def insert_comment_to_db(
         self,
@@ -4182,7 +3540,7 @@ class Bot(object):
                     {"nextGame": self.get_nextGame(self.myTeam["id"])}
                 )
 
-                # Include team subreddit dict
+                # Include team community dict
                 pkData.update({"teamSubs": self.teamSubs})
 
                 # Team leaders (hitting, pitching)
@@ -5499,67 +4857,6 @@ class Bot(object):
             self.error_notification(f"Error rendering title for {thread} thread")
 
         sticky = self.settings.get("Reddit", {}).get("STICKY", False) is True
-        inboxReplies = (
-            self.settings.get("Reddit", {}).get("INBOX_REPLIES", False) is True
-        )
-        flairMode = self.settings.get("Reddit", {}).get("FLAIR_MODE", "none")
-        flair = (
-            self.settings.get("Weekly Thread", {}).get("FLAIR", "")
-            if thread == "weekly"
-            else self.settings.get("Off Day Thread", {}).get("FLAIR", "")
-            if thread == "off"
-            else self.settings.get("Game Day Thread", {}).get("FLAIR", "")
-            if thread == "gameday"
-            else self.settings.get("Game Thread", {}).get("FLAIR", "")
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get("FLAIR", "")
-            if thread == "post"
-            else ""
-        )
-        sort = (
-            self.settings.get("Weekly Thread", {}).get("SUGGESTED_SORT", "new")
-            if thread == "weekly"
-            else self.settings.get("Off Day Thread", {}).get("SUGGESTED_SORT", "new")
-            if thread == "off"
-            else self.settings.get("Game Day Thread", {}).get("SUGGESTED_SORT", "new")
-            if thread == "gameday"
-            else self.settings.get("Game Thread", {}).get("SUGGESTED_SORT", "new")
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get("SUGGESTED_SORT", "new")
-            if thread == "post"
-            else "new"
-        )
-        liveDiscussion = (
-            self.settings.get("Weekly Thread", {}).get("LIVE_DISCUSSION", False)
-            if thread == "weekly"
-            else self.settings.get("Off Day Thread", {}).get("LIVE_DISCUSSION", False)
-            if thread == "off"
-            else self.settings.get("Game Day Thread", {}).get("LIVE_DISCUSSION", False)
-            if thread == "gameday"
-            else self.settings.get("Game Thread", {}).get("LIVE_DISCUSSION", False)
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get("LIVE_DISCUSSION", False)
-            if thread == "post"
-            else False
-        )
-        lockPrevious = (
-            self.settings.get("Game Thread", {}).get("LOCK_GAMEDAY_THREAD", False)
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get(
-                "LOCK_GAME_THREAD", False
-            )
-            if thread == "post"
-            else False
-        )
-        linkPrevious = (
-            self.settings.get("Game Thread", {}).get("LINK_IN_GAMEDAY_THREAD", False)
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get(
-                "LINK_IN_GAME_THREAD", False
-            )
-            if thread == "post"
-            else False
-        )
         title_mod = (
             self.settings.get("Weekly Thread", {}).get("TITLE_MOD", "")
             if thread == "weekly"
@@ -5598,29 +4895,29 @@ class Bot(object):
         theThread = None
         text = ""
         try:
-            for p in self.subreddit.new():
-                if p.author == self.reddit.user.me() and p.title == title:
+            for p in self.lemmy.listPosts():
+                if p["creator"]["name"] == self.lemmy.username and p.post.name == title:
                     # Found existing thread...
                     self.log.info("Found an existing {} thread...".format(thread))
                     theThread = p
-                    if theThread.selftext.find("\n\n^^^Last ^^^Updated") != -1:
-                        text = theThread.selftext[
-                            0 : theThread.selftext.find("\n\n^^^Last ^^^Updated:")
+                    if theThread["post"]["body"].find("\n\n^^^Last ^^^Updated") != -1:
+                        text = theThread["post"]["body"][
+                            0 : theThread["post"]["body"].find("\n\n^^^Last ^^^Updated:")
                         ]
-                    elif theThread.selftext.find("\n\n^^^Posted") != -1:
-                        text = theThread.selftext[
-                            0 : theThread.selftext.find("\n\n^^^Posted:")
+                    elif theThread["post"]["body"].find("\n\n^^^Posted") != -1:
+                        text = theThread["post"]["body"][
+                            0 : theThread["post"]["body"].find("\n\n^^^Posted:")
                         ]
                     else:
-                        text = theThread.selftext
+                        text = theThread["post"]["body"]
 
-                    if sticky:
-                        self.sticky_thread(theThread)
+                    # if sticky:
+                    #     self.sticky_thread(theThread)
 
                     break
         except Exception as e:
-            self.log.error("Error checking subreddit for existing posts: {}".format(e))
-            self.error_notification("Error checking subreddit for existing posts")
+            self.log.error("Error checking community for existing posts: {}".format(e))
+            self.error_notification("Error checking community for existing posts")
 
         if not theThread:
             try:
@@ -5649,15 +4946,10 @@ class Bot(object):
 
             # Submit thread
             try:
-                theThread = self.submit_reddit_post(
+                theThread = self.submit_lemmy_post(
                     title=title,
                     text=fullText,
-                    inboxReplies=inboxReplies,
                     sticky=sticky,
-                    flairMode=flairMode,
-                    flair=flair,
-                    sort=sort,
-                    live_discussion=liveDiscussion,
                 )
                 self.log.info("Submitted {} thread: ({}).".format(thread, theThread))
             except Exception as e:
@@ -5690,63 +4982,6 @@ class Bot(object):
                 )
                 self.insert_thread_to_db(int(self.today["Ymd"]), theThread, thread)
 
-            # Check for webhooks
-            for w in range(0, 10):
-                s = "" if w == 0 else str(w)
-                webhook_url = (
-                    self.settings.get("Weekly Thread", {}).get(
-                        "WEBHOOK{}_URL".format(s)
-                    )
-                    if thread == "weekly"
-                    else self.settings.get("Off Day Thread", {}).get(
-                        "WEBHOOK{}_URL".format(s)
-                    )
-                    if thread == "off"
-                    else self.settings.get("Game Day Thread", {}).get(
-                        "WEBHOOK{}_URL".format(s)
-                    )
-                    if thread == "gameday"
-                    else self.settings.get("Game Thread", {}).get(
-                        "WEBHOOK{}_URL".format(s)
-                    )
-                    if thread == "game"
-                    else self.settings.get("Post Game Thread", {}).get(
-                        "WEBHOOK{}_URL".format(s)
-                    )
-                    if thread == "post"
-                    else None
-                )
-                if webhook_url:
-                    self.log.debug(
-                        "Webhook{} URL for {} thread: [{}].".format(
-                            s, thread, webhook_url
-                        )
-                    )
-                    webhook_text = self.render_template(
-                        thread=thread,
-                        templateType="webhook" + s,
-                        data=self.commonData,
-                        gamePk=pk,
-                        settings=self.settings,
-                        theThread=theThread,
-                    )
-                    self.log.debug(
-                        "Rendered {} webhook{} text: {}".format(thread, s, webhook_text)
-                    )
-                    if webhook_text:
-                        webhook_result = self.post_webhook(webhook_url, webhook_text)
-                        self.log.info(
-                            "Webhook [{}] result: {}.".format(
-                                webhook_url,
-                                webhook_result
-                                if isinstance(webhook_result, str)
-                                else "success",
-                            )
-                        )
-                else:
-                    # Break the loop if no more webhook urls configured
-                    break
-
             # Check for Prowl notification
             prowlKey = self.settings.get("Prowl", {}).get("THREAD_POSTED_API_KEY", "")
             prowlPriority = self.settings.get("Prowl", {}).get(
@@ -5758,138 +4993,15 @@ class Bot(object):
                 self.notify_prowl(
                     apiKey=prowlKey,
                     event=f"{self.myTeam['teamName']} {thread.title()} Thread Posted",
-                    description=f"""{self.myTeam['teamName']} {thread} thread was posted to r/{self.settings["Reddit"]["SUBREDDIT"]} at {self.convert_timezone(datetime.utcfromtimestamp(theThread.created_utc),'local').strftime('%I:%M %p %Z')}\nThread title: {theThread.title}\nURL: {theThread.shortlink}""",
+                    description=f"""{self.myTeam['teamName']} {thread} thread was posted to c/{self.settings["Reddit"]["SUBREDDIT"]} at {self.convert_timezone(datetime.utcfromtimestamp(theThread.created_utc),'local').strftime('%I:%M %p %Z')}\nThread title: {theThread.title}\nURL: {theThread.shortlink}""",
                     priority=prowlPriority,
                     url=theThread.shortlink,
                     appName=f"redball - {self.bot.name}",
                 )
-
-            # Check for Twitter
-            tConsumerKey = self.settings.get("Twitter", {}).get("CONSUMER_KEY", "")
-            tConsumerSecret = self.settings.get("Twitter", {}).get(
-                "CONSUMER_SECRET", ""
-            )
-            tAccessToken = self.settings.get("Twitter", {}).get("ACCESS_TOKEN", "")
-            tAccessSecret = self.settings.get("Twitter", {}).get("ACCESS_SECRET", "")
-            tweetThreadPosted = self.settings.get("Twitter", {}).get(
-                "TWEET_THREAD_POSTED", False
-            )
-            if (
-                "" in [tConsumerKey, tConsumerSecret, tAccessToken, tAccessSecret]
-                or not tweetThreadPosted
-            ):
-                self.log.debug("Twitter disabled or not configured")
-            else:
-                if thread == "game":
-                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')} {'#doubleheader' if self.commonData[pk]["schedule"]["doubleHeader"] != 'N' else ''}"""
-                elif thread == "gameday":
-                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')}"""
-                elif thread == "post":
-                    message = f"""{theThread.title} - The discussion continues: {theThread.shortlink} #{self.myTeam['teamName'].replace(' ','')} {'#doubleheader' if self.commonData[pk]["schedule"]["doubleHeader"] != 'N' else ''}"""
-                elif thread == "off":
-                    message = f"""{theThread.title} - Keep the #{self.myTeam['teamName'].replace(' ','')} discussion going: {theThread.shortlink}"""
-                elif thread == "weekly":
-                    message = f"""{theThread.title} - Keep the #{self.myTeam['teamName'].replace(' ','')} discussion going: {theThread.shortlink}"""
-                else:
-                    self.log.error(f"Can't tweet about unknown thread type [{thread}]!")
-                    return (None, text)
-
-                tweetResult = self.tweet_thread(
-                    message=message,
-                    consumerKey=tConsumerKey,
-                    consumerSecret=tConsumerSecret,
-                    accessToken=tAccessToken,
-                    accessSecret=tAccessSecret,
-                )
-                if tweetResult:
-                    self.log.info("Tweet submitted successfully!")
-
-            # Lock previous thread
-            if lockPrevious or linkPrevious:
-                if previousThread := (
-                    self.activeGames[pk].get("gameDayThread")
-                    if thread == "game"
-                    else self.activeGames[pk].get("gameThread")
-                    if thread == "post"
-                    else None
-                ):
-                    if lockPrevious:
-                        try:
-                            self.log.debug(
-                                f"Attempting to lock {'gameday' if thread == 'game' else 'game' if thread == 'post' else ''} thread [{previousThread.id}]..."
-                            )
-                            previousThread.mod.lock()
-                        except Exception as e:
-                            self.log.warning(
-                                f"Failed to lock {'gameday' if thread == 'game' else 'game' if thread == 'post' else ''} thread [{previousThread.id}]: {e}"
-                            )
-
-                    if linkPrevious:
-                        commentText = (
-                            self.settings.get("Game Thread", {}).get(
-                                "GAMEDAY_THREAD_MESSAGE", None
-                            )
-                            if thread == "game"
-                            else self.settings.get("Post Game Thread", {}).get(
-                                "GAME_THREAD_MESSAGE", None
-                            )
-                            if thread == "post"
-                            else None
-                        )
-                        if not commentText:
-                            commentText = f"{'This thread has been locked. ' if lockPrevious else ''}Please continue the discussion in the [{'game' if thread == 'game' else 'post game' if thread == 'post' else 'new'} thread](link)."
-
-                        parsedCommentText = commentText.replace(
-                            "(link)", f"({theThread.shortlink})"
-                        )
-                        try:
-                            self.log.debug(
-                                "Submitting comment in previous thread with link to new thread..."
-                            )
-                            lockReply = previousThread.reply(parsedCommentText)
-                            self.log.debug("Distinguishing comment...")
-                            lockReply.mod.distinguish(sticky=True)
-                            self.log.debug(
-                                f"Successfully posted a distinguished/sticky reply in {'gameday' if thread == 'game' else 'game' if thread == 'post' else ''} thread."
-                            )
-                        except Exception as e:
-                            self.log.warning(
-                                f"Failed to submit reply with link to new thread or distinguish and sticky comment in {'gameday' if thread == 'game' else 'game' if thread == 'post' else ''} thread: {e}"
-                            )
-                else:
-                    self.log.debug("I did not find a previous thread to lock or link.")
         else:
             self.log.warning("No thread object present. Something went wrong!")
 
         return (theThread, text)
-
-    def tweet_thread(
-        self,
-        message,
-        consumerKey=None,
-        consumerSecret=None,
-        accessToken=None,
-        accessSecret=None,
-    ):
-        if not consumerKey or not consumerSecret or not accessToken or not accessSecret:
-            self.log.warning(
-                "Can't submit tweet because Twitter settings are missing or incomplete. Check bot config."
-            )
-            return False
-
-        self.log.debug("Initiating Twitter...")
-        try:
-            t = twitter.Api(consumerKey, consumerSecret, accessToken, accessSecret)
-            self.log.debug(
-                f"Authenticated Twitter user: {t.VerifyCredentials().screen_name}"
-            )
-            self.log.debug(f"Tweeting: {message}")
-            t.PostUpdate(message)
-            return True
-        except Exception as e:
-            self.log.error(f"Error submitting Tweet: {e}")
-            self.error_notification(f"Error submitting Tweet: {e}")
-            return False
 
     def notify_prowl(
         self, apiKey, event, description, priority=0, url=None, appName="redball"
@@ -5927,113 +5039,26 @@ class Bot(object):
                 appName=f"redball - {self.bot.name}",
             )
 
-    def post_webhook(self, url, body):
-        # url = url to which the data should be posted
-        # body = dict or json-formatted string of data to post to the webhook url
-        if isinstance(body, str):
-            # We need the data to be a dict rather than json
-            # so we can use the json param of requests.post().
-            # Otherwise we have to set headers and stuff
-            try:
-                body = json.loads(body)
-            except Exception as e:
-                self.log.error(
-                    "Failed to convert webhook template from json format. Ensure there are no line breaks or other special characters in the rendered template. Error: {}".format(
-                        e
-                    )
-                )
-                self.error_notification(
-                    "Failed to convert webhook template from json format. Ensure there are no line breaks or other special characters in the rendered template"
-                )
-                return "Failed to convert webhook template from json format. Ensure there are no line breaks or other special characters in the rendered template. Error: {}".format(
-                    e
-                )
-
-        try:
-            r = requests.post(url, json=body)
-            if r.status_code in [200, 204]:
-                return True
-            else:
-                return "Request status code: {}".format(r.status_code)
-        except requests.exceptions.RequestException as e:
-            self.error_notification(f"Error posting to webhook [{url}]")
-            return str(e)
-
-        return False
-
-    def submit_reddit_post(
+    def submit_lemmy_post(
         self,
         title,
         text,
         sub=None,
-        inboxReplies=False,
         sticky=False,
-        flairMode=None,
-        flair=None,
-        sort=None,
-        live_discussion=False,
     ):
         if sub:
-            subreddit = self.reddit.subreddit(sub)
+            community = self.lemmy.getCommunity(sub)
         else:
-            subreddit = self.subreddit
+            community = self.lemmy.community
 
-        post = subreddit.submit(
+        post = self.lemmy.submitPost(
             title=title,
-            selftext=text,
-            send_replies=inboxReplies,
-            discussion_type="CHAT" if live_discussion else None,
+            body=text,
         )
         self.log.info("Thread ({}) submitted: {}".format(title, post))
 
-        if sticky:
-            self.sticky_thread(post)
-
-        if flairMode == "submitter":
-            if flair in [None, ""]:
-                self.log.warning("FLAIR_MODE = submitter, but no flair provided...")
-            else:
-                self.log.info("Adding flair to submission as submitter...")
-                choices = post.flair.choices()
-                flairsuccess = False
-                for p in choices:
-                    if p["flair_text"] == flair:
-                        post.flair.select(p["flair_template_id"])
-                        flairsuccess = True
-                if flairsuccess:
-                    self.log.info("Submission flaired...")
-                else:
-                    self.log.error(
-                        "Flair not set: could not find flair in available choices; check subreddit configuration."
-                    )
-        elif flairMode == "mod":
-            if flair in [None, ""]:
-                self.log.warning("FLAIR_MODE = mod, but no flair provided...")
-            else:
-                self.log.info("Adding flair to submission as mod...")
-                try:
-                    post.mod.flair(flair)
-                    self.log.info("Submission flaired...")
-                except Exception:
-                    self.log.error(
-                        f"Failed to set flair on thread {post.id} (check mod privileges or change FLAIR_MODE to submitter), continuing..."
-                    )
-                    self.error_notification(
-                        "Failed to set flair (check mod privileges or change FLAIR_MODE to submitter)"
-                    )
-
-        if sort not in [None, ""]:
-            self.log.info("Setting suggested sort to {}...".format(sort))
-            try:
-                post.mod.suggested_sort(sort)
-                self.log.info("Suggested sort set...")
-            except Exception:
-                self.log.error(
-                    "Setting suggested sort failed (check mod privileges), continuing..."
-                )
-                self.error_notification(
-                    f"Failed to set suggested sort on thread {post.id} (check mod privileges)"
-                )
+        # if sticky:
+        #     self.sticky_thread(post)
 
         return post
 
@@ -6246,82 +5271,27 @@ class Bot(object):
             self.log.info(
                 "Detected new Reddit Authorization info. Re-initializing Reddit API..."
             )
-            self.init_reddit()
+            self.init_lemmy()
 
         # Check here if settings have changed for other services added in the future (twitter, etc.)
 
         self.log.debug("Refreshed settings: {}".format(self.settings))
 
-    def init_reddit(self):
-        self.log.debug(f"Initiating Reddit API with praw v{praw.__version__}...")
+    def init_lemmy(self):
+        self.log.debug(f"Initiating Lemmy API with plaw v{praw.__version__}...")
         with redball.REDDIT_AUTH_LOCKS[str(self.bot.redditAuth)]:
             try:
-                self.reddit = praw.Reddit(
-                    client_id=self.settings["Reddit Auth"]["reddit_clientId"],
-                    client_secret=self.settings["Reddit Auth"]["reddit_clientSecret"],
-                    token_manager=self.bot.reddit_auth_token_manager,
-                    user_agent="redball Baseball Game Thread Bot - https://github.com/toddrob99/redball/ - r/{}".format(
-                        self.settings["Reddit"].get("SUBREDDIT", "")
-                    ),
+                self.lemmy = plaw.Lemmy(
+                    "https://fanaticus.social", "fanny_b", "zby3vzb1HXQ.ftb0czp"
                 )
             except Exception as e:
                 self.log.error(
-                    "Error encountered attempting to initialize Reddit: {}".format(e)
+                    "Error encountered attempting to initialize Lemmy: {}".format(e)
                 )
-                self.error_notification("Error initializing Reddit")
+                self.error_notification("Error initializing Lemmy")
                 raise
 
-            scopes = [
-                "identity",
-                "submit",
-                "edit",
-                "read",
-                "modposts",
-                "privatemessages",
-                "flair",
-                "modflair",
-            ]
-            try:
-                praw_scopes = self.reddit.auth.scopes()
-            except Exception as e:
-                self.log.error(
-                    "Error encountered attempting to look up authorized Reddit scopes: {}".format(
-                        e
-                    )
-                )
-                self.error_notification(
-                    "Error encountered attempting to look up authorized Reddit scopes"
-                )
-                raise
-
-        missing_scopes = []
-        self.log.debug("Reddit authorized scopes: {}".format(praw_scopes))
-        try:
-            self.log.info("Reddit authorized user: {}".format(self.reddit.user.me()))
-        except Exception as e:
-            self.log.warning(
-                "Error encountered attempting to identify authorized Reddit user (identity scope may not be authorized): {}".format(
-                    e
-                )
-            )
-            self.error_notification(
-                "Error encountered attempting to identify authorized Reddit user (identity scope may not be authorized)"
-            )
-
-        for scope in scopes:
-            if scope not in praw_scopes:
-                missing_scopes.append(scope)
-
-        if len(missing_scopes):
-            self.log.warning(
-                "Scope(s) not authorized: {}. Please check/update/re-authorize Reddit Authorization in redball System Config.".format(
-                    missing_scopes
-                )
-            )
-
-        self.subreddit = self.reddit.subreddit(
-            self.settings.get("Reddit", {}).get("SUBREDDIT")
-        )
+        self.community = self.lemmy.getCommunity(self.settings.get("Reddit", {}).get("SUBREDDIT"))
 
     def eod_loop(self, today):
         # today = date that's already been finished ('%Y-%m-%d')
