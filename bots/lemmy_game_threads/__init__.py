@@ -211,39 +211,6 @@ class Bot(object):
             self.commonData = {}  # Clear data dict every day to save memory
             self.collect_data(0)  # Collect generic data
 
-            # Weekly thread
-            if self.settings.get("Weekly Thread", {}).get("ENABLED", True):
-                if self.settings.get("Weekly Thread", {}).get(
-                    "OFFSEASON_ONLY", True
-                ) and not (
-                    self.seasonState.startswith("off") or self.seasonState == "post:out"
-                ):
-                    # Weekly thread is enabled for off season only (including post season if out of contention)
-                    self.log.info(
-                        "Weekly thread suppressed per OFFSEASON_ONLY setting."
-                    )
-                    self.activeGames.update({"weekly": {"STOP_FLAG": True}})
-                else:
-                    # Spawn a thread to handle weekly thread posting
-                    pass
-                    self.THREADS.update(
-                        {
-                            "WEEKLY_THREAD": threading.Thread(
-                                target=self.weekly_thread_wait_and_post,
-                                name="bot-{}-{}-weekly".format(
-                                    self.bot.id, self.bot.name.replace(" ", "-")
-                                ),
-                                daemon=True,
-                            )
-                        }
-                    )
-                    self.THREADS["WEEKLY_THREAD"].start()
-                    self.log.debug(
-                        "Started weekly thread {}.".format(
-                            self.THREADS["WEEKLY_THREAD"]
-                        )
-                    )
-
             if len(todayGamePks) == 0:
                 # Off day thread
                 self.log.info("No games today!")
@@ -859,7 +826,7 @@ class Bot(object):
             if not gameDayThread["creator"]["name"]:
                 self.log.warning("Game day thread appears to have been deleted.")
                 q = "update {}threads set deleted=1 where id='{}';".format(
-                    self.dbTablePrefix, gameDayThread.id
+                    self.dbTablePrefix, gameDayThread["post"]["id"]
                 )
                 u = rbdb.db_qry(q, commit=True, closeAfter=True, logg=self.log)
                 if isinstance(u, str):
@@ -1007,13 +974,13 @@ class Bot(object):
                                 )
                             )
                         )
-                        self.activeGames[pk]["gameDayThread"].edit(text)
+                        self.lemmy.editPost(self.activeGames[pk]["gameDayThread"]["post"]["id"], body=text)
                         self.log.info("Game day thread edits submitted.")
                         self.count_check_edit(
-                            self.activeGames[pk]["gameDayThread"].id, "NA", edit=True
+                            self.activeGames[pk]["gameDayThread"]["post"]["id"], "NA", edit=True
                         )
                         self.log_last_updated_date_in_db(
-                            self.activeGames[pk]["gameDayThread"].id
+                            self.activeGames[pk]["gameDayThread"]["post"]["id"]
                         )
                     elif text == "":
                         self.log.info(
@@ -1022,7 +989,7 @@ class Bot(object):
                     else:
                         self.log.info("No changes to game day thread.")
                         self.count_check_edit(
-                            self.activeGames[pk]["gameDayThread"].id, "NA", edit=False
+                            self.activeGames[pk]["gameDayThread"]["post"]["id"], "NA", edit=False
                         )
                 except Exception as e:
                     self.log.error("Error editing game day thread: {}".format(e))
@@ -1182,7 +1149,7 @@ class Bot(object):
             if not gameThread["creator"]["name"]:
                 self.log.warning("Game thread appears to have been deleted.")
                 q = "update {}threads set deleted=1 where id='{}';".format(
-                    self.dbTablePrefix, gameThread.id
+                    self.dbTablePrefix, gameThread["post"]["id"]
                 )
                 u = rbdb.db_qry(q, commit=True, closeAfter=True, logg=self.log)
                 if isinstance(u, str):
@@ -1514,7 +1481,7 @@ class Bot(object):
                     {
                         "gameThread": gameThread,
                         "gameThreadText": gameThreadText,
-                        "gameThreadTitle": gameThread.title
+                        "gameThreadTitle": gameThread["post"]["name"]
                         if gameThread not in [None, False]
                         else None,
                     }
@@ -1626,15 +1593,15 @@ class Bot(object):
                     ).strftime(
                         "%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z"
                     )
-                    self.activeGames[pk]["gameThread"].edit(text)
+                    self.lemmy.editPost(self.activeGames[pk]["gameThread"]["post"]["id"], body=text)
                     self.log.info("Edits submitted for {} game thread.".format(pk))
                     self.count_check_edit(
-                        self.activeGames[pk]["gameThread"].id,
+                        self.activeGames[pk]["gameThread"]["post"]["id"],
                         self.commonData[pk]["schedule"]["status"]["statusCode"],
                         edit=True,
                     )
                     self.log_last_updated_date_in_db(
-                        self.activeGames[pk]["gameThread"].id
+                        self.activeGames[pk]["gameThread"]["post"]["id"]
                     )
                 elif text == "":
                     self.log.info(
@@ -1645,7 +1612,7 @@ class Bot(object):
                 else:
                     self.log.info("No changes to {} game thread.".format(pk))
                     self.count_check_edit(
-                        self.activeGames[pk]["gameThread"].id,
+                        self.activeGames[pk]["gameThread"]["post"]["id"],
                         self.commonData[pk]["schedule"]["status"]["statusCode"],
                         edit=False,
                     )
@@ -1904,10 +1871,10 @@ class Bot(object):
                 "Post Game Thread found in database [{}].".format(pgThread[0]["id"])
             )
             postGameThread = self.lemmy.getPost(pgThread[0]["id"])
-            if not postGameThread.author:
+            if not postGameThread["post"]["id"]:
                 self.log.warning("Post game thread appears to have been deleted.")
                 q = "update {}threads set deleted=1 where id='{}';".format(
-                    self.dbTablePrefix, postGameThread.id
+                    self.dbTablePrefix, postGameThread["post"]["id"]
                 )
                 u = rbdb.db_qry(q, commit=True, closeAfter=True, logg=self.log)
                 if isinstance(u, str):
@@ -2050,13 +2017,14 @@ class Bot(object):
                         ).strftime(
                             "%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z"
                         )
-                        self.activeGames[pk]["postGameThread"].edit(text)
+                        self.lemmy.editPost(self.activeGames[pk]["postGameThread"]["post"]["id"], body=text)
+
                         self.log.info("Post game {} thread edits submitted.".format(pk))
                         self.log_last_updated_date_in_db(
-                            self.activeGames[pk]["postGameThread"].id
+                            self.activeGames[pk]["postGameThread"]["post"]["id"]
                         )
                         self.count_check_edit(
-                            self.activeGames[pk]["postGameThread"].id,
+                            self.activeGames[pk]["postGameThread"]["post"]["id"],
                             self.commonData[pk]["schedule"]["status"]["statusCode"],
                             edit=True,
                         )
@@ -2069,7 +2037,7 @@ class Bot(object):
                     else:
                         self.log.info("No changes to post game thread.")
                         self.count_check_edit(
-                            self.activeGames[pk]["postGameThread"].id,
+                            self.activeGames[pk]["postGameThread"]["post"]["id"],
                             self.commonData[pk]["schedule"]["status"]["statusCode"],
                             edit=False,
                         )
@@ -2100,7 +2068,7 @@ class Bot(object):
                 break
             elif update_postgame_thread_until == "An hour after thread is posted":
                 if (
-                    int(self.activeGames[pk]["postGameThread"].created_utc)
+                    int(self.activeGames[pk]["postGameThread"]["post"]["published"])
                     <= int(time.time()) - 3600
                 ):
                     # Post game thread was posted more than an hour ago
@@ -2176,7 +2144,7 @@ class Bot(object):
             self.collect_data(gamePk=pk)
 
         if gameThread:
-            gameThreadId = gameThread.id
+            gameThreadId = gameThread["post"]["id"]
         else:
             self.log.error("No game thread provided!")
             return
@@ -4896,7 +4864,7 @@ class Bot(object):
         text = ""
         try:
             for p in self.lemmy.listPosts():
-                if p["creator"]["name"] == self.lemmy.username and p.post.name == title:
+                if p["creator"]["name"] == self.lemmy.username and p["post"]["name"] == title:
                     # Found existing thread...
                     self.log.info("Found an existing {} thread...".format(thread))
                     theThread = p
@@ -4946,6 +4914,8 @@ class Bot(object):
 
             # Submit thread
             try:
+                # BUG: For some reason the Game Thread's title, but not the GDT's title is multi-line, which throws an error in the lemmy post
+                self.log.info("BUG: submition title {} ".format(title))
                 theThread = self.submit_lemmy_post(
                     title=title,
                     text=fullText,
@@ -4968,19 +4938,19 @@ class Bot(object):
                     self.log.debug(
                         "Inserting {} thread into DB for game {}...".format(thread, x)
                     )
-                    self.insert_thread_to_db(x, theThread, thread)
+                    self.insert_thread_to_db(x, theThread["post"]["id"], thread)
             elif pk:
                 self.log.debug(
                     "Inserting {} thread into DB for game {}...".format(thread, pk)
                 )
-                self.insert_thread_to_db(pk, theThread, thread)
+                self.insert_thread_to_db(pk, theThread["post"]["id"], thread)
             else:
                 self.log.debug(
                     "Inserting {} thread into db as {}...".format(
                         thread, self.today["Ymd"]
                     )
                 )
-                self.insert_thread_to_db(int(self.today["Ymd"]), theThread, thread)
+                self.insert_thread_to_db(int(self.today["Ymd"]), theThread["post"]["id"], thread)
 
             # Check for Prowl notification
             prowlKey = self.settings.get("Prowl", {}).get("THREAD_POSTED_API_KEY", "")
@@ -5114,21 +5084,21 @@ class Bot(object):
         return ""
 
     def sticky_thread(self, thread):
-        self.log.info("Stickying thread [{}]...".format(thread.id))
+        self.log.info("Stickying thread [{}]...".format(thread["post"]["id"]))
         try:
             thread.mod.sticky()
-            self.log.info("Thread [{}] stickied...".format(thread.id))
+            self.log.info("Thread [{}] stickied...".format(thread["post"]["id"]))
         except Exception:
             self.log.warning(
                 "Sticky of thread [{}] failed. Check mod privileges or the thread may have already been sticky.".format(
-                    thread.id
+                    thread["post"]["id"]
                 )
             )
 
     def unsticky_threads(self, threads):
         for t in threads:
             try:
-                self.log.debug("Attempting to unsticky thread [{}]".format(t.id))
+                self.log.debug("Attempting to unsticky thread [{}]".format(t["post"]["id"]))
                 t.mod.sticky(state=False)
             except Exception:
                 self.log.debug(
@@ -5414,10 +5384,10 @@ class Bot(object):
                     if isinstance(self.weekly.get("postTime_local"), datetime)
                     else "",
                     "posted": True if self.weekly.get("weeklyThread") else False,
-                    "id": self.weekly.get("weeklyThread").id
+                    "id": self.weekly.get("weeklyThread")["post"]["id"]
                     if self.weekly.get("weeklyThread")
                     else None,
-                    "url": self.weekly.get("weeklyThread").shortlink
+                    "url": self.weekly.get("weeklyThread")["post"]["ap_id"]
                     if self.weekly.get("weeklyThread")
                     else None,
                     "title": self.weekly.get("weeklyThreadTitle")
@@ -5438,10 +5408,10 @@ class Bot(object):
                     "posted": True
                     if self.activeGames.get("off", {}).get("offDayThread")
                     else False,
-                    "id": self.activeGames.get("off", {}).get("offDayThread").id
+                    "id": self.activeGames.get("off", {}).get("offDayThread")["post"]["id"]
                     if self.activeGames.get("off", {}).get("offDayThread")
                     else None,
-                    "url": self.activeGames.get("off", {}).get("offDayThread").shortlink
+                    "url": self.activeGames.get("off", {}).get("offDayThread")["post"]["ap_id"]
                     if self.activeGames.get("off", {}).get("offDayThread")
                     else None,
                     "title": self.activeGames.get("off", {}).get("offDayThreadTitle")
@@ -5463,12 +5433,11 @@ class Bot(object):
                     "posted": True
                     if self.activeGames.get("gameday", {}).get("gameDayThread")
                     else False,
-                    "id": self.activeGames.get("gameday", {}).get("gameDayThread").id
+                    "id": self.activeGames.get("gameday", {}).get("gameDayThread")["post"]["id"]
                     if self.activeGames.get("gameday", {}).get("gameDayThread")
                     else None,
                     "url": self.activeGames.get("gameday", {})
-                    .get("gameDayThread")
-                    .shortlink
+                    .get("gameDayThread")["post"]["ap_id"]
                     if self.activeGames.get("gameday", {}).get("gameDayThread")
                     else None,
                     "title": self.activeGames.get("gameday", {}).get(
@@ -5495,10 +5464,10 @@ class Bot(object):
                                     if isinstance(v.get("postTime_local"), datetime)
                                     else "",
                                     "posted": True if v.get("gameThread") else False,
-                                    "id": v.get("gameThread").id
+                                    "id": v.get("gameThread")["post"]["id"]
                                     if v.get("gameThread")
                                     else None,
-                                    "url": v.get("gameThread").shortlink
+                                    "url": v.get("gameThread")["post"]["ap_id"]
                                     if v.get("gameThread")
                                     else None,
                                     "title": v.get("gameThreadTitle")
@@ -5512,10 +5481,10 @@ class Bot(object):
                                     "posted": True
                                     if v.get("postGameThread")
                                     else False,
-                                    "id": v.get("postGameThread").id
+                                    "id": v.get("postGameThread")["post"]["id"]
                                     if v.get("postGameThread")
                                     else None,
-                                    "url": v.get("postGameThread").shortlink
+                                    "url": v.get("postGameThread")["post"]["ap_id"]
                                     if v.get("postGameThread")
                                     else None,
                                     "title": v.get("postGameThreadTitle")
