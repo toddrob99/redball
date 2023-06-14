@@ -45,9 +45,9 @@
             title = 'Around the Division: There are no other division teams playing!'
     else:
         if include_wc:
-            title = '###Division & Wild Card Scoreboard'
+            title = '### Division & Wild Card Scoreboard'
         else:
-            title = '###Division Scoreboard'
+            title = '### Division Scoreboard'
 %>\
 ${title}
 % for x in divGames:

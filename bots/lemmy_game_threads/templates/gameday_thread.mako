@@ -1,15 +1,15 @@
 ## loop through gamePks for game info, pass gamePk into each template
 % for pk in (x for x in data.keys() if x!=0):
 % if data[pk]['schedule'].get('seriesDescription') and data[pk]['schedule'].get('gameType') not in ['R','I','S','E']:
-${'#' + data[pk]['schedule']['seriesDescription'] + ' '}\
+${'# ' + data[pk]['schedule']['seriesDescription'] + ' '}\
 ${'Game ' + str(data[pk]['schedule']['seriesGameNumber']) + ' - ' if data[pk]['schedule'].get('seriesGameNumber') and data[pk]['schedule'].get('gamesInSeries',1) > 1 else '- '}\
 % else:
-${'###'}\
+${'### '}\
 % endif
 <%include file="matchup.mako" args="gamePk=pk,dateFormat='%I:%M %p %Z'" />
 
 ## Game status: show detailed state and then list first pitch time if game hasn't started yet and isn't final
-${'###'}Game Status: ${data[pk]['schedule']['status']['detailedState']} \
+${'### '}Game Status: ${data[pk]['schedule']['status']['detailedState']} \
 % if data[pk]['schedule']['status'].get('reason') and len(data[pk]['schedule']['status']['reason']) > 0 and data[pk]['schedule']['status']['reason'] not in data[pk]['schedule']['status']['detailedState']:
 due to ${data[pk]['schedule']['status']['reason']} \
 % endif
@@ -41,7 +41,7 @@ due to ${data[pk]['schedule']['status']['reason']} \
 <%include file="division_scoreboard.mako" args="gamePk=list(data.keys()),include_wc=wc_scoreboard,wc_num=wc_num" />
 % else:
 ## league scoreboard
-${'###Around the League' if any(x for x in data[0]['leagueSchedule'] if x['gamePk'] not in data.keys()) else 'Around the League: There are no other games!'}
+${'###  Around the League' if any(x for x in data[0]['leagueSchedule'] if x['gamePk'] not in data.keys()) else 'Around the League: There are no other games!'}
 <%include file="league_scoreboard.mako" args="gamePk=list(data.keys())" />
 % endif
 % endif

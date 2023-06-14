@@ -1,5 +1,5 @@
 <%page args="gamePk" />
-${'###'}Links & Info
+${'### '}Links & Info
 ## Venue & weather
 % if data[gamePk]['schedule'].get('weather') and len(data[gamePk]['schedule']['weather']) and (data[gamePk]['schedule']['weather'].get('temp') or data[gamePk]['schedule']['weather'].get('condition') or data[gamePk]['schedule']['weather'].get('wind') != 'null mph, null'):
 * Current conditions at ${data[gamePk]['schedule']['venue']['name']}: ${data[gamePk]['schedule']['weather']['temp']+'&#176;F' if data[gamePk]['schedule']['weather'].get('temp') else ''} ${'- ' + data[gamePk]['schedule']['weather']['condition'] if data[gamePk]['schedule']['weather'].get('condition') else ''} ${'- Wind ' + data[gamePk]['schedule']['weather']['wind'] if data[gamePk]['schedule']['weather'].get('wind')  != 'null mph, null' else ''}

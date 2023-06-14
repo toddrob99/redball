@@ -1,5 +1,5 @@
 <%page args="gamePk" />
-${'###'}Links & Info
+${'### '}Links & Info
 * [MLB Gameday](https://www.mlb.com/gameday/${gamePk}/)
 ##* Game Notes: [${data[gamePk]['schedule']['teams']['away']['team']['teamName']}](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=${data[gamePk]['schedule']['teams']['away']['team']['fileCode']}), [${data[gamePk]['schedule']['teams']['home']['team']['teamName']}](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=${data[gamePk]['schedule']['teams']['home']['team']['fileCode']})
 ##* ${'[Strikezone Map](http://www.brooksbaseball.net/pfxVB/zoneTrack.php?month={}&day={}&year={}&game=gid_{})'.format(data[gamePk]['gameTime']['homeTeam'].strftime('%m'), data[gamePk]['gameTime']['homeTeam'].strftime('%d'), data[gamePk]['gameTime']['homeTeam'].strftime('%Y'), data[gamePk]['gumbo']['gameData']['game']['id'].replace('/','_').replace('-','_'))}
