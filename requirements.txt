@@ -11,3 +11,4 @@ pyprowl
 python-twitter
 bs4
 discord
+plaw
