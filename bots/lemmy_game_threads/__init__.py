@@ -836,13 +836,13 @@ class Bot(object):
 
                 gameDayThread = None
             else:
-                if gameDayThread["post"]["body"].find("\n\n^^^Last ^^^Updated") != -1:
+                if gameDayThread["post"]["body"].find("\n\nLast Updated") != -1:
                     gameDayThreadText = gameDayThread["post"]["body"][
-                        0 : gameDayThread["post"]["body"].find("\n\n^^^Last ^^^Updated:")
+                        0 : gameDayThread["post"]["body"].find("\n\nLast Updated:")
                     ]
-                elif gameDayThread["post"]["body"].find("\n\n^^^Posted") != -1:
+                elif gameDayThread["post"]["body"].find("\n\nPosted") != -1:
                     gameDayThreadText = gameDayThread["post"]["body"][
-                        0 : gameDayThread["post"]["body"].find("\n\n^^^Posted:")
+                        0 : gameDayThread["post"]["body"].find("\n\nPosted:")
                     ]
                 else:
                     gameDayThreadText = gameDayThread["post"]["body"]
@@ -903,11 +903,11 @@ class Bot(object):
                 todayGamePks,
                 postFooter="""
 
-^^^Posted: ^^^"""
+Posted: """
                 + self.convert_timezone(
                     datetime.utcnow(), self.myTeam["venue"]["timeZone"]["id"]
-                ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
-                + ", ^^^Update ^^^Interval: ^^^{} ^^^Minutes".format(
+                ).strftime("%m/%d/%Y %I:%M:%S %p %Z")
+                + ", Update Interval: {} Minutes".format(
                     self.settings.get("Game Day Thread", {}).get("UPDATE_INTERVAL", 5)
                 ),
             )
@@ -963,12 +963,12 @@ class Bot(object):
                         text += (
                             """
 
-^^^Last ^^^Updated: ^^^"""
+Last Updated: """
                             + self.convert_timezone(
                                 datetime.utcnow(),
                                 self.myTeam["venue"]["timeZone"]["id"],
-                            ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
-                            + ", ^^^Update ^^^Interval: ^^^{} ^^^Minutes".format(
+                            ).strftime("%m/%d/%Y %I:%M:%S %p %Z")
+                            + ", Update Interval: {} Minutes".format(
                                 self.settings.get("Game Day Thread", {}).get(
                                     "UPDATE_INTERVAL", 5
                                 )
@@ -1159,13 +1159,13 @@ class Bot(object):
 
                 gameThread = None
             else:
-                if gameThread["post"]["body"].find("\n\n^^^Last ^^^Updated") != -1:
+                if gameThread["post"]["body"].find("\n\nLast Updated") != -1:
                     gameThreadText = gameThread["post"]["body"][
-                        0 : gameThread["post"]["body"].find("\n\n^^^Last ^^^Updated:")
+                        0 : gameThread["post"]["body"].find("\n\nLast Updated:")
                     ]
-                elif gameThread["post"]["body"].find("\n\n^^^Posted") != -1:
+                elif gameThread["post"]["body"].find("\n\nPosted") != -1:
                     gameThreadText = gameThread["post"]["body"][
-                        0 : gameThread["post"]["body"].find("\n\n^^^Posted:")
+                        0 : gameThread["post"]["body"].find("\n\nPosted:")
                     ]
                 else:
                     gameThreadText = gameThread["post"]["body"]
@@ -1472,10 +1472,10 @@ class Bot(object):
                     pk,
                     postFooter="""
 
-^^^Posted: ^^^"""
+Posted: """
                     + self.convert_timezone(
                         datetime.utcnow(), self.myTeam["venue"]["timeZone"]["id"]
-                    ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z"),
+                    ).strftime("%m/%d/%Y %I:%M:%S %p %Z"),
                 )
                 self.activeGames[pk].update(
                     {
@@ -1588,10 +1588,10 @@ class Bot(object):
                     # Add last updated timestamp
                     text += """
 
-^^^Last ^^^Updated: ^^^""" + self.convert_timezone(
+Last Updated: """ + self.convert_timezone(
                         datetime.utcnow(), self.myTeam["venue"]["timeZone"]["id"]
                     ).strftime(
-                        "%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z"
+                        "%m/%d/%Y %I:%M:%S %p %Z"
                     )
                     self.lemmy.editPost(self.activeGames[pk]["gameThread"]["post"]["id"], body=text)
                     self.log.info("Edits submitted for {} game thread.".format(pk))
@@ -1884,13 +1884,13 @@ class Bot(object):
 
                 postGameThread = None
             else:
-                if postGameThread["post"]["body"].find("\n\n^^^Last ^^^Updated") != -1:
+                if postGameThread["post"]["body"].find("\n\nLast Updated") != -1:
                     postGameThreadText = postGameThread["post"]["body"][
-                        0 : postGameThread["post"]["body"].find("\n\n^^^Last ^^^Updated:")
+                        0 : postGameThread["post"]["body"].find("\n\nLast Updated:")
                     ]
-                elif postGameThread["post"]["body"].find("\n\n^^^Posted") != -1:
+                elif postGameThread["post"]["body"].find("\n\nPosted") != -1:
                     postGameThreadText = postGameThread["post"]["body"][
-                        0 : postGameThread["post"]["body"].find("\n\n^^^Posted:")
+                        0 : postGameThread["post"]["body"].find("\n\nPosted:")
                     ]
                 else:
                     postGameThreadText = postGameThread["post"]["body"]
@@ -1957,10 +1957,10 @@ class Bot(object):
                 pk,
                 postFooter="""
 
-^^^Posted: ^^^"""
+Posted: """
                 + self.convert_timezone(
                     datetime.utcnow(), self.myTeam["venue"]["timeZone"]["id"]
-                ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z"),
+                ).strftime("%m/%d/%Y %I:%M:%S %p %Z"),
             )
             self.activeGames[pk].update(
                 {
@@ -2012,10 +2012,10 @@ class Bot(object):
                         self.activeGames[pk]["postGameThreadText"] = text
                         text += """
 
-^^^Last ^^^Updated: ^^^""" + self.convert_timezone(
+Last Updated: """ + self.convert_timezone(
                             datetime.utcnow(), self.myTeam["venue"]["timeZone"]["id"]
                         ).strftime(
-                            "%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z"
+                            "%m/%d/%Y %I:%M:%S %p %Z"
                         )
                         self.lemmy.editPost(self.activeGames[pk]["postGameThread"]["post"]["id"], body=text)
 
@@ -4868,13 +4868,13 @@ class Bot(object):
                     # Found existing thread...
                     self.log.info("Found an existing {} thread...".format(thread))
                     theThread = p
-                    if theThread["post"]["body"].find("\n\n^^^Last ^^^Updated") != -1:
+                    if theThread["post"]["body"].find("\n\nLast Updated") != -1:
                         text = theThread["post"]["body"][
-                            0 : theThread["post"]["body"].find("\n\n^^^Last ^^^Updated:")
+                            0 : theThread["post"]["body"].find("\n\nLast Updated:")
                         ]
-                    elif theThread["post"]["body"].find("\n\n^^^Posted") != -1:
+                    elif theThread["post"]["body"].find("\n\nPosted") != -1:
                         text = theThread["post"]["body"][
-                            0 : theThread["post"]["body"].find("\n\n^^^Posted:")
+                            0 : theThread["post"]["body"].find("\n\nPosted:")
                         ]
                     else:
                         text = theThread["post"]["body"]
