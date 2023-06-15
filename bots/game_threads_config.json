@@ -1261,5 +1261,43 @@
             "subkeys": [],
             "parent_key": ""
         }
+    ],
+    "Lemmy" : [
+        {
+            "key": "INSTANCE_NAME",
+            "description": "Full instance domain name (including protocol)",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "COMMUNITY_NAME",
+            "description": "Name of lemmy community to target",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "USERNAME",
+            "description": "Username of bot user",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "PASSWORD",
+            "description": "Password for bot user",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        }
     ]
 }

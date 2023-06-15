@@ -27,7 +27,6 @@ import mako.exceptions
 
 import pyprowl
 import statsapi
-import twitter
 
 import praw
 import plaw
@@ -4914,8 +4913,6 @@ Last Updated: """ + self.convert_timezone(
 
             # Submit thread
             try:
-                # BUG: For some reason the Game Thread's title, but not the GDT's title is multi-line, which throws an error in the lemmy post
-                self.log.info("BUG: submition title {} ".format(title))
                 theThread = self.submit_lemmy_post(
                     title=title,
                     text=fullText,
@@ -4963,7 +4960,7 @@ Last Updated: """ + self.convert_timezone(
                 self.notify_prowl(
                     apiKey=prowlKey,
                     event=f"{self.myTeam['teamName']} {thread.title()} Thread Posted",
-                    description=f"""{self.myTeam['teamName']} {thread} thread was posted to c/{self.settings["Reddit"]["SUBREDDIT"]} at {self.convert_timezone(datetime.utcfromtimestamp(theThread.created_utc),'local').strftime('%I:%M %p %Z')}\nThread title: {theThread.title}\nURL: {theThread.shortlink}""",
+                    description=f"""{self.myTeam['teamName']} {thread} thread was posted to c/{self.settings["Lemmy"]["COMMUNITY_NAME"]} at {self.convert_timezone(datetime.utcfromtimestamp(theThread.created_utc),'local').strftime('%I:%M %p %Z')}\nThread title: {theThread.title}\nURL: {theThread.shortlink}""",
                     priority=prowlPriority,
                     url=theThread.shortlink,
                     appName=f"redball - {self.bot.name}",
@@ -5243,17 +5240,23 @@ Last Updated: """ + self.convert_timezone(
             )
             self.init_lemmy()
 
-        # Check here if settings have changed for other services added in the future (twitter, etc.)
-
         self.log.debug("Refreshed settings: {}".format(self.settings))
 
     def init_lemmy(self):
         self.log.debug(f"Initiating Lemmy API with plaw v{praw.__version__}...")
         with redball.REDDIT_AUTH_LOCKS[str(self.bot.redditAuth)]:
             try:
-                self.lemmy = plaw.Lemmy(
-                    "https://fanaticus.social", "fanny_b", "zby3vzb1HXQ.ftb0czp"
-                )
+                # Check for Lemmy
+                instance_name = self.settings.get("Lemmy", {}).get("INSTANCE_NAME", "")
+                username = self.settings.get("Lemmy", {}).get("USERNAME", "")
+                password = self.settings.get("Lemmy", {}).get("PASSWORD", "")
+                community = self.settings.get("Lemmy", {}).get("COMMUNITY_NAME")
+
+                if ("" in [instance_name, username, password, community]):
+                    self.log.warn("Lemmy not fully configured")
+                    
+                self.lemmy = plaw.Lemmy(instance_name, username, password)
+                self.community = self.lemmy.getCommunity(community)
             except Exception as e:
                 self.log.error(
                     "Error encountered attempting to initialize Lemmy: {}".format(e)
@@ -5261,7 +5264,6 @@ Last Updated: """ + self.convert_timezone(
                 self.error_notification("Error initializing Lemmy")
                 raise
 
-        self.community = self.lemmy.getCommunity(self.settings.get("Reddit", {}).get("SUBREDDIT"))
 
     def eod_loop(self, today):
         # today = date that's already been finished ('%Y-%m-%d')
