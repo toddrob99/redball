@@ -5018,6 +5018,7 @@ Last Updated: """ + self.convert_timezone(
         else:
             community = self.lemmy.community
 
+        title = title.strip("\n")
         post = self.lemmy.submitPost(
             title=title,
             body=text,
