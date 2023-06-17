@@ -85,3 +85,25 @@ class Lemmy:
         res = self._req.request(HttpType.PUT, api_url, data)
 
         return res["post_view"]
+
+    def submitComment(self, post_id, content, language_id=None, parent_id=None):
+        api_url = self.instance + "/api/v3/comment"
+
+        data = {
+            "auth": self.auth_token,
+            "content": content,
+            "post_id": post_id,
+        }
+
+        if language_id:
+            data["language_id"] = language_id
+        if parent_id:
+            data["parent_id"] = parent_id
+
+        res = self._req.request(
+            HttpType.POST,
+            api_url,
+            data,
+        )
+
+        return res["comment_view"]

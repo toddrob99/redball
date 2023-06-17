@@ -2312,7 +2312,7 @@ Last Updated: """ + self.convert_timezone(
                         self.log.debug("Rendered comment text: {}".format(text))
                         if text != "":
                             try:
-                                commentObj = gameThread.reply(text)
+                                commentObj = self.lemmy.submitComment(gameThreadId, text, language_id=37)
                                 self.log.info(
                                     "Submitted comment to game thread {} for actionIndex {} for atBatIndex {}: {}".format(
                                         gameThreadId,
@@ -2341,27 +2341,10 @@ Last Updated: """ + self.convert_timezone(
                                         .replace(" ", "_"),
                                     ),
                                     myTeamBatting=1 if myTeamBatting else 0,
-                                    commentId=commentObj.id,
-                                    dateCreated=commentObj.created_utc,
-                                    dateUpdated=commentObj.created_utc,
+                                    commentId=commentObj["comment"]["id"],
+                                    dateCreated=commentObj["comment"]["published"],
+                                    dateUpdated=commentObj["comment"]["published"],
                                     deleted=0,
-                                )
-                                self.check_for_comment_webhooks(
-                                    gamePk=pk,
-                                    actionOrResult="action",
-                                    myTeamBatting=myTeamBatting,
-                                    atBat=atBat,
-                                    actionIndex=actionIndex,
-                                    eventType=atBat["playEvents"][actionIndex][
-                                        "details"
-                                    ].get(
-                                        "eventType",
-                                        atBat["playEvents"][actionIndex]["details"]
-                                        .get("event", "")
-                                        .lower()
-                                        .replace(" ", "_"),
-                                    ),
-                                    commentText=text,
                                 )
                             except Exception as e:
                                 self.log.error(
@@ -2479,7 +2462,7 @@ Last Updated: """ + self.convert_timezone(
                         self.log.debug("Rendered comment text: {}".format(text))
                         if text != "":
                             try:
-                                commentObj = gameThread.reply(text)
+                                commentObj = self.lemmy.submitComment(gameThreadId, text, language_id=37)
                                 self.log.info(
                                     "Submitted comment to game thread {} for result of atBatIndex {}: {}".format(
                                         gameThreadId, atBat["atBatIndex"], text
@@ -2501,25 +2484,10 @@ Last Updated: """ + self.convert_timezone(
                                         .replace(" ", "_"),
                                     ),
                                     myTeamBatting=1 if myTeamBatting else 0,
-                                    commentId=commentObj.id,
-                                    dateCreated=commentObj.created_utc,
-                                    dateUpdated=commentObj.created_utc,
+                                    commentId=commentObj["comment"]["id"],
+                                    dateCreated=commentObj["comment"]["published"],
+                                    dateUpdated=commentObj["comment"]["published"],
                                     deleted=0,
-                                )
-                                self.check_for_comment_webhooks(
-                                    gamePk=pk,
-                                    actionOrResult="result",
-                                    myTeamBatting=myTeamBatting,
-                                    atBat=atBat,
-                                    actionIndex=None,
-                                    eventType=atBat["result"].get(
-                                        "eventType",
-                                        atBat["result"]
-                                        .get("event", "")
-                                        .lower()
-                                        .replace(" ", "_"),
-                                    ),
-                                    commentText=text,
                                 )
                             except Exception as e:
                                 self.log.error(
@@ -3466,7 +3434,7 @@ Last Updated: """ + self.convert_timezone(
                                 }
                             }
                         )
-                        if x["venue"].get("timezone", {}).get("id"):
+                        if x["venue"].get("timeZone", {}).get("id"):
                             x["gameTime"].update(
                                 {
                                     "homeTeam": self.convert_timezone(
