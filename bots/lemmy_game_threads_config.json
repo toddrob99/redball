@@ -600,7 +600,10 @@
             "description": "Propagate Logs",
             "type": "bool",
             "val": false,
-            "options": [true, false],
+            "options": [
+                true,
+                false
+            ],
             "subkeys": [],
             "parent_key": ""
         }
@@ -1163,14 +1166,16 @@
             "parent_key": ""
         }
     ],
-    "Prowl" : [
+    "Prowl": [
         {
             "key": "ERROR_API_KEY",
             "description": "API Key for sending error notifications to Prowl.",
             "type": "str",
             "val": "",
             "options": [],
-            "subkeys": ["ERROR_PRIORITY"],
+            "subkeys": [
+                "ERROR_PRIORITY"
+            ],
             "parent_key": ""
         },
         {
@@ -1195,7 +1200,9 @@
             "type": "str",
             "val": "",
             "options": [],
-            "subkeys": ["THREAD_POSTED_PRIORITY"],
+            "subkeys": [
+                "THREAD_POSTED_PRIORITY"
+            ],
             "parent_key": ""
         },
         {
@@ -1215,13 +1222,16 @@
             "parent_key": "THREAD_POSTED_API_KEY"
         }
     ],
-    "Twitter" : [
+    "Twitter": [
         {
             "key": "TWEET_THREAD_POSTED",
             "description": "Tweet when threads are posted (see wiki for info).",
             "type": "bool",
             "val": "false",
-            "options": [true, false],
+            "options": [
+                true,
+                false
+            ],
             "subkeys": [],
             "parent_key": ""
         },
@@ -1255,6 +1265,44 @@
         {
             "key": "ACCESS_SECRET",
             "description": "Twitter Access Secret (see wiki)",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        }
+    ],
+    "Lemmy": [
+        {
+            "key": "INSTANCE_NAME",
+            "description": "Full instance domain name (including protocol)",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "COMMUNITY_NAME",
+            "description": "Name of lemmy community to target",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "USERNAME",
+            "description": "Username of bot user",
+            "type": "str",
+            "val": "",
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
+            "key": "PASSWORD",
+            "description": "Password for bot user",
             "type": "str",
             "val": "",
             "options": [],
