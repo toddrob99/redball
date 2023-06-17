@@ -28,8 +28,7 @@ import mako.exceptions
 import pyprowl
 import statsapi
 
-import praw
-import plaw
+from . import plaw
 
 __version__ = "1.5.2"
 
@@ -5084,7 +5083,7 @@ Last Updated: """ + self.convert_timezone(
     def sticky_thread(self, thread):
         self.log.info("Stickying thread [{}]...".format(thread["post"]["id"]))
         try:
-            thread.mod.sticky()
+            # thread.mod.sticky()
             self.log.info("Thread [{}] stickied...".format(thread["post"]["id"]))
         except Exception:
             self.log.warning(
@@ -5097,7 +5096,7 @@ Last Updated: """ + self.convert_timezone(
         for t in threads:
             try:
                 self.log.debug("Attempting to unsticky thread [{}]".format(t["post"]["id"]))
-                t.mod.sticky(state=False)
+                # t.mod.sticky(state=False)
             except Exception:
                 self.log.debug(
                     "Unsticky of thread [{}] failed. Check mod privileges or the thread may not have been sticky.".format(
@@ -5244,7 +5243,7 @@ Last Updated: """ + self.convert_timezone(
         self.log.debug("Refreshed settings: {}".format(self.settings))
 
     def init_lemmy(self):
-        self.log.debug(f"Initiating Lemmy API with plaw v{praw.__version__}...")
+        self.log.debug(f"Initiating Lemmy API with plaw")
         with redball.REDDIT_AUTH_LOCKS[str(self.bot.redditAuth)]:
             try:
                 # Check for Lemmy
