@@ -722,6 +722,405 @@ class Bot(object):
             },
         }
 
+    def off_day(self):
+        if (
+            self.seasonState.startswith("off") or self.seasonState == "post:out"
+        ) and self.settings.get("Off Day Thread", {}).get("SUPPRESS_OFFSEASON", True):
+            self.log.info("Suppressing off day thread during offseason.")
+            self.activeGames.update({"off": {"STOP_FLAG": True}})
+        elif not self.settings.get("Off Day Thread", {}).get("ENABLED", True):
+            self.log.info("Off day thread disabled.")
+            self.activeGames.update({"off": {"STOP_FLAG": True}})
+        else:
+            # Spawn a thread to wait for post time and then keep off day thread updated
+            self.activeGames.update(
+                {"off": {"STOP_FLAG": False}}
+            )  # Off day thread is not specific to a gamePk
+            self.THREADS.update(
+                {
+                    "OFFDAY_THREAD": threading.Thread(
+                        target=self.off_thread_update_loop,
+                        name="bot-{}-{}-offday".format(
+                            self.bot.id, self.bot.name.replace(" ", "-")
+                        ),
+                        daemon=True,
+                    )
+                }
+            )
+            self.THREADS["OFFDAY_THREAD"].start()
+            self.log.debug(
+                "Started off day thread {}.".format(self.THREADS["OFFDAY_THREAD"])
+            )
+
+        while (
+            len([{k: v} for k, v in self.activeGames.items() if not v["STOP_FLAG"]])
+            and redball.SIGNAL is None
+            and not self.bot.STOP
+        ):
+            try:
+                if not self.settings.get("Off Day Thread", {}).get("ENABLED", True):
+                    # Off day thread is disabled, so don't start an update thread...
+                    pass
+                elif (
+                    not self.activeGames["off"]["STOP_FLAG"]
+                    and self.THREADS.get("OFFDAY_THREAD")
+                    and isinstance(self.THREADS["OFFDAY_THREAD"], threading.Thread)
+                    and self.THREADS["OFFDAY_THREAD"].is_alive()
+                ):
+                    self.log.debug(
+                        "Off day update thread looks fine..."
+                    )  # debug - need this here to see if the condition is working when the thread crashes
+                    # pass
+                elif self.activeGames["off"]["STOP_FLAG"]:
+                    # Off day thread is already done
+                    pass
+                else:
+                    raise Exception("Off day thread update process is not running!")
+            except Exception as e:
+                self.log.error(
+                    "Off day thread update process is not running. Attempting to start. (Error: {})".format(
+                        e
+                    )
+                )
+                self.error_notification("Off day thread update process is not running")
+                self.THREADS.update(
+                    {
+                        "OFFDAY_THREAD": threading.Thread(
+                            target=self.off_thread_update_loop,
+                            name="bot-{}-{}-offday".format(
+                                self.bot.id, self.bot.name.replace(" ", "-")
+                            ),
+                            daemon=True,
+                        )
+                    }
+                )
+                self.THREADS["OFFDAY_THREAD"].start()
+                self.log.debug(
+                    "Started off day thread {}.".format(self.THREADS["OFFDAY_THREAD"])
+                )
+
+            if (
+                len(
+                    [
+                        {k: v}
+                        for k, v in self.activeGames.items()
+                        if not v.get("STOP_FLAG", False)
+                        or not v.get("POST_STOP_FLAG", False)
+                    ]
+                )
+                > 0
+            ):
+                # There are still active threads
+                self.log.debug(
+                    "Active games/threads: {}".format(
+                        [
+                            k
+                            for k, v in self.activeGames.items()
+                            if not v["STOP_FLAG"] or not v.get("POST_STOP_FLAG", True)
+                        ]
+                    )
+                )
+                self.log.debug(
+                    "Active threads: {}".format(
+                        [
+                            t
+                            for t in threading.enumerate()
+                            if t.name.startswith(
+                                "bot-{}-{}".format(
+                                    self.bot.id, self.bot.name.replace(" ", "-")
+                                )
+                            )
+                        ]
+                    )
+                )
+                self.sleep(30)
+            else:
+                break
+
+    def off_thread_update_loop(self):
+        skipFlag = None  # Will be set later if off day thread edit should be skipped
+
+        # Check/wait for time to submit off day thread
+        self.activeGames["off"].update(
+            {
+                "postTime_local": datetime.strptime(
+                    datetime.today().strftime(
+                        "%Y-%m-%d "
+                        + self.settings.get("Off Day Thread", {}).get(
+                            "POST_TIME", "05:00"
+                        )
+                    ),
+                    "%Y-%m-%d %H:%M",
+                )
+            }
+        )
+        while (
+            datetime.today() < self.activeGames["off"]["postTime_local"]
+            and redball.SIGNAL is None
+            and not self.bot.STOP
+        ):
+            if (
+                self.activeGames["off"]["postTime_local"] - datetime.today()
+            ).total_seconds() > 3600:
+                self.log.info(
+                    "Off day thread should not be posted for a long time ({}). Sleeping for an hour...".format(
+                        self.activeGames["off"]["postTime_local"]
+                    )
+                )
+                self.sleep(3600)
+            elif (
+                self.activeGames["off"]["postTime_local"] - datetime.today()
+            ).total_seconds() > 1800:
+                self.log.info(
+                    "Off day thread post time is still more than 30 minutes away ({}). Sleeping for a half hour...".format(
+                        self.activeGames["off"]["postTime_local"]
+                    )
+                )
+                self.sleep(1800)
+            else:
+                self.log.info(
+                    "Off day thread post time is approaching ({}). Sleeping until then...".format(
+                        self.activeGames["off"]["postTime_local"]
+                    )
+                )
+                self.sleep(
+                    (
+                        self.activeGames["off"]["postTime_local"] - datetime.today()
+                    ).total_seconds()
+                )
+
+        if redball.SIGNAL is not None or self.bot.STOP:
+            return
+
+        # Unsticky stale threads
+        if self.settings.get("Reddit", {}).get("STICKY", False):
+            """
+            # Make sure the subreddit's sticky posts are marked as stale
+            try:
+                sticky1 = self.subreddit.sticky(1)
+                if sticky1.author == self.reddit.user.me() and sticky1 not in self.staleThreads:
+                    self.staleThreads.append(sticky1)
+
+                sticky2 = self.subreddit.sticky(2)
+                if sticky2.author == self.reddit.user.me() and sticky2 not in self.staleThreads:
+                    self.staleThreads.append(sticky2)
+            except Exception:
+                # Exception likely due to no post being stickied (or only one), so ignore it...
+                pass
+            """
+            if len(self.staleThreads):
+                self.unsticky_threads(self.staleThreads)
+                self.staleThreads = []
+
+        # Check DB for existing off day thread
+        oq = "select * from {}threads where gamePk = {} and type='off' and deleted=0;".format(
+            self.dbTablePrefix, self.today["Ymd"]
+        )
+        offThread = rbdb.db_qry(oq, closeAfter=True, logg=self.log)
+
+        offDayThread = None
+        if len(offThread) > 0:
+            self.log.info(
+                "Off Day Thread found in database [{}].".format(offThread[0]["id"])
+            )
+            offDayThread = self.lemmy.getPost(offThread[0]["id"])
+            if not offDayThread["creator"]["name"]:
+                self.log.warning("Off day thread appears to have been deleted.")
+                q = "update {}threads set deleted=1 where id='{}';".format(
+                    self.dbTablePrefix, offDayThread["post"]["id"]
+                )
+                u = rbdb.db_qry(q, commit=True, closeAfter=True, logg=self.log)
+                if isinstance(u, str):
+                    self.log.error(
+                        "Error marking thread as deleted in database: {}".format(u)
+                    )
+
+                offDayThread = None
+            else:
+                if offDayThread["post"]["body"].find("\n\nLast Updated") != -1:
+                    offDayThreadText = offDayThread["post"]["body"][
+                        0 : offDayThread["post"]["body"].find("\n\nLast Updated:")
+                    ]
+                elif offDayThread["post"]["body"].find("\n\nPosted") != -1:
+                    offDayThreadText = offDayThread["post"]["body"][
+                        0 : offDayThread["post"]["body"].find("\n\nPosted:")
+                    ]
+                else:
+                    offDayThreadText = offDayThread["post"]["body"]
+
+                self.activeGames["off"].update(
+                    {
+                        "offDayThreadText": offDayThreadText,
+                        "offDayThread": offDayThread,
+                        "offDayThreadTitle": offDayThread["post"]["name"]
+                        if offDayThread not in [None, False]
+                        else None,
+                    }
+                )
+                # Only sticky when posting the thread
+                # if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(offDayThread)
+
+        if not offDayThread:
+            (offDayThread, offDayThreadText) = self.prep_and_post(
+                "off",
+                postFooter="""
+
+Posted: """
+                + self.convert_timezone(
+                    datetime.utcnow(), self.myTeam["venue"]["timeZone"]["id"]
+                ).strftime("%m/%d/%Y %I:%M:%S %p %Z")
+                + ", Update Interval: {} Minutes".format(
+                    self.settings.get("Off Day Thread", {}).get("UPDATE_INTERVAL", 5)
+                ),
+            )
+            self.activeGames["off"].update(
+                {
+                    "offDayThreadText": offDayThreadText,
+                    "offDayThread": offDayThread,
+                    "offDayThreadTitle": offDayThread["post"]["name"]
+                    if offDayThread not in [None, False]
+                    else None,
+                }
+            )
+            skipFlag = True
+
+        while (
+            not self.activeGames["off"]["STOP_FLAG"]
+            and redball.SIGNAL is None
+            and not self.bot.STOP
+        ):
+            # Keep off day thread updated
+            if skipFlag:
+                # Skip check/edit since skip flag is set
+                skipFlag = None
+                self.log.debug(
+                    "Skip flag is set, off day thread was just submitted/edited and does not need to be checked."
+                )
+            else:
+                try:
+                    # Update generic data for division games and no-no/perfect game watch
+                    self.collect_data(0)
+                    # self.log.debug('data passed into render_template: {}'.format(self.commonData))#debug
+                    text = self.render_template(
+                        thread="off",
+                        templateType="thread",
+                        data=self.commonData,
+                        settings=self.settings,
+                    )
+                    self.log.debug("Rendered off day thread text: {}".format(text))
+                    if (
+                        text != self.activeGames["off"]["offDayThreadText"]
+                        and text != ""
+                    ):
+                        self.activeGames["off"].update({"offDayThreadText": text})
+                        text += (
+                            """
+
+Last Updated: """
+                            + self.convert_timezone(
+                                datetime.utcnow(),
+                                self.myTeam["venue"]["timeZone"]["id"],
+                            ).strftime("%m/%d/%Y %I:%M:%S %p %Z")
+                            + ", Update Interval: {} Minutes".format(
+                                self.settings.get("Off Day Thread", {}).get(
+                                    "UPDATE_INTERVAL", 5
+                                )
+                            )
+                        )
+                        self.lemmy.editPost(offDayThread["post"]["id"])
+                        self.log.info("Off day thread edits submitted.")
+                        self.count_check_edit(offDayThread["post"]["id"], "NA", edit=True)
+                        self.log_last_updated_date_in_db(offDayThread["post"]["id"])
+                    elif text == "":
+                        self.log.info(
+                            "Skipping off day thread edit since thread text is blank..."
+                        )
+                    else:
+                        self.log.info("No changes to off day thread.")
+                        self.count_check_edit(offDayThread["post"]["id"], "NA", edit=False)
+                except Exception as e:
+                    self.log.error("Error editing off day thread: {}".format(e))
+                    self.error_notification("Error editing off day thread")
+
+            update_off_thread_until = self.settings.get("Off Day Thread", {}).get(
+                "UPDATE_UNTIL", "All MLB games are final"
+            )
+            if update_off_thread_until not in [
+                "Do not update",
+                "All division games are final",
+                "All MLB games are final",
+            ]:
+                # Unsupported value, use default
+                update_off_thread_until = "All MLB games are final"
+
+            if update_off_thread_until == "Do not update":
+                # Setting says not to update
+                self.log.info(
+                    "Stopping off day thread update loop per UPDATE_UNTIL setting."
+                )
+                self.activeGames["off"].update({"STOP_FLAG": True})
+                break
+            elif update_off_thread_until == "All division games are final":
+                if not next(
+                    (
+                        True
+                        for x in self.commonData[0]["leagueSchedule"]
+                        if x["status"]["abstractGameCode"] != "F"
+                        and x["status"]["codedGameState"] not in ["C", "D", "U", "T"]
+                        and self.myTeam["division"]["id"]
+                        in [
+                            x["teams"]["away"]["team"].get("division", {}).get("id"),
+                            x["teams"]["home"]["team"].get("division", {}).get("id"),
+                        ]
+                    ),
+                    False,
+                ):
+                    # Division games are all final
+                    self.log.info(
+                        "All division games are final. Stopping off day thread update loop per UPDATE_UNTIL setting."
+                    )
+                    self.activeGames["off"].update({"STOP_FLAG": True})
+                    break
+            elif update_off_thread_until == "All MLB games are final":
+                if not next(
+                    (
+                        True
+                        for x in self.commonData[0]["leagueSchedule"]
+                        if x["status"]["abstractGameCode"] != "F"
+                        and x["status"]["codedGameState"] not in ["C", "D", "U", "T"]
+                    ),
+                    False,
+                ):
+                    # MLB games are all final
+                    self.log.info(
+                        "All MLB games are final. Stopping off day thread update loop per UPDATE_UNTIL setting."
+                    )
+                    self.activeGames["off"].update({"STOP_FLAG": True})
+                    break
+
+            self.log.debug(
+                "Off day thread stop criteria not met ({}).".format(
+                    update_off_thread_until
+                )
+            )  # debug - need this to tell if logic is working
+
+            # Update interval is in minutes (seconds for game thread only)
+            odtWait = self.settings.get("Off Day Thread", {}).get("UPDATE_INTERVAL", 5)
+            if odtWait < 1:
+                odtWait = 1
+            self.log.info("Sleeping for {} minutes...".format(odtWait))
+            self.sleep(odtWait * 60)
+
+        if redball.SIGNAL is not None or self.bot.STOP:
+            self.log.debug("Caught a stop signal...")
+
+        # Mark off day thread as stale so it will be unstickied tomorrow
+        if offDayThread:
+            self.staleThreads.append(offDayThread)
+
+        self.log.debug("Ending off day update thread...")
+        return
+
     def gameday_thread_update_loop(self, todayGamePks):
         pk = "gameday"  # Game day thread is not specific to a gamePk
         skipFlag = None  # Will be set later if game day thread edit should be skipped
@@ -972,10 +1371,15 @@ Last Updated: """
                                 )
                             )
                         )
-                        self.lemmy.editPost(self.activeGames[pk]["gameDayThread"]["post"]["id"], body=text)
+                        self.lemmy.editPost(
+                            self.activeGames[pk]["gameDayThread"]["post"]["id"],
+                            body=text,
+                        )
                         self.log.info("Game day thread edits submitted.")
                         self.count_check_edit(
-                            self.activeGames[pk]["gameDayThread"]["post"]["id"], "NA", edit=True
+                            self.activeGames[pk]["gameDayThread"]["post"]["id"],
+                            "NA",
+                            edit=True,
                         )
                         self.log_last_updated_date_in_db(
                             self.activeGames[pk]["gameDayThread"]["post"]["id"]
@@ -987,7 +1391,9 @@ Last Updated: """
                     else:
                         self.log.info("No changes to game day thread.")
                         self.count_check_edit(
-                            self.activeGames[pk]["gameDayThread"]["post"]["id"], "NA", edit=False
+                            self.activeGames[pk]["gameDayThread"]["post"]["id"],
+                            "NA",
+                            edit=False,
                         )
                 except Exception as e:
                     self.log.error("Error editing game day thread: {}".format(e))
@@ -1591,7 +1997,9 @@ Last Updated: """ + self.convert_timezone(
                     ).strftime(
                         "%m/%d/%Y %I:%M:%S %p %Z"
                     )
-                    self.lemmy.editPost(self.activeGames[pk]["gameThread"]["post"]["id"], body=text)
+                    self.lemmy.editPost(
+                        self.activeGames[pk]["gameThread"]["post"]["id"], body=text
+                    )
                     self.log.info("Edits submitted for {} game thread.".format(pk))
                     self.count_check_edit(
                         self.activeGames[pk]["gameThread"]["post"]["id"],
@@ -1964,7 +2372,7 @@ Posted: """
                 {
                     "postGameThread": postGameThread,
                     "postGameThreadText": postGameThreadText,
-                    "postGameThreadTitle": postGameThread["post"]['name']
+                    "postGameThreadTitle": postGameThread["post"]["name"]
                     if postGameThread not in [None, False]
                     else None,
                 }
@@ -2015,7 +2423,10 @@ Last Updated: """ + self.convert_timezone(
                         ).strftime(
                             "%m/%d/%Y %I:%M:%S %p %Z"
                         )
-                        self.lemmy.editPost(self.activeGames[pk]["postGameThread"]["post"]["id"], body=text)
+                        self.lemmy.editPost(
+                            self.activeGames[pk]["postGameThread"]["post"]["id"],
+                            body=text,
+                        )
 
                         self.log.info("Post game {} thread edits submitted.".format(pk))
                         self.log_last_updated_date_in_db(
@@ -2312,7 +2723,9 @@ Last Updated: """ + self.convert_timezone(
                         self.log.debug("Rendered comment text: {}".format(text))
                         if text != "":
                             try:
-                                commentObj = self.lemmy.submitComment(gameThreadId, text, language_id=37)
+                                commentObj = self.lemmy.submitComment(
+                                    gameThreadId, text, language_id=37
+                                )
                                 self.log.info(
                                     "Submitted comment to game thread {} for actionIndex {} for atBatIndex {}: {}".format(
                                         gameThreadId,
@@ -2462,7 +2875,9 @@ Last Updated: """ + self.convert_timezone(
                         self.log.debug("Rendered comment text: {}".format(text))
                         if text != "":
                             try:
-                                commentObj = self.lemmy.submitComment(gameThreadId, text, language_id=37)
+                                commentObj = self.lemmy.submitComment(
+                                    gameThreadId, text, language_id=37
+                                )
                                 self.log.info(
                                     "Submitted comment to game thread {} for result of atBatIndex {}: {}".format(
                                         gameThreadId, atBat["atBatIndex"], text
@@ -3237,7 +3652,9 @@ Last Updated: """ + self.convert_timezone(
 
         if gamePk == 0:
             # Generic data used by all threads
-            with GENERIC_DATA_LOCK:  # Use lock to prevent multiple threads from updating data at the same time
+            with (
+                GENERIC_DATA_LOCK
+            ):  # Use lock to prevent multiple threads from updating data at the same time
                 if self.commonData.get(gamePk) and self.commonData[gamePk].get(
                     "lastUpdate", datetime.today() - timedelta(hours=1)
                 ) >= datetime.today() - timedelta(seconds=cache_seconds):
@@ -3493,7 +3910,9 @@ Last Updated: """ + self.convert_timezone(
             if not self.commonData.get(0):
                 self.collect_data(0)
 
-            with GAME_DATA_LOCK:  # Use lock to prevent multiple threads from updating data at the same time
+            with (
+                GAME_DATA_LOCK
+            ):  # Use lock to prevent multiple threads from updating data at the same time
                 # Update game-specific data
                 if not isinstance(gamePk, list):
                     gamePks = [gamePk]
@@ -4830,7 +5249,10 @@ Last Updated: """ + self.convert_timezone(
         text = ""
         try:
             for p in self.lemmy.listPosts():
-                if p["creator"]["name"] == self.lemmy.username and p["post"]["name"] == title:
+                if (
+                    p["creator"]["name"] == self.lemmy.username
+                    and p["post"]["name"] == title
+                ):
                     # Found existing thread...
                     self.log.info("Found an existing {} thread...".format(thread))
                     theThread = p
@@ -4914,7 +5336,9 @@ Last Updated: """ + self.convert_timezone(
                         thread, self.today["Ymd"]
                     )
                 )
-                self.insert_thread_to_db(int(self.today["Ymd"]), theThread["post"]["id"], thread)
+                self.insert_thread_to_db(
+                    int(self.today["Ymd"]), theThread["post"]["id"], thread
+                )
 
             # Check for Prowl notification
             prowlKey = self.settings.get("Prowl", {}).get("THREAD_POSTED_API_KEY", "")
@@ -5016,6 +5440,7 @@ Last Updated: """ + self.convert_timezone(
         )
         try:
             template = self.LOOKUP.get_template(template)
+            self.log.info("BEN: {}".format(template))
             return template.render(**kwargs)
         except Exception:
             self.log.error(
@@ -5063,7 +5488,9 @@ Last Updated: """ + self.convert_timezone(
     def unsticky_threads(self, threads):
         for t in threads:
             try:
-                self.log.debug("Attempting to unsticky thread [{}]".format(t["post"]["id"]))
+                self.log.debug(
+                    "Attempting to unsticky thread [{}]".format(t["post"]["id"])
+                )
                 # t.mod.sticky(state=False)
             except Exception:
                 self.log.debug(
@@ -5220,9 +5647,9 @@ Last Updated: """ + self.convert_timezone(
                 password = self.settings.get("Lemmy", {}).get("PASSWORD", "")
                 community = self.settings.get("Lemmy", {}).get("COMMUNITY_NAME")
 
-                if ("" in [instance_name, username, password, community]):
+                if "" in [instance_name, username, password, community]:
                     self.log.warn("Lemmy not fully configured")
-                    
+
                 self.lemmy = plaw.Lemmy(instance_name, username, password)
                 self.community = self.lemmy.getCommunity(community)
             except Exception as e:
@@ -5231,7 +5658,6 @@ Last Updated: """ + self.convert_timezone(
                 )
                 self.error_notification("Error initializing Lemmy")
                 raise
-
 
     def eod_loop(self, today):
         # today = date that's already been finished ('%Y-%m-%d')
@@ -5378,10 +5804,14 @@ Last Updated: """ + self.convert_timezone(
                     "posted": True
                     if self.activeGames.get("off", {}).get("offDayThread")
                     else False,
-                    "id": self.activeGames.get("off", {}).get("offDayThread")["post"]["id"]
+                    "id": self.activeGames.get("off", {}).get("offDayThread")["post"][
+                        "id"
+                    ]
                     if self.activeGames.get("off", {}).get("offDayThread")
                     else None,
-                    "url": self.activeGames.get("off", {}).get("offDayThread")["post"]["ap_id"]
+                    "url": self.activeGames.get("off", {}).get("offDayThread")["post"][
+                        "ap_id"
+                    ]
                     if self.activeGames.get("off", {}).get("offDayThread")
                     else None,
                     "title": self.activeGames.get("off", {}).get("offDayThreadTitle")
@@ -5403,11 +5833,14 @@ Last Updated: """ + self.convert_timezone(
                     "posted": True
                     if self.activeGames.get("gameday", {}).get("gameDayThread")
                     else False,
-                    "id": self.activeGames.get("gameday", {}).get("gameDayThread")["post"]["id"]
+                    "id": self.activeGames.get("gameday", {}).get("gameDayThread")[
+                        "post"
+                    ]["id"]
                     if self.activeGames.get("gameday", {}).get("gameDayThread")
                     else None,
-                    "url": self.activeGames.get("gameday", {})
-                    .get("gameDayThread")["post"]["ap_id"]
+                    "url": self.activeGames.get("gameday", {}).get("gameDayThread")[
+                        "post"
+                    ]["ap_id"]
                     if self.activeGames.get("gameday", {}).get("gameDayThread")
                     else None,
                     "title": self.activeGames.get("gameday", {}).get(
