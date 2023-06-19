@@ -958,7 +958,7 @@ class Bot(object):
                     }
                 )
                 # Only sticky when posting the thread
-                # if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(offDayThread)
+                if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(offDayThread)
 
         if not offDayThread:
             (offDayThread, offDayThreadText) = self.prep_and_post(
@@ -1254,7 +1254,7 @@ Last Updated: """
                     }
                 )
                 # Only sticky when posting the thread
-                # if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(gameDayThread)
+                if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(gameDayThread)
 
         # Check if post game thread is already posted, and skip game day thread if so
         if (
@@ -2311,7 +2311,7 @@ Last Updated: """ + self.convert_timezone(
                     }
                 )
                 # Only sticky when posting the thread
-                # if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(self.activeGames[pk]['postGameThread'])
+                if self.settings.get('Reddit',{}).get('STICKY',False): self.sticky_thread(self.activeGames[pk]['postGameThread'])
 
         game_result = (
             "EXCEPTION"
@@ -5267,8 +5267,8 @@ Last Updated: """ + self.convert_timezone(
                     else:
                         text = theThread["post"]["body"]
 
-                    # if sticky:
-                    #     self.sticky_thread(theThread)
+                    if sticky:
+                        self.sticky_thread(theThread)
 
                     break
         except Exception as e:
@@ -5416,8 +5416,8 @@ Last Updated: """ + self.convert_timezone(
         )
         self.log.info("Thread ({}) submitted: {}".format(title, post))
 
-        # if sticky:
-        #     self.sticky_thread(post)
+        if sticky:
+            self.lemmy.stickyPost(post["post"]["id"])
 
         return post
 
@@ -5440,7 +5440,6 @@ Last Updated: """ + self.convert_timezone(
         )
         try:
             template = self.LOOKUP.get_template(template)
-            self.log.info("BEN: {}".format(template))
             return template.render(**kwargs)
         except Exception:
             self.log.error(
@@ -5476,7 +5475,7 @@ Last Updated: """ + self.convert_timezone(
     def sticky_thread(self, thread):
         self.log.info("Stickying thread [{}]...".format(thread["post"]["id"]))
         try:
-            # thread.mod.sticky()
+            self.lemmy.stickyPost(thread["post"]["id"])
             self.log.info("Thread [{}] stickied...".format(thread["post"]["id"]))
         except Exception:
             self.log.warning(
@@ -5491,7 +5490,7 @@ Last Updated: """ + self.convert_timezone(
                 self.log.debug(
                     "Attempting to unsticky thread [{}]".format(t["post"]["id"])
                 )
-                # t.mod.sticky(state=False)
+                self.lemmy.unStickyPost(t["post"]["id"])
             except Exception:
                 self.log.debug(
                     "Unsticky of thread [{}] failed. Check mod privileges or the thread may not have been sticky.".format(

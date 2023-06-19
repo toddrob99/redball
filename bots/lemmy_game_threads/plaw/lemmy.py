@@ -107,3 +107,39 @@ class Lemmy:
         )
 
         return res["comment_view"]
+
+    def stickyPost(self, post_id):
+        api_url = self.instance + "/api/v3/post/feature"
+
+        data = {
+            "auth": self.auth_token,
+            "post_id": post_id,
+            "feature_type": "Community",
+            "featured": True
+        }
+
+        res = self._req.request(
+            HttpType.POST,
+            api_url,
+            data,
+        )
+
+        return res["post_view"]
+
+    def unStickyPost(self, post_id):
+        api_url = self.instance + "/api/v3/post/feature"
+
+        data = {
+            "auth": self.auth_token,
+            "post_id": post_id,
+            "feature_type": "Community",
+            "featured": False
+        }
+
+        res = self._req.request(
+            HttpType.POST,
+            api_url,
+            data,
+        )
+
+        return res["post_view"]
