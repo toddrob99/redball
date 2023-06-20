@@ -11,7 +11,7 @@ ${settings['Comments'][("MYTEAM_BATTING_HEADER_" if myTeamBatting else "MYTEAM_P
 
     % else:
     ## Use event for header
-${'###'} ${atBat["playEvents"][actionIndex]["details"].get("event", "")}
+${'### '} ${atBat["playEvents"][actionIndex]["details"].get("event", "")}
 
     ## End if custom event header
     % endif
@@ -41,13 +41,13 @@ ${settings['Comments'][("MYTEAM_BATTING_HEADER_" if myTeamBatting else "MYTEAM_P
     ## End if eventType == 'home_run'
     % elif eventType == 'strikeout':
         % if atBat['playEvents'][atBat['pitchIndex'][-1]]['details']['code'] == 'C':
-${'#'} &#xA4D8;
+${'# '} &#xA4D8;
         % else:
-${'###'} K
+${'### '} K
         % endif
     ## End if custom event header
     % else:
-${'###'} ${atBat['result']['event']}
+${'### '} ${atBat['result']['event']}
     ## End else (if eventType == * or custom event header)
     % endif
 ## The event description:

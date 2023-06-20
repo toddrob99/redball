@@ -3,10 +3,10 @@
     import pytz
 %>\
 ## Header: Team names with links to team subs and matchup image, followed by game date
-${'#'}<%include file="matchup.mako" args="dateFormat='%a, %b %d'" />
+${'# '}<%include file="matchup.mako" args="dateFormat='%a, %b %d'" />
 
 ## Game status: show detailed state and then list first pitch time if game hasn't started yet and isn't final
-${'###'}Game Status: ${data[gamePk]['schedule']['status']['detailedState']} \
+${'### '}Game Status: ${data[gamePk]['schedule']['status']['detailedState']} \
 % if data[gamePk]['schedule']['status'].get('reason') and len(data[gamePk]['schedule']['status']['reason']) > 0 and data[gamePk]['schedule']['status']['reason'] not in data[gamePk]['schedule']['status']['detailedState']:
 due to ${data[gamePk]['schedule']['status']['reason']} \
 % endif
@@ -81,7 +81,7 @@ ${ondeck} is on deck\
 % endif
 % endif
 
-${'###'} Trash Talk Thread Rules
+${'### '} Trash Talk Thread Rules
 
 * Trash talk stays in this thread only, retaliating in other subs will result in a permanent ban
 * Fans of all teams are welcome!
@@ -120,11 +120,11 @@ ${'###'} Trash Talk Thread Rules
 
 % if data[0]['myTeam']['seasonState'] != 'post:in':
 ## division scoreboard
-${'###Around the Division' if any(x for x in data[0]['leagueSchedule'] if data[0]['myTeam']['division']['id'] in [x['teams']['away']['team'].get('division',{}).get('id'), x['teams']['home']['team'].get('division',{}).get('id')] and x['gamePk'] != gamePk) else 'Around the Division: There are no other division teams playing!'}
+${'### Around the Division' if any(x for x in data[0]['leagueSchedule'] if data[0]['myTeam']['division']['id'] in [x['teams']['away']['team'].get('division',{}).get('id'), x['teams']['home']['team'].get('division',{}).get('id')] and x['gamePk'] != gamePk) else 'Around the Division: There are no other division teams playing!'}
 <%include file="division_scoreboard.mako" args="gamePk=gamePk" />
 % else:
 ## league scoreboard
-${'###Around the League' if any(x for x in data[0]['leagueSchedule'] if x['gamePk'] != gamePk) else 'Around the League: There are no other games!'}
+${'### Around the League' if any(x for x in data[0]['leagueSchedule'] if x['gamePk'] != gamePk) else 'Around the League: There are no other games!'}
 <%include file="league_scoreboard.mako" args="gamePk=gamePk" />
 % endif
 

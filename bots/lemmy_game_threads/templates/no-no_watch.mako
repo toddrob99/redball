@@ -5,7 +5,7 @@
 %>
 % for x in games:
 % if x['flags'].get('perfectGame'):
-${'###Perfect Game Alert'}
+${'### Perfect Game Alert'}
 
 |${x['linescore']['inningState'][0] + ' ' + str(x['linescore']['currentInning']) if x['status']['abstractGameCode'] == 'L' else x['status']['detailedState']}|R|H|E|
 |:--|:--|:--|:--|
@@ -13,7 +13,7 @@ ${'###Perfect Game Alert'}
 |${x['teams']['home']['team']['teamName']}|${x['linescore']['teams']['home'].get('runs',0)}|${x['linescore']['teams']['home'].get('hits',0)}|${x['linescore']['teams']['home'].get('errors',0)}|
 
 % elif x['flags'].get('noHitter'):
-${'###No-Hitter Alert'}
+${'### No-Hitter Alert'}
 
 |${x['linescore']['inningState'][0] + ' ' + str(x['linescore']['currentInning']) if x['status']['abstractGameCode'] == 'L' else x['status']['detailedState']}|R|H|E|
 |:--|:--|:--|:--|

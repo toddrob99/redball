@@ -8,7 +8,7 @@ ${'**Around the Division**' if any(x for x in data[0]['leagueSchedule'] if data[
 % elif data[0]['myTeam']['seasonState'] in ['off:before', 'off:after']:
 
 % elif data[0]['myTeam']['seasonState'] in ['post:out', 'post:in']:
-${'###Around the League' if len(data[0]['leagueSchedule']) else 'Around the League: There are no games today!'}
+${'### Around the League' if len(data[0]['leagueSchedule']) else 'Around the League: There are no games today!'}
 <%include file="league_scoreboard.mako" args="gamePk='off'"/>
 % endif
 

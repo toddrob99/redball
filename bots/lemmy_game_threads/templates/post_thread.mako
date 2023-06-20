@@ -3,10 +3,10 @@
     import pytz
 %>\
 ## Header: Team names with links to team subs and matchup image, followed by game date
-${'#'}<%include file="matchup.mako" args="dateFormat='%a, %b %d'" />
+${'# '}<%include file="matchup.mako" args="dateFormat='%a, %b %d'" />
 
 ## Game status: show detailed state and final score
-${'###'}Game Status: ${data[gamePk]['schedule']['status']['detailedState']} \
+${'### '}Game Status: ${data[gamePk]['schedule']['status']['detailedState']} \
 % if data[gamePk]['schedule']['status'].get('reason') and len(data[gamePk]['schedule']['status']['reason']) > 0 and data[gamePk]['schedule']['status']['reason'] not in data[gamePk]['schedule']['status']['detailedState']:
 due to ${data[gamePk]['schedule']['status']['reason']} \
 % endif
@@ -34,7 +34,7 @@ due to ${data[gamePk]['schedule']['status']['reason']} \
 % if data[0]['myTeam'].get('division'):  # will skip for All Star teams
 % if data[0]['myTeam']['seasonState'].startswith('post'):
 ## league scoreboard during post season
-${'###Around the League' if any(x for x in data[0]['leagueSchedule'] if x['gamePk'] != gamePk) else 'Around the League: There are no other games!'}
+${'### Around the League' if any(x for x in data[0]['leagueSchedule'] if x['gamePk'] != gamePk) else 'Around the League: There are no other games!'}
 <%include file="league_scoreboard.mako" args="gamePk=gamePk" />
 % else:
 <%

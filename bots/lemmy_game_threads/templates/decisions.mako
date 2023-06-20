@@ -19,7 +19,7 @@
     if not len(decisions_prepared):
         return
 %>
-${'###'}Decisions
+${'### '}Decisions
 % for d in decisions_prepared:
 * ${d}
 % endfor
