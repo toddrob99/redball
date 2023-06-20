@@ -30,7 +30,7 @@ import statsapi
 
 from . import plaw
 
-__version__ = "1.5.2"
+__version__ = "1.0.0"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -1027,7 +1027,11 @@ Last Updated: """
                                 )
                             )
                         )
-                        self.lemmy.editPost(offDayThread["post"]["id"])
+                        if (len(text) >= 10000):
+                            text = text[0,9960]
+                            text += '# Truncated: 10k Limit Reached'
+
+                        self.lemmy.editPost(offDayThread["post"]["id"], text)
                         self.log.info("Off day thread edits submitted.")
                         self.count_check_edit(offDayThread["post"]["id"], "NA", edit=True)
                         self.log_last_updated_date_in_db(offDayThread["post"]["id"])
@@ -1371,6 +1375,10 @@ Last Updated: """
                                 )
                             )
                         )
+                        if (len(text) >= 10000):
+                            text = text[0,9960]
+                            text += '# Truncated: 10k Limit Reached'
+
                         self.lemmy.editPost(
                             self.activeGames[pk]["gameDayThread"]["post"]["id"],
                             body=text,
@@ -1997,6 +2005,10 @@ Last Updated: """ + self.convert_timezone(
                     ).strftime(
                         "%m/%d/%Y %I:%M:%S %p %Z"
                     )
+                    if (len(text) >= 10000):
+                        text = text[0,9960]
+                        text += '# Truncated: 10k Limit Reached'
+
                     self.lemmy.editPost(
                         self.activeGames[pk]["gameThread"]["post"]["id"], body=text
                     )
@@ -2423,6 +2435,11 @@ Last Updated: """ + self.convert_timezone(
                         ).strftime(
                             "%m/%d/%Y %I:%M:%S %p %Z"
                         )
+
+                        if (len(text) >= 10000):
+                            text = text[0,9960]
+                            text += '# Truncated: 10k Limit Reached'
+
                         self.lemmy.editPost(
                             self.activeGames[pk]["postGameThread"]["post"]["id"],
                             body=text,
@@ -5410,6 +5427,10 @@ Last Updated: """ + self.convert_timezone(
             community = self.lemmy.community
 
         title = title.strip("\n")
+        if (len(text) >= 10000):
+            text = text[0,9960]
+            text += '# Truncated: 10k Limit Reached'
+
         post = self.lemmy.submitPost(
             title=title,
             body=text,
