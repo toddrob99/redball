@@ -5723,38 +5723,38 @@ Last Updated: """ + self.convert_timezone(
         return dt.astimezone(to_tz)
 
     teamSubs = {
-        142: "/c/minnesotatwins",
-        145: "/c/whitesox",
-        116: "/c/motorcitykitties",
-        118: "/c/kcroyals",
-        114: "/c/clevelandguardians",
-        140: "/c/texasrangers",
-        117: "/c/astros",
-        133: "/c/oaklandathletics",
-        108: "/c/angelsbaseball",
-        136: "/c/mariners",
-        111: "/c/redsox",
-        147: "/c/nyyankees",
-        141: "/c/torontobluejays",
-        139: "/c/tampabayrays",
-        110: "/c/orioles",
-        138: "/c/cardinals",
-        113: "/c/reds",
-        134: "/c/buccos",
-        112: "/c/chicubs",
-        158: "/c/brewers",
-        137: "/c/sfgiants",
-        109: "/c/azdiamondbacks",
-        115: "/c/coloradorockies",
-        119: "/c/dodgers",
-        135: "/c/padres",
-        143: "/c/phillies",
-        121: "/c/newyorkmets",
-        146: "/c/miamimarlins",
-        120: "/c/nationals",
-        144: "/c/braves",
-        0: "/MLB",
-        "mlb": "/MLB",
+        142: "/c/minnesotatwins@fanaticus.social",
+        145: "/c/whitesox@fanaticus.social",
+        116: "/c/motorcitykitties@fanaticus.social",
+        118: "/c/kcroyals@fanaticus.social",
+        114: "/c/clevelandguardians@fanaticus.social",
+        140: "/c/texasrangers@fanaticus.social",
+        117: "/c/astros@fanaticus.social",
+        133: "/c/oaklandathletics@fanaticus.social",
+        108: "/c/angelsbaseball@fanaticus.social",
+        136: "/c/mariners@fanaticus.social",
+        111: "/c/redsox@fanaticus.social",
+        147: "/c/nyyankees@fanaticus.social",
+        141: "/c/torontobluejays@fanaticus.social",
+        139: "/c/tampabayrays@fanaticus.social",
+        110: "/c/orioles@fanaticus.social",
+        138: "/c/cardinals@fanaticus.social",
+        113: "/c/reds@fanaticus.social",
+        134: "/c/buccos@fanaticus.social",
+        112: "/c/chicubs@fanaticus.social",
+        158: "/c/brewers@fanaticus.social",
+        137: "/c/sfgiants@fanaticus.social",
+        109: "/c/azdiamondbacks@fanaticus.social",
+        115: "/c/coloradorockies@fanaticus.social",
+        119: "/c/dodgers@fanaticus.social",
+        135: "/c/padres@fanaticus.social",
+        143: "/c/phillies@fanaticus.social",
+        121: "/c/newyorkmets@fanaticus.social",
+        146: "/c/miamimarlins@fanaticus.social",
+        120: "/c/nationals@fanaticus.social",
+        144: "/c/braves@fanaticus.social",
+        0: "/c/baseball@fanaticus.social",
+        "mlb": "/c/baseball@fanaticus.social",
     }
 
     def bot_state(self):
@@ -6339,3 +6339,17 @@ Last Updated: """ + self.convert_timezone(
 
         self.log.debug("Bot Status: {}".format(botStatus))  # debug
         self.bot.detailedState = botStatus
+
+
+    def off_day(self):
+        if (
+                self.seasonState.startswith("off") or self.seasonState == "post:out"
+        ) and self.settings.get("Off Day Thread", {}).get("SUPPRESS_OFFSEASON", True):
+            self.log.info("Suppressing off day thread during offseason.")
+            self.activeGames.update({"off": {"STOP_FLAG": True}})
+        elif not self.settings.get("Off Day Thread", {}).get("ENABLED", True):
+            self.log.info("Off day thread disabled.")
+            self.activeGames.update({"off": {"STOP_FLAG": True}})
+        else:
+            raise NotImplemented
+
