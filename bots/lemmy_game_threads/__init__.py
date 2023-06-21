@@ -3936,7 +3936,11 @@ Last Updated: """ + self.convert_timezone(
                 else:
                     gamePks = [x for x in gamePk]
 
-                for pk in gamePks:
+                if len(gamePks) == 0:
+                    self.log.warning("No gamePks to collect data for.")
+                    return False
+                
+                for pk in gamePks[:]:
                     if self.commonData.get(pk) and self.commonData[pk].get(
                         "lastUpdate", datetime.today() - timedelta(hours=1)
                     ) >= datetime.today() - timedelta(seconds=cache_seconds):
@@ -3957,7 +3961,7 @@ Last Updated: """ + self.convert_timezone(
                         )
 
                 if len(gamePks) == 0:
-                    self.log.warning("No gamePks to collect data for.")
+                    self.log.debug("Using cached data for all gamePks.")
                     return False
 
                 self.log.debug("Getting schedule data for gamePks: {}".format(gamePks))
