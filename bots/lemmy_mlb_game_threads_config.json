@@ -1292,6 +1292,15 @@
             "parent_key": ""
         },
         {
+            "key": "POST_CHARACTER_LIMIT",
+            "description": "Maximum number of characters to post.",
+            "type": "int",
+            "val": 10000,
+            "options": [],
+            "subkeys": [],
+            "parent_key": ""
+        },
+        {
             "key": "USERNAME",
             "description": "Username of bot user",
             "type": "str",

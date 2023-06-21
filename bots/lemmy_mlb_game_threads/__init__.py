@@ -1027,10 +1027,7 @@ Last Updated: """
                                 )
                             )
                         )
-                        if len(text) >= 10000:
-                            text = text[0:9960]
-                            text += '# Truncated: 10k Limit Reached'
-
+                        text = self._truncate_post(text)
                         self.lemmy.editPost(offDayThread["post"]["id"], text)
                         self.log.info("Off day thread edits submitted.")
                         self.count_check_edit(offDayThread["post"]["id"], "NA", edit=True)
@@ -1375,10 +1372,7 @@ Last Updated: """
                                 )
                             )
                         )
-                        if (len(text) >= 10000):
-                            text = text[0:9960]
-                            text += '# Truncated: 10k Limit Reached'
-
+                        text = self._truncate_post(text)
                         self.lemmy.editPost(
                             self.activeGames[pk]["gameDayThread"]["post"]["id"],
                             body=text,
@@ -2005,10 +1999,7 @@ Last Updated: """ + self.convert_timezone(
                     ).strftime(
                         "%m/%d/%Y %I:%M:%S %p %Z"
                     )
-                    if (len(text) >= 10000):
-                        text = text[0:9960]
-                        text += '# Truncated: 10k Limit Reached'
-
+                    text = self._truncate_post(text)
                     self.lemmy.editPost(
                         self.activeGames[pk]["gameThread"]["post"]["id"], body=text
                     )
@@ -2435,11 +2426,7 @@ Last Updated: """ + self.convert_timezone(
                         ).strftime(
                             "%m/%d/%Y %I:%M:%S %p %Z"
                         )
-
-                        if (len(text) >= 10000):
-                            text = text[0:9960]
-                            text += '# Truncated: 10k Limit Reached'
-
+                        text = self._truncate_post(text)
                         self.lemmy.editPost(
                             self.activeGames[pk]["postGameThread"]["post"]["id"],
                             body=text,
@@ -5428,10 +5415,7 @@ Last Updated: """ + self.convert_timezone(
             community = self.lemmy.community
 
         title = title.strip("\n")
-        if (len(text) >= 10000):
-            text = text[0:9960]
-            text += '# Truncated: 10k Limit Reached'
-
+        text = self._truncate_post(text)
         post = self.lemmy.submitPost(
             title=title,
             body=text,
@@ -6341,3 +6325,12 @@ Last Updated: """ + self.convert_timezone(
         self.log.debug("Bot Status: {}".format(botStatus))  # debug
         self.bot.detailedState = botStatus
 
+    def _truncate_post(self, text):
+        warning_text = '\n# Truncated: 10k Limit Reached'
+        max_length = self.settings["Lemmy"]["POST_CHARACTER_LIMIT"] - len(warning_text)
+        if len(text) >= max_length:
+            new_text = text[0:max_length - 1]
+            new_text += warning_text
+        else:
+            new_text = text
+        return new_text
