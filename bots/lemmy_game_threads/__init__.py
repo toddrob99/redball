@@ -1027,8 +1027,8 @@ Last Updated: """
                                 )
                             )
                         )
-                        if (len(text) >= 10000):
-                            text = text[0,9960]
+                        if len(text) >= 10000:
+                            text = text[0:9960]
                             text += '# Truncated: 10k Limit Reached'
 
                         self.lemmy.editPost(offDayThread["post"]["id"], text)
@@ -1376,7 +1376,7 @@ Last Updated: """
                             )
                         )
                         if (len(text) >= 10000):
-                            text = text[0,9960]
+                            text = text[0:9960]
                             text += '# Truncated: 10k Limit Reached'
 
                         self.lemmy.editPost(
@@ -2006,7 +2006,7 @@ Last Updated: """ + self.convert_timezone(
                         "%m/%d/%Y %I:%M:%S %p %Z"
                     )
                     if (len(text) >= 10000):
-                        text = text[0,9960]
+                        text = text[0:9960]
                         text += '# Truncated: 10k Limit Reached'
 
                     self.lemmy.editPost(
@@ -2437,7 +2437,7 @@ Last Updated: """ + self.convert_timezone(
                         )
 
                         if (len(text) >= 10000):
-                            text = text[0,9960]
+                            text = text[0:9960]
                             text += '# Truncated: 10k Limit Reached'
 
                         self.lemmy.editPost(
@@ -2494,8 +2494,9 @@ Last Updated: """ + self.convert_timezone(
                 break
             elif update_postgame_thread_until == "An hour after thread is posted":
                 if (
-                    int(self.activeGames[pk]["postGameThread"]["post"]["published"])
-                    <= int(time.time()) - 3600
+                        datetime.now() - datetime.strptime(self.activeGames[pk]["postGameThread"]["post"]["published"],
+                                                           '%Y-%m-%dT%H:%M:%S.%f')
+                        <= timedelta(hours=1)
                 ):
                     # Post game thread was posted more than an hour ago
                     self.log.info(
@@ -5428,7 +5429,7 @@ Last Updated: """ + self.convert_timezone(
 
         title = title.strip("\n")
         if (len(text) >= 10000):
-            text = text[0,9960]
+            text = text[0:9960]
             text += '# Truncated: 10k Limit Reached'
 
         post = self.lemmy.submitPost(
@@ -6339,17 +6340,4 @@ Last Updated: """ + self.convert_timezone(
 
         self.log.debug("Bot Status: {}".format(botStatus))  # debug
         self.bot.detailedState = botStatus
-
-
-    def off_day(self):
-        if (
-                self.seasonState.startswith("off") or self.seasonState == "post:out"
-        ) and self.settings.get("Off Day Thread", {}).get("SUPPRESS_OFFSEASON", True):
-            self.log.info("Suppressing off day thread during offseason.")
-            self.activeGames.update({"off": {"STOP_FLAG": True}})
-        elif not self.settings.get("Off Day Thread", {}).get("ENABLED", True):
-            self.log.info("Off day thread disabled.")
-            self.activeGames.update({"off": {"STOP_FLAG": True}})
-        else:
-            raise NotImplemented
 
