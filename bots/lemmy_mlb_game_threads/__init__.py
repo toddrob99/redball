@@ -6326,7 +6326,7 @@ Last Updated: """ + self.convert_timezone(
         self.bot.detailedState = botStatus
 
     def _truncate_post(self, text):
-        warning_text = '\n# Truncated: 10k Limit Reached'
+        warning_text = " \  # Truncated, post length limit reached."
         max_length = self.settings["Lemmy"]["POST_CHARACTER_LIMIT"] - len(warning_text)
         if len(text) >= max_length:
             new_text = text[0:max_length - 1]
