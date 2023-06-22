@@ -1027,10 +1027,7 @@ Last Updated: """
                                 )
                             )
                         )
-                        if (len(text) >= 10000):
-                            text = text[0,9960]
-                            text += '# Truncated: 10k Limit Reached'
-
+                        text = self._truncate_post(text)
                         self.lemmy.editPost(offDayThread["post"]["id"], text)
                         self.log.info("Off day thread edits submitted.")
                         self.count_check_edit(offDayThread["post"]["id"], "NA", edit=True)
@@ -1375,10 +1372,7 @@ Last Updated: """
                                 )
                             )
                         )
-                        if (len(text) >= 10000):
-                            text = text[0,9960]
-                            text += '# Truncated: 10k Limit Reached'
-
+                        text = self._truncate_post(text)
                         self.lemmy.editPost(
                             self.activeGames[pk]["gameDayThread"]["post"]["id"],
                             body=text,
@@ -2005,10 +1999,7 @@ Last Updated: """ + self.convert_timezone(
                     ).strftime(
                         "%m/%d/%Y %I:%M:%S %p %Z"
                     )
-                    if (len(text) >= 10000):
-                        text = text[0,9960]
-                        text += '# Truncated: 10k Limit Reached'
-
+                    text = self._truncate_post(text)
                     self.lemmy.editPost(
                         self.activeGames[pk]["gameThread"]["post"]["id"], body=text
                     )
@@ -2435,11 +2426,7 @@ Last Updated: """ + self.convert_timezone(
                         ).strftime(
                             "%m/%d/%Y %I:%M:%S %p %Z"
                         )
-
-                        if (len(text) >= 10000):
-                            text = text[0,9960]
-                            text += '# Truncated: 10k Limit Reached'
-
+                        text = self._truncate_post(text)
                         self.lemmy.editPost(
                             self.activeGames[pk]["postGameThread"]["post"]["id"],
                             body=text,
@@ -2494,8 +2481,9 @@ Last Updated: """ + self.convert_timezone(
                 break
             elif update_postgame_thread_until == "An hour after thread is posted":
                 if (
-                    int(self.activeGames[pk]["postGameThread"]["post"]["published"])
-                    <= int(time.time()) - 3600
+                        datetime.now() - datetime.strptime(self.activeGames[pk]["postGameThread"]["post"]["published"],
+                                                           '%Y-%m-%dT%H:%M:%S.%f')
+                        <= timedelta(hours=1)
                 ):
                     # Post game thread was posted more than an hour ago
                     self.log.info(
@@ -5431,10 +5419,7 @@ Last Updated: """ + self.convert_timezone(
             community = self.lemmy.community
 
         title = title.strip("\n")
-        if (len(text) >= 10000):
-            text = text[0,9960]
-            text += '# Truncated: 10k Limit Reached'
-
+        text = self._truncate_post(text)
         post = self.lemmy.submitPost(
             title=title,
             body=text,
@@ -5727,38 +5712,38 @@ Last Updated: """ + self.convert_timezone(
         return dt.astimezone(to_tz)
 
     teamSubs = {
-        142: "/c/minnesotatwins",
-        145: "/c/whitesox",
-        116: "/c/motorcitykitties",
-        118: "/c/kcroyals",
-        114: "/c/clevelandguardians",
-        140: "/c/texasrangers",
-        117: "/c/astros",
-        133: "/c/oaklandathletics",
-        108: "/c/angelsbaseball",
-        136: "/c/mariners",
-        111: "/c/redsox",
-        147: "/c/nyyankees",
-        141: "/c/torontobluejays",
-        139: "/c/tampabayrays",
-        110: "/c/orioles",
-        138: "/c/cardinals",
-        113: "/c/reds",
-        134: "/c/buccos",
-        112: "/c/chicubs",
-        158: "/c/brewers",
-        137: "/c/sfgiants",
-        109: "/c/azdiamondbacks",
-        115: "/c/coloradorockies",
-        119: "/c/dodgers",
-        135: "/c/padres",
-        143: "/c/phillies",
-        121: "/c/newyorkmets",
-        146: "/c/miamimarlins",
-        120: "/c/nationals",
-        144: "/c/braves",
-        0: "/MLB",
-        "mlb": "/MLB",
+        142: "/c/minnesotatwins@fanaticus.social",
+        145: "/c/whitesox@fanaticus.social",
+        116: "/c/motorcitykitties@fanaticus.social",
+        118: "/c/kcroyals@fanaticus.social",
+        114: "/c/clevelandguardians@fanaticus.social",
+        140: "/c/texasrangers@fanaticus.social",
+        117: "/c/astros@fanaticus.social",
+        133: "/c/oaklandathletics@fanaticus.social",
+        108: "/c/angelsbaseball@fanaticus.social",
+        136: "/c/mariners@fanaticus.social",
+        111: "/c/redsox@fanaticus.social",
+        147: "/c/nyyankees@fanaticus.social",
+        141: "/c/torontobluejays@fanaticus.social",
+        139: "/c/tampabayrays@fanaticus.social",
+        110: "/c/orioles@fanaticus.social",
+        138: "/c/cardinals@fanaticus.social",
+        113: "/c/reds@fanaticus.social",
+        134: "/c/buccos@fanaticus.social",
+        112: "/c/chicubs@fanaticus.social",
+        158: "/c/brewers@fanaticus.social",
+        137: "/c/sfgiants@fanaticus.social",
+        109: "/c/azdiamondbacks@fanaticus.social",
+        115: "/c/coloradorockies@fanaticus.social",
+        119: "/c/dodgers@fanaticus.social",
+        135: "/c/padres@fanaticus.social",
+        143: "/c/phillies@fanaticus.social",
+        121: "/c/newyorkmets@fanaticus.social",
+        146: "/c/miamimarlins@fanaticus.social",
+        120: "/c/nationals@fanaticus.social",
+        144: "/c/braves@fanaticus.social",
+        0: "/c/baseball@fanaticus.social",
+        "mlb": "/c/baseball@fanaticus.social",
     }
 
     def bot_state(self):
@@ -6343,3 +6328,13 @@ Last Updated: """ + self.convert_timezone(
 
         self.log.debug("Bot Status: {}".format(botStatus))  # debug
         self.bot.detailedState = botStatus
+
+    def _truncate_post(self, text):
+        warning_text = " \  # Truncated, post length limit reached."
+        max_length = self.settings.get("Lemmy", {}).get("POST_CHARACTER_LIMIT", 10000) - len(warning_text)
+        if len(text) >= max_length:
+            new_text = text[0:max_length - 1]
+            new_text += warning_text
+        else:
+            new_text = text
+        return new_text
