@@ -6327,7 +6327,7 @@ Last Updated: """ + self.convert_timezone(
 
     def _truncate_post(self, text):
         warning_text = " \  # Truncated, post length limit reached."
-        max_length = self.settings["Lemmy"]["POST_CHARACTER_LIMIT"] - len(warning_text)
+        max_length = self.settings.get("Lemmy", {}).get("POST_CHARACTER_LIMIT", 10000) - len(warning_text)
         if len(text) >= max_length:
             new_text = text[0:max_length - 1]
             new_text += warning_text
