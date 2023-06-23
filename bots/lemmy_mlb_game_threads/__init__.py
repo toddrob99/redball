@@ -2481,9 +2481,9 @@ Last Updated: """ + self.convert_timezone(
                 break
             elif update_postgame_thread_until == "An hour after thread is posted":
                 if (
-                        datetime.now() - datetime.strptime(self.activeGames[pk]["postGameThread"]["post"]["published"],
+                        datetime.utcnow() - datetime.strptime(self.activeGames[pk]["postGameThread"]["post"]["published"],
                                                            '%Y-%m-%dT%H:%M:%S.%f')
-                        <= timedelta(hours=1)
+                        >= timedelta(hours=1)
                 ):
                     # Post game thread was posted more than an hour ago
                     self.log.info(
