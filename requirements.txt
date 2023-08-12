@@ -2,7 +2,7 @@ cherrypy
 requests
 apscheduler
 pytz
-tzlocal=4.2.2
+tzlocal==4.2.2
 praw
 mlb-statsapi
 pyOpenSSL
