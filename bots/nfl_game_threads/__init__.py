@@ -1009,7 +1009,9 @@ class Bot(object):
                     break
             elif update_tailgate_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    self.allData["gameSummary"].get(
+                        "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    )
                     in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # And all division games are final
                     (
@@ -1041,7 +1043,9 @@ class Bot(object):
                     break
             elif update_tailgate_thread_until == "All NFL games are final":
                 if (  # This game is final
-                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    self.allData["gameSummary"].get(
+                        "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    )
                     in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # All NFL games are final
                     (
@@ -1176,7 +1180,9 @@ class Bot(object):
                 and not self.bot.STOP
                 and not self.threadCache["game"].get("thread")
             ):
-                if self.allData["gameDetails"].get("phase", "UNKNOWN") in [
+                if self.allData["gameSummary"].get(
+                    "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                ) in [
                     "FINAL",
                     "FINAL_OVERTIME",
                     "CANCELED",
@@ -1198,12 +1204,17 @@ class Bot(object):
                         # Post game thread is enabled, so skip game thread
                         self.log.info(
                             "Game is {}; skipping game thread...".format(
-                                self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                                self.allData["gameSummary"].get(
+                                    "phase",
+                                    self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                                ),
                             )
                         )
                         skipFlag = True
                     break
-                elif self.allData["gameDetails"].get("phase", "UNKNOWN") in [
+                elif self.allData["gameSummary"].get(
+                    "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                ) in [
                     "INGAME",
                     "HALFTIME",
                 ]:
@@ -1339,7 +1350,9 @@ class Bot(object):
                     self.log.info("Edits submitted for game thread.")
                     self.count_check_edit(
                         self.threadCache["game"]["thread"].id,
-                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                        self.allData["gameSummary"].get(
+                            "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                        ),
                         edit=True,
                     )
                     self.log_last_updated_date_in_db(
@@ -1353,7 +1366,9 @@ class Bot(object):
                     self.log.info("No changes to game thread.")
                     self.count_check_edit(
                         self.threadCache["game"]["thread"].id,
-                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                        self.allData["gameSummary"].get(
+                            "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                        ),
                         edit=False,
                     )
 
@@ -1377,7 +1392,9 @@ class Bot(object):
                 self.stopFlags.update({"game": True})
                 break
             elif update_game_thread_until == "My team's game is final":
-                if self.allData["gameDetails"].get("phase", "UNKNOWN") in [
+                if self.allData["gameSummary"].get(
+                    "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                ) in [
                     "FINAL",
                     "FINAL_OVERTIME",
                     "CANCELED",
@@ -1391,7 +1408,9 @@ class Bot(object):
                     break
             elif update_game_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    self.allData["gameSummary"].get(
+                        "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    )
                     in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # And all division games are final
                     (
@@ -1423,7 +1442,9 @@ class Bot(object):
                     break
             elif update_game_thread_until == "All NFL games are final":
                 if (  # This game is final
-                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    self.allData["gameSummary"].get(
+                        "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    )
                     in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # All NFL games are final
                     (
@@ -1449,7 +1470,12 @@ class Bot(object):
                 )
             )  # debug - need this to tell if logic is working
 
-            if self.allData["gameDetails"].get("phase", "UNKNOWN") == "HALFTIME":
+            if (
+                self.allData["gameSummary"].get(
+                    "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                )
+                == "HALFTIME"
+            ):
                 # Game is at halftime
                 # Update interval is in minutes (seconds only when game is live)
                 gtnlWait = self.settings.get("Game Thread", {}).get(
@@ -1463,7 +1489,12 @@ class Bot(object):
                     )
                 )
                 self.sleep(gtnlWait * 60)
-            elif self.allData["gameDetails"].get("phase", "UNKNOWN") == "INGAME":
+            elif (
+                self.allData["gameSummary"].get(
+                    "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                )
+                == "INGAME"
+            ):
                 # Update interval is in seconds (minutes for all other cases)
                 gtWait = self.settings.get("Game Thread", {}).get("UPDATE_INTERVAL", 10)
                 if gtWait < 1:
@@ -1483,7 +1514,9 @@ class Bot(object):
                     gtnlWait = 1
                 self.log.info(
                     "Game is not live ({}), sleeping for {} minutes...".format(
-                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                        self.allData["gameSummary"].get(
+                            "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                        ),
                         gtnlWait,
                     )
                 )
@@ -1509,7 +1542,9 @@ class Bot(object):
         )
 
         while redball.SIGNAL is None and not self.bot.STOP:
-            if self.allData["gameDetails"].get("phase", "UNKNOWN") in [
+            if self.allData["gameSummary"].get(
+                "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+            ) in [
                 "FINAL",
                 "FINAL_OVERTIME",
                 "CANCELED",
@@ -1518,7 +1553,9 @@ class Bot(object):
                 # Game is over
                 self.log.info(
                     "Game is over ({}). Proceeding with post game thread...".format(
-                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                        self.allData["gameSummary"].get(
+                            "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                        ),
                     )
                 )
                 break
@@ -1532,7 +1569,9 @@ class Bot(object):
             else:
                 self.log.debug(
                     "Game is not yet final ({}). Sleeping for 1 minute...".format(
-                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                        self.allData["gameSummary"].get(
+                            "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                        ),
                     )
                 )
                 self.sleep(60)
@@ -1671,7 +1710,10 @@ class Bot(object):
                         )
                         self.count_check_edit(
                             self.threadCache["post"]["thread"].id,
-                            self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                            self.allData["gameSummary"].get(
+                                "phase",
+                                self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                            ),
                             edit=True,
                         )
                     elif text == "":
@@ -1682,7 +1724,10 @@ class Bot(object):
                         self.log.info("No changes to post game thread.")
                         self.count_check_edit(
                             self.threadCache["post"]["thread"].id,
-                            self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                            self.allData["gameSummary"].get(
+                                "phase",
+                                self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                            ),
                             edit=False,
                         )
                 except Exception as e:
@@ -1727,7 +1772,9 @@ class Bot(object):
                     break
             elif update_postgame_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    self.allData["gameSummary"].get(
+                        "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    )
                     in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # And all division games are final
                     (
@@ -1759,7 +1806,9 @@ class Bot(object):
                     break
             elif update_postgame_thread_until == "All NFL games are final":
                 if (  # This game is final
-                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    self.allData["gameSummary"].get(
+                        "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    )
                     in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # All NFL games are final
                     (
