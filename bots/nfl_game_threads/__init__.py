@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "2.2.8"
+__version__ = "2.3.0"
 
 DATA_LOCK = threading.Lock()
 
@@ -296,17 +296,7 @@ class Bot(object):
             otherTodayGamesDetails = {}
             for g in [g for g in todayGames if g["id"] != myTeamTodayGameId]:
                 try:
-                    g_did = next(
-                        (
-                            x["id"]
-                            for x in g["externalIds"]
-                            if x["source"] == "gamedetail"
-                        ),
-                        "0",
-                    )
-                    g_details = self.nfl.shieldQuery(
-                        f"query%7Bviewer%7BgameDetail(id%3A%22{g_did}%22)%7Bid%20attendance%20distance%20down%20gameClock%20goalToGo%20homePointsOvertime%20homePointsTotal%20homePointsQ1%20homePointsQ2%20homePointsQ3%20homePointsQ4%20homeTeam%7Babbreviation%20nickName%7DhomeTimeoutsUsed%20homeTimeoutsRemaining%20period%20phase%20playReview%20possessionTeam%7Babbreviation%20nickName%7Dredzone%20stadium%20startTime%20visitorPointsOvertime%20visitorPointsOvertimeTotal%20visitorPointsQ1%20visitorPointsQ2%20visitorPointsQ3%20visitorPointsQ4%20visitorPointsTotal%20visitorTeam%7Babbreviation%20nickName%7DvisitorTimeoutsUsed%20visitorTimeoutsRemaining%20homePointsOvertimeTotal%20visitorPointsOvertimeTotal%20possessionTeam%7BnickName%7Dweather%7BcurrentFahrenheit%20location%20longDescription%20shortDescription%20currentRealFeelFahrenheit%7DyardLine%20yardsToGo%7D%7D%7D"
-                    )
+                    g_details = self.nfl.gameDetails(g["id"])
                     g_details = (
                         g_details.get("data", {})
                         .get("viewer", {})
@@ -315,7 +305,7 @@ class Bot(object):
                 except Exception as e:
                     if "404" in str(e):
                         self.log.debug(
-                            f"Game detail id is not active in shield API yet for other today game [{g['id']}]: {e}"
+                            f"Game detail is not published in NFL API yet for other today game [{g['id']}]: {e}"
                         )
                     else:
                         self.log.debug(
@@ -454,20 +444,11 @@ class Bot(object):
                 )
                 """ Holds data about current week games, including detailed data for my team's game """
                 try:
-                    gameDetails = self.nfl.gameDetails(
-                        gameDetailId=next(
-                            (
-                                x["id"]
-                                for x in todayGames[myGameIndex]["externalIds"]
-                                if x["source"] == "gamedetail"
-                            ),
-                            "0",
-                        )
-                    )
+                    gameDetails = self.nfl.gameDetails(myTeamTodayGameId)
                 except Exception as e:
                     if "404" in str(e):
                         self.log.debug(
-                            f"Game detail id is not active in shield API yet: {e}"
+                            f"Game detail is not published in NFL API yet: {e}"
                         )
                         gameDetails = {}
                     else:
@@ -477,6 +458,7 @@ class Bot(object):
                         "gameDetails": gameDetails.get("data", {})
                         .get("viewer", {})
                         .get("gameDetail", {}),
+                        "gameSummary": self.nfl.gameSummaryById(self.allData["gameId"]),
                     }
                 )
                 if redball.DEV:
@@ -1858,31 +1840,11 @@ class Bot(object):
                 ),
                 None,
             )
-            gameDetailId = next(
-                (
-                    x["id"]
-                    for x in todayGames[myGameIndex]["externalIds"]
-                    if x["source"] == "gamedetail"
-                ),
-                "0",
-            )
-            self.log.debug(
-                f"self.allData['gameId']: {self.allData['gameId']}; gameDetailId: {gameDetailId}"
-            )
+            self.log.debug(f"self.allData['gameId']: {self.allData['gameId']}")
             otherTodayGamesDetails = {}
             for g in [g for g in todayGames if g["id"] != self.allData["gameId"]]:
                 try:
-                    g_did = next(
-                        (
-                            x["id"]
-                            for x in g["externalIds"]
-                            if x["source"] == "gamedetail"
-                        ),
-                        "0",
-                    )
-                    g_details = self.nfl.shieldQuery(
-                        f"query%7Bviewer%7BgameDetail(id%3A%22{g_did}%22)%7Bid%20attendance%20distance%20down%20gameClock%20goalToGo%20homePointsOvertime%20homePointsTotal%20homePointsQ1%20homePointsQ2%20homePointsQ3%20homePointsQ4%20homeTeam%7Babbreviation%20nickName%7DhomeTimeoutsUsed%20homeTimeoutsRemaining%20period%20phase%20playReview%20possessionTeam%7Babbreviation%20nickName%7Dredzone%20stadium%20startTime%20visitorPointsOvertime%20visitorPointsOvertimeTotal%20visitorPointsQ1%20visitorPointsQ2%20visitorPointsQ3%20visitorPointsQ4%20visitorPointsTotal%20visitorTeam%7Babbreviation%20nickName%7DvisitorTimeoutsUsed%20visitorTimeoutsRemaining%20homePointsOvertimeTotal%20visitorPointsOvertimeTotal%20possessionTeam%7BnickName%7Dweather%7BcurrentFahrenheit%20location%20longDescription%20shortDescription%20currentRealFeelFahrenheit%7DyardLine%20yardsToGo%7D%7D%7D"
-                    )
+                    g_details = self.nfl.gameDetails(g["id"])
                     g_details = (
                         g_details.get("data", {})
                         .get("viewer", {})
@@ -1891,7 +1853,7 @@ class Bot(object):
                 except Exception as e:
                     if "404" in str(e):
                         self.log.debug(
-                            f"Game detail id is not active in shield API yet for other today game [{g['id']}]: {e}"
+                            f"Game detail is not published in NFL API yet for other today game [{g['id']}]: {e}"
                         )
                     else:
                         self.log.debug(
@@ -1900,21 +1862,10 @@ class Bot(object):
                     g_details = {}
                 otherTodayGamesDetails.update({g["id"]: g_details})
             try:
-                gameDetails = self.nfl.gameDetails(
-                    gameDetailId=next(
-                        (
-                            x["id"]
-                            for x in todayGames[myGameIndex]["externalIds"]
-                            if x["source"] == "gamedetail"
-                        ),
-                        "0",
-                    )
-                )
+                gameDetails = self.nfl.gameDetails(self.allData["gameId"])
             except Exception as e:
                 if "404" in str(e):
-                    self.log.debug(
-                        f"Game detail id is not active in shield API yet: {e}"
-                    )
+                    self.log.debug(f"Game detail is not published in NFL API yet: {e}")
                     gameDetails = {}
                 else:
                     raise
@@ -1971,6 +1922,16 @@ class Bot(object):
             except Exception as e:
                 self.log.error(f"Error retrieving standings: {e}")
                 standings = []
+            myGameSummary = self.nfl.gameSummaryById(self.allData["gameId"])
+            allGameSummaries_raw = self.nfl.gameSummariesByWeek(
+                season=self.allData["currentWeek"]["season"],
+                seasonType=self.allData["currentWeek"]["seasonType"],
+                week=self.allData["currentWeek"]["week"],
+            )
+            otherTodayGameSummaries = {}
+            for gs in allGameSummaries_raw.get("data"):
+                if gs["gameId"] != self.allData["gameId"]:
+                    otherTodayGameSummaries.update({gs["gameId"]: gs})
             self.allData.update(
                 {
                     "myTeam": self.nfl.teamById(
@@ -1994,6 +1955,8 @@ class Bot(object):
                     },
                     "myGameIndex": myGameIndex,
                     "standings": standings,
+                    "gameSummary": myGameSummary,
+                    "otherTodayGameSummaries": otherTodayGameSummaries,
                     "lastUpdate": datetime.today(),
                 }
             )

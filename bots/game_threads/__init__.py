@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.5.2"
+__version__ = "1.5.3"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -4208,7 +4208,7 @@ class Bot(object):
                 else:
                     gamePks = [x for x in gamePk]
 
-                for pk in gamePks:
+                for pk in gamePks[:]:
                     if self.commonData.get(pk) and self.commonData[pk].get(
                         "lastUpdate", datetime.today() - timedelta(hours=1)
                     ) >= datetime.today() - timedelta(seconds=cache_seconds):
