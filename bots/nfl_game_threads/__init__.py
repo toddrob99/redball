@@ -453,12 +453,22 @@ class Bot(object):
                         gameDetails = {}
                     else:
                         raise
+                try:
+                    gameSummary = self.nfl.gameSummaryById(self.allData["gameId"])
+                except Exception as e:
+                    if "404" in str(e):
+                        self.log.debug(
+                            f"Game summary is not published in NFL API yet: {e}"
+                        )
+                        gameSummary = {}
+                    else:
+                        raise
                 self.allData.update(
                     {
                         "gameDetails": gameDetails.get("data", {})
                         .get("viewer", {})
                         .get("gameDetail", {}),
-                        "gameSummary": self.nfl.gameSummaryById(self.allData["gameId"]),
+                        "gameSummary": gameSummary,
                     }
                 )
                 if redball.DEV:
@@ -1922,16 +1932,32 @@ class Bot(object):
             except Exception as e:
                 self.log.error(f"Error retrieving standings: {e}")
                 standings = []
-            myGameSummary = self.nfl.gameSummaryById(self.allData["gameId"])
-            allGameSummaries_raw = self.nfl.gameSummariesByWeek(
-                season=self.allData["currentWeek"]["season"],
-                seasonType=self.allData["currentWeek"]["seasonType"],
-                week=self.allData["currentWeek"]["week"],
-            )
-            otherTodayGameSummaries = {}
-            for gs in allGameSummaries_raw.get("data"):
+            try:
+                myGameSummary = self.nfl.gameSummaryById(self.allData["gameId"])
+            except Exception as e:
+                if "404" in str(e):
+                    self.log.debug(f"Game summary is not published in NFL API yet: {e}")
+                    myGameSummary = {}
+                else:
+                    raise
+            try:
+                allGameSummaries_raw = self.nfl.gameSummariesByWeek(
+                    season=self.allData["currentWeek"]["season"],
+                    seasonType=self.allData["currentWeek"]["seasonType"],
+                    week=self.allData["currentWeek"]["week"],
+                )
+            except Exception as e:
+                if "404" in str(e):
+                    self.log.debug(
+                        f"Game summaries are not published in NFL API yet: {e}"
+                    )
+                    allGameSummaries_raw = {}
+                else:
+                    raise
+            otherWeekGameSummaries = {}
+            for gs in allGameSummaries_raw.get("data", []):
                 if gs["gameId"] != self.allData["gameId"]:
-                    otherTodayGameSummaries.update({gs["gameId"]: gs})
+                    otherWeekGameSummaries.update({gs["gameId"]: gs})
             self.allData.update(
                 {
                     "myTeam": self.nfl.teamById(
@@ -1956,7 +1982,7 @@ class Bot(object):
                     "myGameIndex": myGameIndex,
                     "standings": standings,
                     "gameSummary": myGameSummary,
-                    "otherTodayGameSummaries": otherTodayGameSummaries,
+                    "otherWeekGameSummaries": otherWeekGameSummaries,
                     "lastUpdate": datetime.today(),
                 }
             )
