@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "2.2.8"
+__version__ = "2.3.0"
 
 DATA_LOCK = threading.Lock()
 
@@ -296,17 +296,7 @@ class Bot(object):
             otherTodayGamesDetails = {}
             for g in [g for g in todayGames if g["id"] != myTeamTodayGameId]:
                 try:
-                    g_did = next(
-                        (
-                            x["id"]
-                            for x in g["externalIds"]
-                            if x["source"] == "gamedetail"
-                        ),
-                        "0",
-                    )
-                    g_details = self.nfl.shieldQuery(
-                        f"query%7Bviewer%7BgameDetail(id%3A%22{g_did}%22)%7Bid%20attendance%20distance%20down%20gameClock%20goalToGo%20homePointsOvertime%20homePointsTotal%20homePointsQ1%20homePointsQ2%20homePointsQ3%20homePointsQ4%20homeTeam%7Babbreviation%20nickName%7DhomeTimeoutsUsed%20homeTimeoutsRemaining%20period%20phase%20playReview%20possessionTeam%7Babbreviation%20nickName%7Dredzone%20stadium%20startTime%20visitorPointsOvertime%20visitorPointsOvertimeTotal%20visitorPointsQ1%20visitorPointsQ2%20visitorPointsQ3%20visitorPointsQ4%20visitorPointsTotal%20visitorTeam%7Babbreviation%20nickName%7DvisitorTimeoutsUsed%20visitorTimeoutsRemaining%20homePointsOvertimeTotal%20visitorPointsOvertimeTotal%20possessionTeam%7BnickName%7Dweather%7BcurrentFahrenheit%20location%20longDescription%20shortDescription%20currentRealFeelFahrenheit%7DyardLine%20yardsToGo%7D%7D%7D"
-                    )
+                    g_details = self.nfl.gameDetails(g["id"])
                     g_details = (
                         g_details.get("data", {})
                         .get("viewer", {})
@@ -315,7 +305,7 @@ class Bot(object):
                 except Exception as e:
                     if "404" in str(e):
                         self.log.debug(
-                            f"Game detail id is not active in shield API yet for other today game [{g['id']}]: {e}"
+                            f"Game detail is not published in NFL API yet for other today game [{g['id']}]: {e}"
                         )
                     else:
                         self.log.debug(
@@ -454,22 +444,23 @@ class Bot(object):
                 )
                 """ Holds data about current week games, including detailed data for my team's game """
                 try:
-                    gameDetails = self.nfl.gameDetails(
-                        gameDetailId=next(
-                            (
-                                x["id"]
-                                for x in todayGames[myGameIndex]["externalIds"]
-                                if x["source"] == "gamedetail"
-                            ),
-                            "0",
-                        )
-                    )
+                    gameDetails = self.nfl.gameDetails(myTeamTodayGameId)
                 except Exception as e:
                     if "404" in str(e):
                         self.log.debug(
-                            f"Game detail id is not active in shield API yet: {e}"
+                            f"Game detail is not published in NFL API yet: {e}"
                         )
                         gameDetails = {}
+                    else:
+                        raise
+                try:
+                    gameSummary = self.nfl.gameSummaryById(self.allData["gameId"])
+                except Exception as e:
+                    if "404" in str(e):
+                        self.log.debug(
+                            f"Game summary is not published in NFL API yet: {e}"
+                        )
+                        gameSummary = {}
                     else:
                         raise
                 self.allData.update(
@@ -477,6 +468,7 @@ class Bot(object):
                         "gameDetails": gameDetails.get("data", {})
                         .get("viewer", {})
                         .get("gameDetail", {}),
+                        "gameSummary": gameSummary,
                     }
                 )
                 if redball.DEV:
@@ -1017,7 +1009,9 @@ class Bot(object):
                     break
             elif update_tailgate_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    self.allData["gameSummary"].get(
+                        "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    )
                     in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # And all division games are final
                     (
@@ -1049,7 +1043,9 @@ class Bot(object):
                     break
             elif update_tailgate_thread_until == "All NFL games are final":
                 if (  # This game is final
-                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    self.allData["gameSummary"].get(
+                        "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    )
                     in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # All NFL games are final
                     (
@@ -1184,7 +1180,9 @@ class Bot(object):
                 and not self.bot.STOP
                 and not self.threadCache["game"].get("thread")
             ):
-                if self.allData["gameDetails"].get("phase", "UNKNOWN") in [
+                if self.allData["gameSummary"].get(
+                    "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                ) in [
                     "FINAL",
                     "FINAL_OVERTIME",
                     "CANCELED",
@@ -1206,12 +1204,17 @@ class Bot(object):
                         # Post game thread is enabled, so skip game thread
                         self.log.info(
                             "Game is {}; skipping game thread...".format(
-                                self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                                self.allData["gameSummary"].get(
+                                    "phase",
+                                    self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                                ),
                             )
                         )
                         skipFlag = True
                     break
-                elif self.allData["gameDetails"].get("phase", "UNKNOWN") in [
+                elif self.allData["gameSummary"].get(
+                    "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                ) in [
                     "INGAME",
                     "HALFTIME",
                 ]:
@@ -1347,7 +1350,9 @@ class Bot(object):
                     self.log.info("Edits submitted for game thread.")
                     self.count_check_edit(
                         self.threadCache["game"]["thread"].id,
-                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                        self.allData["gameSummary"].get(
+                            "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                        ),
                         edit=True,
                     )
                     self.log_last_updated_date_in_db(
@@ -1361,7 +1366,9 @@ class Bot(object):
                     self.log.info("No changes to game thread.")
                     self.count_check_edit(
                         self.threadCache["game"]["thread"].id,
-                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                        self.allData["gameSummary"].get(
+                            "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                        ),
                         edit=False,
                     )
 
@@ -1385,7 +1392,9 @@ class Bot(object):
                 self.stopFlags.update({"game": True})
                 break
             elif update_game_thread_until == "My team's game is final":
-                if self.allData["gameDetails"].get("phase", "UNKNOWN") in [
+                if self.allData["gameSummary"].get(
+                    "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                ) in [
                     "FINAL",
                     "FINAL_OVERTIME",
                     "CANCELED",
@@ -1399,7 +1408,9 @@ class Bot(object):
                     break
             elif update_game_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    self.allData["gameSummary"].get(
+                        "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    )
                     in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # And all division games are final
                     (
@@ -1431,7 +1442,9 @@ class Bot(object):
                     break
             elif update_game_thread_until == "All NFL games are final":
                 if (  # This game is final
-                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    self.allData["gameSummary"].get(
+                        "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    )
                     in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # All NFL games are final
                     (
@@ -1457,7 +1470,12 @@ class Bot(object):
                 )
             )  # debug - need this to tell if logic is working
 
-            if self.allData["gameDetails"].get("phase", "UNKNOWN") == "HALFTIME":
+            if (
+                self.allData["gameSummary"].get(
+                    "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                )
+                == "HALFTIME"
+            ):
                 # Game is at halftime
                 # Update interval is in minutes (seconds only when game is live)
                 gtnlWait = self.settings.get("Game Thread", {}).get(
@@ -1471,7 +1489,12 @@ class Bot(object):
                     )
                 )
                 self.sleep(gtnlWait * 60)
-            elif self.allData["gameDetails"].get("phase", "UNKNOWN") == "INGAME":
+            elif (
+                self.allData["gameSummary"].get(
+                    "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                )
+                == "INGAME"
+            ):
                 # Update interval is in seconds (minutes for all other cases)
                 gtWait = self.settings.get("Game Thread", {}).get("UPDATE_INTERVAL", 10)
                 if gtWait < 1:
@@ -1491,7 +1514,9 @@ class Bot(object):
                     gtnlWait = 1
                 self.log.info(
                     "Game is not live ({}), sleeping for {} minutes...".format(
-                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                        self.allData["gameSummary"].get(
+                            "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                        ),
                         gtnlWait,
                     )
                 )
@@ -1517,7 +1542,9 @@ class Bot(object):
         )
 
         while redball.SIGNAL is None and not self.bot.STOP:
-            if self.allData["gameDetails"].get("phase", "UNKNOWN") in [
+            if self.allData["gameSummary"].get(
+                "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+            ) in [
                 "FINAL",
                 "FINAL_OVERTIME",
                 "CANCELED",
@@ -1526,7 +1553,9 @@ class Bot(object):
                 # Game is over
                 self.log.info(
                     "Game is over ({}). Proceeding with post game thread...".format(
-                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                        self.allData["gameSummary"].get(
+                            "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                        ),
                     )
                 )
                 break
@@ -1540,7 +1569,9 @@ class Bot(object):
             else:
                 self.log.debug(
                     "Game is not yet final ({}). Sleeping for 1 minute...".format(
-                        self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                        self.allData["gameSummary"].get(
+                            "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                        ),
                     )
                 )
                 self.sleep(60)
@@ -1679,7 +1710,10 @@ class Bot(object):
                         )
                         self.count_check_edit(
                             self.threadCache["post"]["thread"].id,
-                            self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                            self.allData["gameSummary"].get(
+                                "phase",
+                                self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                            ),
                             edit=True,
                         )
                     elif text == "":
@@ -1690,7 +1724,10 @@ class Bot(object):
                         self.log.info("No changes to post game thread.")
                         self.count_check_edit(
                             self.threadCache["post"]["thread"].id,
-                            self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                            self.allData["gameSummary"].get(
+                                "phase",
+                                self.allData["gameDetails"].get("phase", "UNKNOWN"),
+                            ),
                             edit=False,
                         )
                 except Exception as e:
@@ -1735,7 +1772,9 @@ class Bot(object):
                     break
             elif update_postgame_thread_until == "All division games are final":
                 if (  # This game is final
-                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    self.allData["gameSummary"].get(
+                        "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    )
                     in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # And all division games are final
                     (
@@ -1767,7 +1806,9 @@ class Bot(object):
                     break
             elif update_postgame_thread_until == "All NFL games are final":
                 if (  # This game is final
-                    self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    self.allData["gameSummary"].get(
+                        "phase", self.allData["gameDetails"].get("phase", "UNKNOWN")
+                    )
                     in ["FINAL", "FINAL_OVERTIME", "CANCELED", "CANCELLED"]
                 ) and not next(  # All NFL games are final
                     (
@@ -1858,31 +1899,11 @@ class Bot(object):
                 ),
                 None,
             )
-            gameDetailId = next(
-                (
-                    x["id"]
-                    for x in todayGames[myGameIndex]["externalIds"]
-                    if x["source"] == "gamedetail"
-                ),
-                "0",
-            )
-            self.log.debug(
-                f"self.allData['gameId']: {self.allData['gameId']}; gameDetailId: {gameDetailId}"
-            )
+            self.log.debug(f"self.allData['gameId']: {self.allData['gameId']}")
             otherTodayGamesDetails = {}
             for g in [g for g in todayGames if g["id"] != self.allData["gameId"]]:
                 try:
-                    g_did = next(
-                        (
-                            x["id"]
-                            for x in g["externalIds"]
-                            if x["source"] == "gamedetail"
-                        ),
-                        "0",
-                    )
-                    g_details = self.nfl.shieldQuery(
-                        f"query%7Bviewer%7BgameDetail(id%3A%22{g_did}%22)%7Bid%20attendance%20distance%20down%20gameClock%20goalToGo%20homePointsOvertime%20homePointsTotal%20homePointsQ1%20homePointsQ2%20homePointsQ3%20homePointsQ4%20homeTeam%7Babbreviation%20nickName%7DhomeTimeoutsUsed%20homeTimeoutsRemaining%20period%20phase%20playReview%20possessionTeam%7Babbreviation%20nickName%7Dredzone%20stadium%20startTime%20visitorPointsOvertime%20visitorPointsOvertimeTotal%20visitorPointsQ1%20visitorPointsQ2%20visitorPointsQ3%20visitorPointsQ4%20visitorPointsTotal%20visitorTeam%7Babbreviation%20nickName%7DvisitorTimeoutsUsed%20visitorTimeoutsRemaining%20homePointsOvertimeTotal%20visitorPointsOvertimeTotal%20possessionTeam%7BnickName%7Dweather%7BcurrentFahrenheit%20location%20longDescription%20shortDescription%20currentRealFeelFahrenheit%7DyardLine%20yardsToGo%7D%7D%7D"
-                    )
+                    g_details = self.nfl.gameDetails(g["id"])
                     g_details = (
                         g_details.get("data", {})
                         .get("viewer", {})
@@ -1891,7 +1912,7 @@ class Bot(object):
                 except Exception as e:
                     if "404" in str(e):
                         self.log.debug(
-                            f"Game detail id is not active in shield API yet for other today game [{g['id']}]: {e}"
+                            f"Game detail is not published in NFL API yet for other today game [{g['id']}]: {e}"
                         )
                     else:
                         self.log.debug(
@@ -1900,21 +1921,10 @@ class Bot(object):
                     g_details = {}
                 otherTodayGamesDetails.update({g["id"]: g_details})
             try:
-                gameDetails = self.nfl.gameDetails(
-                    gameDetailId=next(
-                        (
-                            x["id"]
-                            for x in todayGames[myGameIndex]["externalIds"]
-                            if x["source"] == "gamedetail"
-                        ),
-                        "0",
-                    )
-                )
+                gameDetails = self.nfl.gameDetails(self.allData["gameId"])
             except Exception as e:
                 if "404" in str(e):
-                    self.log.debug(
-                        f"Game detail id is not active in shield API yet: {e}"
-                    )
+                    self.log.debug(f"Game detail is not published in NFL API yet: {e}")
                     gameDetails = {}
                 else:
                     raise
@@ -1971,6 +1981,32 @@ class Bot(object):
             except Exception as e:
                 self.log.error(f"Error retrieving standings: {e}")
                 standings = []
+            try:
+                myGameSummary = self.nfl.gameSummaryById(self.allData["gameId"])
+            except Exception as e:
+                if "404" in str(e):
+                    self.log.debug(f"Game summary is not published in NFL API yet: {e}")
+                    myGameSummary = {}
+                else:
+                    raise
+            try:
+                allGameSummaries_raw = self.nfl.gameSummariesByWeek(
+                    season=self.allData["currentWeek"]["season"],
+                    seasonType=self.allData["currentWeek"]["seasonType"],
+                    week=self.allData["currentWeek"]["week"],
+                )
+            except Exception as e:
+                if "404" in str(e):
+                    self.log.debug(
+                        f"Game summaries are not published in NFL API yet: {e}"
+                    )
+                    allGameSummaries_raw = {}
+                else:
+                    raise
+            otherWeekGameSummaries = {}
+            for gs in allGameSummaries_raw.get("data", []):
+                if gs["gameId"] != self.allData["gameId"]:
+                    otherWeekGameSummaries.update({gs["gameId"]: gs})
             self.allData.update(
                 {
                     "myTeam": self.nfl.teamById(
@@ -1994,6 +2030,8 @@ class Bot(object):
                     },
                     "myGameIndex": myGameIndex,
                     "standings": standings,
+                    "gameSummary": myGameSummary,
+                    "otherWeekGameSummaries": otherWeekGameSummaries,
                     "lastUpdate": datetime.today(),
                 }
             )

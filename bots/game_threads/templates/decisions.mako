@@ -1,7 +1,7 @@
 <%page args="gamePk" />
 <%
     def playerLink(name, personId):
-        return '[{}](http://mlb.mlb.com/team/player.jsp?player_id={})'.format(name,str(personId))
+        return '[{}](https://www.mlb.com/player/{})'.format(name,str(personId))
 
     if data[gamePk]["gumbo"]["liveData"].get("decisions"):
         decisions = data[gamePk]["gumbo"]["liveData"]["decisions"]

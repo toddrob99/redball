@@ -282,12 +282,26 @@ class APISession(object):
             query=f"?query={query}&variables=null",
         )
 
-    def gameDetails(self, gameDetailId, query=None):
+    def gameDetails_shield(self, gameDetailId, query=None):
         if not query:
             query = QUERIES["shield"]["gameDetails"].format(
                 param_gameDetailId=gameDetailId
             )
         return self.shieldQuery(query)
+
+    def gameDetails(self, gameId):
+        return self.api_call(f"{ENDPOINTS['experience']}/gamedetails/{gameId}")
+
+    def gameSummaryById(self, gameId):
+        return self.api_call(
+            f"{ENDPOINTS['football']}/stats/live/game-summaries/{gameId}"
+        )
+
+    def gameSummariesByWeek(self, season, seasonType, week):
+        return self.api_call(
+            f"{ENDPOINTS['football']}/stats/live/game-summaries",
+            query=f"?season={season}&seasonType={seasonType}&week={week}",
+        )
 
     def gameInsights(self, gameId=None, gameIds=None, query=None):
         if isinstance(gameId, str):
