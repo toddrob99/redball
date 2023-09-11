@@ -2,7 +2,7 @@
 <%
     def playerLink(name, personId):
         if name=='' or personId==0: return ''
-        return '[{}](http://mlb.mlb.com/team/player.jsp?player_id={})'.format(name,str(personId))
+        return '[{}](https://www.mlb.com/player/{})'.format(name,str(personId))
 
     if not len(data[gamePk]['gumbo']['liveData']['boxscore']['teams']['away']['batters']) and not len(data[gamePk]['gumbo']['liveData']['boxscore']['teams']['home']['batters']):
         # lineups not posted

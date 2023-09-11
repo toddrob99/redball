@@ -2,7 +2,7 @@
 ## Probable Pitchers
 <%
     def playerLink(name, personId):
-        return '[{}](http://mlb.mlb.com/team/player.jsp?player_id={})'.format(name,str(personId))
+        return '[{}](https://www.mlb.com/player/{})'.format(name,str(personId))
 
     awayPitcher = data[gamePk]['schedule']['teams']['away'].get('probablePitcher',{})
     awayPitcherData = data[gamePk]['gumbo']["liveData"]["boxscore"]["teams"]['away']['players'].get('ID'+str(awayPitcher.get('id','')),{'person':{'fullName':'TBD'}})
