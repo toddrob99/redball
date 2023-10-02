@@ -29,8 +29,8 @@
         if "OVERTIME" in gameDetails["phase"] or (isinstance(gameDetails["period"], int) and gameDetails["period"] > 4):
             headerLine += "OT|"
             alignmentLine += ":--|"
-            awayLine += f"{gameDetails.get('visitorPointsOvertime', '')}|"
-            homeLine += f"{gameDetails.get('homePointsOvertime', '')}|"
+            awayLine += f"{gameDetails.get('visitorPointsOvertimeTotal', '')}|"
+            homeLine += f"{gameDetails.get('homePointsOvertimeTotal', '')}|"
         headerLine += "|TOTAL|"
         alignmentLine += ":--|:--|"
         awayLine += f"|{gameDetails['visitorPointsTotal']}|"
