@@ -8,69 +8,75 @@ logger = logging.getLogger(f"{constants.APP_NAME}.api")
 
 
 class API:
-    def __init__(self, api_url=constants.API_URL):
-        self.api_url = api_url
-        logger.debug(f"Set API URL to {self.api_url}")
+    def __init__(self):
+        pass
 
-    def game(self, game_pk, json=True, **kwargs):
-        url = f"{self.api_url}{constants.GAME_ENDPOINT.format(game_pk=game_pk)}"
+    def game(self, game_pk, **kwargs):
+        url = f"{constants.GAME_ENDPOINT.format(game_pk=game_pk)}"
         url = self.add_kwargs_to_url(url, kwargs)
         json = self.get_json(url)
         if json:
             return json
 
-    def game_content(self, game_pk, json=True, **kwargs):
-        url = f"{self.api_url}{constants.GAME_CONTENT_ENDPOINT.format(game_pk=game_pk)}"
+    def game_boxscore(self, game_pk, **kwargs):
+        url = f"{constants.GAME_BOXSCORE_ENDPOINT.format(game_pk=game_pk)}"
         url = self.add_kwargs_to_url(url, kwargs)
         json = self.get_json(url)
         if json:
             return json
 
-    def schedule(
+    def game_playbyplay(self, game_pk, **kwargs):
+        url = f"{constants.GAME_PLAYBYPLAY_ENDPOINT.format(game_pk=game_pk)}"
+        url = self.add_kwargs_to_url(url, kwargs)
+        json = self.get_json(url)
+        if json:
+            return json
+
+    def scoreboard(
         self,
         start_date=datetime.today().strftime("%Y-%m-%d"),
         end_date=None,
         team_id=None,
-        json=True,
         **kwargs,
     ):
-        url = f"{self.api_url}{constants.SCHEDULE_ENDPOINT}"
+        url = f"{constants.SCOREBOARD_ENDPOINT.format(ymd=start_date)}"
         if not self.check_date_format(start_date):
             raise ValueError(
-                "Parameter start_date contains invalid value (format should be %Y-%m-%d e.g. '2021-10-05')."
+                "Parameter start_date contains invalid value (format should be %Y-%m-%d e.g. '2021-10-05', or 'now')."
             )
         if end_date and not self.check_date_format(end_date):
             raise ValueError(
-                "Parameter end_date contains invalid value (format should be %Y-%m-%d e.g. '2021-10-05')."
+                "Parameter end_date contains invalid value (format should be %Y-%m-%d e.g. '2021-10-05', or 'now')."
             )
-        url += f"?startDate={start_date}&endDate={end_date if end_date else start_date}"
-        url += f"&teamId={team_id}" if team_id else ""
         url = self.add_kwargs_to_url(url, kwargs)
         json = self.get_json(url)
         if json:
-            return json
+            games = json.get("games", [])
+            if games and end_date:
+                games = [x for x in games if x["gameDate"] <= end_date]
+            if games and team_id:
+                games = [
+                    x
+                    for x in games
+                    if team_id in [x["awayTeam"]["id"], x["homeTeam"]["id"]]
+                ]
+            return games
 
-    def season_by_date(
-        self, date_str, pre_season_allowance_days=30, json=True, **kwargs
-    ):
+    def season_by_date(self, date_str, **kwargs):
         if not self.check_date_format(date_str):
             raise ValueError(
                 "Parameter date_str contains invalid value (format should be %Y-%m-%d e.g. '2021-10-05')."
             )
-        all_seasons = self.seasons(ids=[], **kwargs)
+        all_seasons = self.seasons(**kwargs)
         date_obj = datetime.strptime(date_str, "%Y-%m-%d")
         given_year = date_obj.strftime("%Y")
-        relevant_seasons = [x for x in all_seasons if given_year in str(x["seasonId"])]
+        relevant_seasons = [x for x in all_seasons if given_year in str(x["id"])]
         in_season = next(
             (
                 x
                 for x in relevant_seasons
-                if date_obj
-                >= (
-                    datetime.strptime(x["regularSeasonStartDate"], "%Y-%m-%d")
-                    - timedelta(days=pre_season_allowance_days)
-                )
-                and date_obj <= datetime.strptime(x["seasonEndDate"], "%Y-%m-%d")
+                if date_obj >= (datetime.fromisoformat(x["preseasonStartdate"]))
+                and date_obj <= datetime.fromisoformat(x["endDate"])
             ),
             None,
         )
@@ -79,67 +85,85 @@ class API:
         return (
             relevant_seasons[0]
             if (
-                date_obj
-                - datetime.strptime(relevant_seasons[0]["seasonEndDate"], "%Y-%m-%d")
-                < (
-                    datetime.strptime(
-                        relevant_seasons[1]["regularSeasonStartDate"], "%Y-%m-%d"
-                    )
-                    - timedelta(days=pre_season_allowance_days)
-                )
+                date_obj - datetime.fromisoformat(relevant_seasons[0]["endDate"])
+                < (datetime.fromisoformat(relevant_seasons[1]["preseasonStartDate"]))
                 - date_obj
             )
             else relevant_seasons[1]
         )
 
-    def season_by_id(self, season_id, json=True, **kwargs):
-        url = f"{self.api_url}{constants.SEASON_ENDPOINT.format(season_id=season_id)}"
-        url = self.add_kwargs_to_url(url, kwargs)
-        json = self.get_json(url)
-        if json:
-            return json.get("seasons", [])[0]
+    def season_by_id(self, season_id, **kwargs):
+        all_seasons = self.seasons(**kwargs)
+        return next(
+            (x for x in all_seasons if x["id"] == season_id),
+            None,
+        )
 
-    def seasons(self, ids=[], json=True, **kwargs):
-        url = f"{self.api_url}{constants.SEASONS_ENDPOINT}"
+    def seasons(self, ids=[], **kwargs):
+        url = f"{constants.SEASONS_ENDPOINT}"
         url = self.add_kwargs_to_url(url, kwargs)
         json = self.get_json(url)
         if ids == []:
-            return json["seasons"]
+            return json["data"]
         if isinstance(ids, int) or isinstance(ids, str):
             ids = [str(ids)]
         ids = [str(i) for i in ids]
-        seasons = [s for s in json["seasons"] if s["seasonId"] in ids]
+        seasons = [s for s in json["data"] if s["id"] in ids]
         if json:
             return seasons
 
-    def standings(self, season=None, **kwargs):
-        url = f"{self.api_url}{constants.STANDINGS_ENDPOINT}"
-        if season:
-            url += f"?season={season}"
+    def standings(self, ymd="now", **kwargs):
+        if not self.check_date_format(ymd):
+            raise ValueError(
+                "Parameter ymd contains invalid value (format should be %Y-%m-%d e.g. '2021-10-05', or 'now')."
+            )
+        url = f"{constants.STANDINGS_ENDPOINT.format(ymd=ymd)}"
         url = self.add_kwargs_to_url(url, kwargs)
         json = self.get_json(url)
         if json:
-            return json.get("records", [])
+            return json.get("standings", [])
 
-    def team_by_id(self, team_id, json=True, **kwargs):
-        url = f"{self.api_url}{constants.TEAM_ENDPOINT.format(team_id=team_id)}"
-        url = self.add_kwargs_to_url(url, kwargs)
-        json = self.get_json(url)
-        if json:
-            return json.get("teams", [])[0]
+    def team_by_id(self, team_id):
+        return next((x for x in self.teams() if x["id"] == team_id), None)
 
-    def teams(self, ids=[], json=True, **kwargs):
-        if isinstance(ids, list):
-            ids = ",".join([str(id) for id in ids])
-        elif isinstance(ids, int):
-            ids = str(ids)
-        url = f"{self.api_url}{constants.TEAMS_ENDPOINT}"
-        if len(ids):
-            url += f"?teamId={ids}"
+    def teams(self, ymd="now", ids=[], **kwargs):
+        if not self.check_date_format(ymd):
+            raise ValueError(
+                "Parameter ymd contains invalid value (format should be %Y-%m-%d e.g. '2021-10-05', or 'now')."
+            )
+        url = f"{constants.TEAMS_ENDPOINT.format(ymd=ymd)}"
         url = self.add_kwargs_to_url(url, kwargs)
         json = self.get_json(url)
-        if json:
+        if not json:
+            return []
+        if ids:
+            return [x for x in json["teams"] if x["id"] in ids]
+        else:
             return json["teams"]
+
+    def teams_with_conf_div(self, ymd="now", ids=[]):
+        all_teams = self.teams(ymd=ymd, ids=ids)
+        standings = self.standings()
+        if not standings:
+            logger.error(
+                "No data returned for standings/now. Teams won't have valid division or conference data included!"
+            )
+            standings = []
+        for t in all_teams:
+            st = next(
+                (x for x in standings if x["teamAbbrev"]["default"] == t["abbrev"]),
+                {},
+            )
+            t.update(
+                {
+                    "conferenceAbbrev": st.get("conferenceAbbrev", "U"),
+                    "conferenceName": st.get("conferenceName", "Unknown"),
+                    "divisionAbbrev": st.get("divisionAbbrev", "U"),
+                    "divisionName": st.get("divisionName", "Unknown"),
+                }
+            )
+
+        return all_teams
 
     @staticmethod
     def add_kwargs_to_url(url, kwargs=None):
@@ -152,6 +176,8 @@ class API:
 
     @staticmethod
     def check_date_format(d):
+        if d == "now":
+            return True
         try:
             datetime.strptime(d, "%Y-%m-%d")
         except ValueError:

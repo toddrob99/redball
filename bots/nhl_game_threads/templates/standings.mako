@@ -1,15 +1,13 @@
 <%
-    if not len(data["standings"]):
+    if not len(data["standings"]) or data["game"].get("gameType") != 2:
         return
-    myDivStandings = next((
-        x["teamRecords"]
-        for x in data["standings"]
-        if x["division"]["id"] == data["myTeam"]["division"]["id"]
-    ), [])
+    myDivStandings = [x for x in data["standings"] if x.get("divisionAbbrev") == data["myTeam"].get("divisionAbbrev", "UNK")]
 %>\
-${'##'} ${data["myTeam"]["division"]["nameShort"]} Standings
+${'##'} ${data["myTeam"]["divisionName"]} Standings
 |Rank|Team|Wins|Losses|OT|Points|
 |:--|:--|:--|:--|:--|:--|
-${"\n".join([f"|{x['divisionRank']}|\
-[{x['team']['name']}]({data['teamSubsById'][x['team']['id']]})|\
-{x['leagueRecord']['wins']}|{x['leagueRecord']['losses']}|{x['leagueRecord']['ot']}|{x['points']}|" for x in myDivStandings])}
+% for x in myDivStandings:
+|${x["divisionSequence"]}|\
+[${x["teamName"]["default"]}]({data["teamSubs"][x["teamAbbrev"]]})|\
+${x["wins"]}|${x["losses"]}|${x["otLosses"]}|${x["points"]}|
+% endfor

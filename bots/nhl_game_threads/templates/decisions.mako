@@ -2,21 +2,24 @@
     awayTeam = data["myTeam"] if data["homeAway"] == "away" else data["oppTeam"]
     homeTeam = data["myTeam"] if data["homeAway"] == "home" else data["oppTeam"]
     def playerLink(p):
-        return f"[{p['fullName']}](https://www.nhl.com/player/{p['id']})"
+        return f"[{p['name']}](https://www.nhl.com/player/{p['playerId']})"
+    threeStars = data["game"].get("summary", {}).get("threeStars")
+    labels = ["First", "Second", "Third"]
 %>\
-${'##'} Decisions
-%if data["game"]["liveData"]["decisions"].get("winner", {}).get("fullName"):
-* Winner: ${playerLink(data["game"]["liveData"]["decisions"]["winner"])}
-%endif
-%if data["game"]["liveData"]["decisions"].get("loser", {}).get("fullName"):
-* Loser: ${playerLink(data["game"]["liveData"]["decisions"]["loser"])}
-%endif
-%if data["game"]["liveData"]["decisions"].get("firstStar", {}).get("fullName"):
-* First Star: ${playerLink(data["game"]["liveData"]["decisions"]["firstStar"])}
-%endif
-%if data["game"]["liveData"]["decisions"].get("secondStar", {}).get("fullName"):
-* Second Star: ${playerLink(data["game"]["liveData"]["decisions"]["secondStar"])}
-%endif
-%if data["game"]["liveData"]["decisions"].get("thirdStar", {}).get("fullName"):
-* Third Star: ${playerLink(data["game"]["liveData"]["decisions"]["thirdStar"])}
-%endif
+% if threeStars:
+${'##'} Stars of the Game
+##%   if data["game"]["liveData"]["decisions"].get("winner", {}).get("fullName"):
+##* Winner: ${playerLink(data["game"]["liveData"]["decisions"]["winner"])}
+##%   endif
+##%   if data["game"]["liveData"]["decisions"].get("loser", {}).get("fullName"):
+##* Loser: ${playerLink(data["game"]["liveData"]["decisions"]["loser"])}
+##%   endif
+% for p in threeStars:
+* ${labels[p["star"] - 1]} Star: ${playerLink(p)} (${p["teamAbbrev"]})\
+%   if p.get("goals") is not None and p.get("assists") is not None:
+ Goals: ${p["goals"]}, Assists: ${p["assists"]}
+%   else:
+
+%   endif
+% endfor
+% endif

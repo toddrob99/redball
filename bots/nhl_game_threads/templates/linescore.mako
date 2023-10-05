@@ -7,31 +7,28 @@
         data["myTeam"] if data["homeAway"] == "home"
         else data["oppTeam"]
     )
-    if (
-        data["game"]["liveData"]["linescore"]["teams"]["away"].get("goals") is not None
-        and data["game"]["liveData"]["linescore"]["teams"]["home"].get("goals") is not None
-    ):
+    linescore = data["game"].get("summary", {}).get("linescore", {}).get("byPeriod", [])
+    ordDict = {1:{1:'1st',2:'2nd',3:'3rd',4:'OT',5:'SO'},2:{1:'1st',2:'2nd',3:'3rd',4:'OT',5:'SO'},3:{1:'1st',2:'2nd',3:'3rd',4:'OT1',5:'OT2',6:'OT3',7:'OT4',8:'OT5'}}
+    periodOrd = ordDict[data["game"]["gameType"]]
+    if linescore:
         headerLine = "||"
         alignmentLine = "|:--|"
-        awayLine = f'|[{awayTeam["teamName"]}]({data["teamSubs"][awayTeam["abbreviation"]]})|'
-        homeLine = f'|[{homeTeam["teamName"]}]({data["teamSubs"][homeTeam["abbreviation"]]})|'
-        for period in data["game"]["liveData"]["linescore"]["periods"]:
-            headerLine += f'{period["ordinalNum"]}|'
+        awayLine = f'|[{awayTeam["commonName"]}]({data["teamSubs"][awayTeam["abbrev"]]})|'
+        homeLine = f'|[{homeTeam["commonName"]}]({data["teamSubs"][homeTeam["abbrev"]]})|'
+        for period in linescore:
+            headerLine += f'{periodOrd[period["period"]]}|'
             alignmentLine += ":--|"
-            awayLine += f'{period["away"]["goals"]}|'
-            homeLine += f'{period["home"]["goals"]}|'
-        if data["game"]["liveData"]["linescore"]["hasShootout"]:
-            headerLine += "SO|"
-            alignmentLine += ":--|"
-            awayLine += f"{data['game']['liveData']['linescore']['shootoutInfo']['away']['scores']}/{data['game']['liveData']['linescore']['shootoutInfo']['away']['attempts']}|"
-            homeLine += f"{data['game']['liveData']['linescore']['shootoutInfo']['home']['scores']}/{data['game']['liveData']['linescore']['shootoutInfo']['home']['attempts']}|"
+            awayLine += f'{period["away"]}|'
+            homeLine += f'{period["home"]}|'
         headerLine += "|TOTAL|"
         alignmentLine += ":--|:--|"
-        awayLine += f'|{data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"]}|'
-        homeLine += f'|{data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]}|'
+        awayLine += f'|{data["game"].get("summary", {}).get("linescore", {}).get("totals", {}).get("away")}|'
+        homeLine += f'|{data["game"].get("summary", {}).get("linescore", {}).get("totals", {}).get("away")}|'
 %>\
+% if linescore:
 ${'##'} Linescore
 ${headerLine}
 ${alignmentLine}
 ${awayLine}
 ${homeLine}
+% endif

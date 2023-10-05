@@ -1,7 +1,5 @@
 ## Skaters
 <%
-    if not len(data["game"]["liveData"]["boxscore"]["teams"]["away"]["skaters"]) or not len(data["game"]["liveData"]["boxscore"]["teams"]["home"]["skaters"]):
-        return
     awayTeam = (
         data["myTeam"] if data["homeAway"] == "away"
         else data["oppTeam"]
@@ -10,45 +8,45 @@
         data["myTeam"] if data["homeAway"] == "home"
         else data["oppTeam"]
     )
-    awaySkaterIds = data["game"]["liveData"]["boxscore"]["teams"]["away"]["skaters"]
-    homeSkaterIds = data["game"]["liveData"]["boxscore"]["teams"]["home"]["skaters"]
-    awayGoalieIds = data["game"]["liveData"]["boxscore"]["teams"]["away"]["goalies"]
-    homeGoalieIds = data["game"]["liveData"]["boxscore"]["teams"]["home"]["goalies"]
-    awayPlayers = data["game"]["liveData"]["boxscore"]["teams"]["away"]["players"]
-    homePlayers = data["game"]["liveData"]["boxscore"]["teams"]["home"]["players"]
-    awaySkaters = [{"id": s["person"]["id"], "name":s["person"]["fullName"], "position_abbreviation": s["position"]["abbreviation"], "position_name": s["position"]["name"], "position_type": s["position"]["type"]} for k, s in awayPlayers.items() if int(k[2:]) in awaySkaterIds]
-    homeSkaters = [{"id": s["person"]["id"], "name":s["person"]["fullName"], "position_abbreviation": s["position"]["abbreviation"], "position_name": s["position"]["name"], "position_type": s["position"]["type"]} for k, s in homePlayers.items() if int(k[2:]) in homeSkaterIds]
-    awayGoalies = [{"id": s["person"]["id"], "name":s["person"]["fullName"], "position_abbreviation": s["position"]["abbreviation"], "position_name": s["position"]["name"], "position_type": s["position"]["type"]} for k, s in awayPlayers.items() if int(k[2:]) in awayGoalieIds]
-    homeGoalies = [{"id": s["person"]["id"], "name":s["person"]["fullName"], "position_abbreviation": s["position"]["abbreviation"], "position_name": s["position"]["name"], "position_type": s["position"]["type"]} for k, s in homePlayers.items() if int(k[2:]) in homeGoalieIds]
-    awayF = [x for x in awaySkaters if x["position_type"] == "Forward"]
-    awayD = [x for x in awaySkaters if x["position_type"] == "Defenseman"]
-    homeF = [x for x in homeSkaters if x["position_type"] == "Forward"]
-    homeD = [x for x in homeSkaters if x["position_type"] == "Defenseman"]
-    awayOnIce = data["game"]["liveData"]["boxscore"]["teams"]["away"]["onIce"]
-    homeOnIce = data["game"]["liveData"]["boxscore"]["teams"]["home"]["onIce"]
+    awayF = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("awayTeam", {}).get("forwards", [])
+    awayL = [x for x in awayF if x["position"] == "L"]
+    awayC = [x for x in awayF if x["position"] == "C"]
+    awayR = [x for x in awayF if x["position"] == "R"]
+    awayD = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("awayTeam", {}).get("defense", [])
+    awayG = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("awayTeam", {}).get("goalies", [])
+    awayOnIce = data["game_pbp"].get("awayTeam", {}).get("onIce", [])
+    homeF = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("homeTeam", {}).get("forwards", [])
+    homeL = [x for x in homeF if x["position"] == "L"]
+    homeC = [x for x in homeF if x["position"] == "C"]
+    homeR = [x for x in homeF if x["position"] == "R"]
+    homeD = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("homeTeam", {}).get("defense", [])
+    homeG = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("homeTeam", {}).get("goalies", [])
+    homeOnIce = data["game_pbp"].get("homeTeam", {}).get("onIce", [])
     def playerLink(p):
-        return f"[{p['name']}](https://www.nhl.com/player/{p['id']})"
+        return f"[{p['name']}](https://www.nhl.com/player/{p['playerId']})"
 %>
-% if len(awaySkaters):
-${'##'} ${awayTeam["teamName"]} Players
-|Forwards|Forwards|Defensemen|Goalies|
-|:--|:--|:--|:--|
-%   for i in range(0, min(6, max(len(awayF), len(awayD), len(awayGoalies)))):
-|${"**" if len(awayF)>i and awayF[i]["id"] in awayOnIce else ""}${playerLink(awayF[i]) if len(awayF)>i else ""}${"**" if len(awayF)>i and awayF[i]["id"] in awayOnIce else ""}|\
-${"**" if len(awayF)>i+6 and awayF[i+6]["id"] in awayOnIce else ""}${playerLink(awayF[i+6]) if len(awayF)>i+6 else ""}${"**" if len(awayF)>i+6 and awayF[i+6]["id"] in awayOnIce else ""}|\
-${"**" if len(awayD)>i and awayD[i]["id"] in awayOnIce else ""}${playerLink(awayD[i]) if len(awayD)>i else ""}${"**" if len(awayD)>i and awayD[i]["id"] in awayOnIce else ""}|\
-${"**" if len(awayGoalies)>i and awayGoalies[i]["id"] in awayOnIce else ""}${playerLink(awayGoalies[i]) if len(awayGoalies)>i else ""}${"**" if len(awayGoalies)>i and awayGoalies[i]["id"] in awayOnIce else ""}|
+% if len(awayF) or len(awayD) or len(awayG):
+${'##'} ${awayTeam["commonName"]} Players
+|Left|Center|Right|Defensemen|Goalies|
+|:--|:--|:--|:--|:--|
+%   for i in range(0, min(12, max(len(awayL), len(awayC), len(awayR), len(awayD), len(awayG)))):
+|${"**" if len(awayL)>i and awayL[i]["playerId"] in awayOnIce else ""}${playerLink(awayL[i]) if len(awayL)>i else ""}${"**" if len(awayL)>i and awayL[i]["playerId"] in awayOnIce else ""}|\
+${"**" if len(awayC)>i and awayC[i]["playerId"] in awayOnIce else ""}${playerLink(awayC[i]) if len(awayC)>i else ""}${"**" if len(awayC)>i and awayC[i]["playerId"] in awayOnIce else ""}|\
+${"**" if len(awayR)>i and awayR[i]["playerId"] in awayOnIce else ""}${playerLink(awayR[i]) if len(awayR)>i else ""}${"**" if len(awayR)>i and awayR[i]["playerId"] in awayOnIce else ""}|\
+${"**" if len(awayD)>i and awayD[i]["playerId"] in awayOnIce else ""}${playerLink(awayD[i]) if len(awayD)>i else ""}${"**" if len(awayD)>i and awayD[i]["playerId"] in awayOnIce else ""}|\
+${"**" if len(awayG)>i and awayG[i]["playerId"] in awayOnIce else ""}${playerLink(awayG[i]) if len(awayG)>i else ""}${"**" if len(awayG)>i and awayG[i]["playerId"] in awayOnIce else ""}|
 %   endfor
 % endif
 
-% if len(homeSkaters):
-${'##'} ${homeTeam["teamName"]} Players
-|Forwards|Forwards|Defensemen|Goalies|
-|:--|:--|:--|:--|
-%   for i in range(0, min(6, max(len(homeF), len(homeD), len(homeGoalies)))):
-|${"**" if len(homeF)>i and homeF[i]["id"] in homeOnIce else ""}${playerLink(homeF[i]) if len(homeF)>i else ""}${"**" if len(homeF)>i and homeF[i]["id"] in homeOnIce else ""}|\
-${"**" if len(homeF)>i+6 and homeF[i+6]["id"] in homeOnIce else ""}${playerLink(homeF[i+6]) if len(homeF)>i+6 else ""}${"**" if len(homeF)>i+6 and homeF[i+6]["id"] in homeOnIce else ""}|\
-${"**" if len(homeD)>i and homeD[i]["id"] in homeOnIce else ""}${playerLink(homeD[i]) if len(homeD)>i else ""}${"**" if len(homeD)>i and homeD[i]["id"] in homeOnIce else ""}|\
-${"**" if len(homeGoalies)>i and homeGoalies[i]["id"] in homeOnIce else ""}${playerLink(homeGoalies[i]) if len(homeGoalies)>i else ""}${"**" if len(homeGoalies)>i and homeGoalies[i]["id"] in homeOnIce else ""}|
+% if len(homeF) or len(homeD) or len(homeG):
+${'##'} ${homeTeam["commonName"]} Players
+|Left|Center|Right|Defensemen|Goalies|
+|:--|:--|:--|:--|:--|
+%   for i in range(0, min(12, max(len(homeL), len(homeC), len(homeR), len(homeD), len(homeG)))):
+|${"**" if len(homeL)>i and homeL[i]["playerId"] in homeOnIce else ""}${playerLink(homeL[i]) if len(homeL)>i else ""}${"**" if len(homeL)>i and homeL[i]["playerId"] in homeOnIce else ""}|\
+${"**" if len(homeC)>i and homeC[i]["playerId"] in homeOnIce else ""}${playerLink(homeC[i]) if len(homeC)>i else ""}${"**" if len(homeC)>i and homeC[i]["playerId"] in homeOnIce else ""}|\
+${"**" if len(homeR)>i and homeR[i]["playerId"] in homeOnIce else ""}${playerLink(homeR[i]) if len(homeR)>i else ""}${"**" if len(homeR)>i and homeR[i]["playerId"] in homeOnIce else ""}|\
+${"**" if len(homeD)>i and homeD[i]["playerId"] in homeOnIce else ""}${playerLink(homeD[i]) if len(homeD)>i else ""}${"**" if len(homeD)>i and homeD[i]["playerId"] in homeOnIce else ""}|\
+${"**" if len(homeG)>i and homeG[i]["playerId"] in homeOnIce else ""}${playerLink(homeG[i]) if len(homeG)>i else ""}${"**" if len(homeG)>i and homeG[i]["playerId"] in homeOnIce else ""}|
 %   endfor
 % endif

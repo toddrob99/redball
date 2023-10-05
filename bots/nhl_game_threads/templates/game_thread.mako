@@ -1,83 +1,92 @@
 <%
     from datetime import datetime, timedelta
-    if data["game"]["gameData"]["status"]["abstractGameState"] == "Final":
+    if data["game"]["gameState"] in ["FINAL", "OFF", "OVER"] or data["game"].get("gameScheduleState") in ["PPD", "SUSP", "CNCL"]:
         result = (
-            "tie" if data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"] == data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]
+            "postponed" if data["game"].get("gameScheduleState") == "PPD"
+            else "suspended" if data["game"].get("gameScheduleState") == "SUSP"
+            else "canceled" if data["game"].get("gameScheduleState") == "CNCL"
+            else "tie" if data["game"].get("awayTeam", {}).get("score") == data["game"].get("homeTeam", {}).get("score")
             else "win" if (
-                data["homeAway"] == "home" and data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"] > data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"]
-                or data["homeAway"] == "away" and data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"] > data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]
+                data["homeAway"] == "home" and data["game"].get("homeTeam", {}).get("score") > data["game"].get("awayTeam", {}).get("score")
+                or data["homeAway"] == "away" and data["game"].get("awayTeam", {}).get("score") > data["game"].get("homeTeam", {}).get("score")
             )
             else "loss" if (
-                data["homeAway"] == "home" and data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"] < data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"]
-                or data["homeAway"] == "away" and data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"] < data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]
+                data["homeAway"] == "home" and data["game"].get("homeTeam", {}).get("score") < data["game"].get("awayTeam", {}).get("score")
+                or data["homeAway"] == "away" and data["game"].get("awayTeam", {}).get("score") < data["game"].get("homeTeam", {}).get("score")
             )
             else ""
         )
-    elif data["game"]["gameData"]["status"]["statusCode"] == "9":
-        result = "postponed"
     else:
         result = None
     oppHomeAway = "away" if data["homeAway"] == "home" else "home"
-    myLeagueRecord = data["todayGames"][0]["teams"][data["homeAway"]]['leagueRecord']
-    oppLeagueRecord = data["todayGames"][0]["teams"][oppHomeAway]['leagueRecord']
-    myTeamRecord = (
-        f" ({myLeagueRecord['wins']}-{myLeagueRecord['losses']}{'-'+str(myLeagueRecord['ot']) if myLeagueRecord.get('ot', 0) > 0 else ''})"
-    ) if data["todayGames"][0]["teams"][data["homeAway"]].get("leagueRecord") else ""
-    oppTeamRecord = (
-        f" ({oppLeagueRecord['wins']}-{oppLeagueRecord['losses']}{'-'+str(oppLeagueRecord['ot']) if oppLeagueRecord.get('ot', 0) > 0 else ''})"
-    ) if data["todayGames"][0]["teams"][oppHomeAway].get("leagueRecord") else ""
+    if data["standings"]:
+        myTeamStandingsData = next((x for x in data["standings"] if x["teamAbbrev"].get("default") == data["myTeam"]["abbrev"]), {})
+        myTeamRecord = f" ({myTeamStandingsData.get('wins', 0)}-{myTeamStandingsData.get('losses', 0)}{'-'+str(myTeamStandingsData['otLosses']) if myTeamStandingsData.get('otLosses', 0) > 0 else ''})" if myTeamStandingsData else ""
+        oppTeamStandingsData = next((x for x in data["standings"] if x["teamAbbrev"].get("default") == data["oppTeam"]["abbrev"]), {})
+        oppTeamRecord = f" ({oppTeamStandingsData.get('wins', 0)}-{oppTeamStandingsData.get('losses', 0)}{'-'+str(oppTeamStandingsData['otLosses']) if oppTeamStandingsData.get('otLosses', 0) > 0 else ''})" if oppTeamStandingsData else ""
+    else:
+        myTeamRecord = ""
+        oppTeamRecord = ""
+
+    homeTeam = data["myTeam"] if data["homeAway"] == "home" else data["oppTeam"]
+    awayTeam = data["myTeam"] if data["homeAway"] == "away" else data["oppTeam"]
+    maxScore = max(int(data["game"].get("awayTeam", {}).get("score", 0)), int(data["game"].get("homeTeam", {}).get("score", 0)))
+    minScore = min(int(data["game"].get("awayTeam", {}).get("score", 0)), int(data["game"].get("homeTeam", {}).get("score", 0)))
+    ordDict = {1:{1:'1st',2:'2nd',3:'3rd',4:'OT',5:'SO'},2:{1:'1st',2:'2nd',3:'3rd',4:'OT',5:'SO'},3:{1:'1st',2:'2nd',3:'3rd',4:'OT1',5:'OT2',6:'OT3',7:'OT4',8:'OT5'}}
+    periodOrd = ordDict[data["game"]["gameType"]]
 %>\
 ## Visiting Team
-${'##'} [${data["game"]["gameData"]["teams"]["away"]["name"]}](${data["teamSubs"][data["game"]["gameData"]["teams"]["away"]["abbreviation"]]})${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
+${'##'} [${awayTeam["name"]}](${data["teamSubs"][awayTeam["abbrev"]]})${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
 @ \
 ## Home Team
-[${data["game"]["gameData"]["teams"]["home"]["name"]}](${data["teamSubs"][data["game"]["gameData"]["teams"]["home"]["abbreviation"]]})${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
+[${homeTeam["name"]}](${data["teamSubs"][homeTeam["abbrev"]]})${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
 
 <%include file="game_info.mako" />
 
-%if data["game"]["gameData"]["status"]["abstractGameState"] == "Live":
+%if data["game"]["gameState"] in ["LIVE", "CRIT"]:
 ${'##'} Game Status - \
-%   if data["game"]["liveData"]["linescore"]["hasShootout"]:
-Shootout! ${data["game"]["gameData"]["teams"]["away"]["teamName"]}: ${data["game"]["liveData"]["linescore"]["shootoutInfo"]["away"]["scores"]}/${data["game"]["liveData"]["linescore"]["shootoutInfo"]["away"]["attempts"]}, ${data["game"]["gameData"]["teams"]["home"]["teamName"]}: ${data["game"]["liveData"]["linescore"]["shootoutInfo"]["home"]["scores"]}/${data["game"]["liveData"]["linescore"]["shootoutInfo"]["home"]["attempts"]}
-%   elif data["game"]["liveData"]["linescore"]["intermissionInfo"].get("inIntermission"):
-Intermission, ${str(timedelta(seconds=int(data["game"]["liveData"]["linescore"]["intermissionInfo"]["intermissionTimeRemaining"])))[-5:]} Remaining
+%   if data["game_boxscore"].get("periodDescriptor", {}).get("periodType") == "SO":
+<%
+    shootout_data = data["game_boxscore"].get("boxscore", {}).get("linescore", {}).get("shootout", {})
+%>
+Shootout! ${data["game"]["awayTeam"]["name"]}: ${shootout_data.get("awayConversions", 0)}/${shootout_data.get("awayAttempts", 0)}, ${data["game"]["homeTeam"]["name"]}: ${shootout_data.get("homeConversions", 0)}/${shootout_data.get("homeAttempts", 0)}
+%   elif data["game"].get("clock", {}).get("inIntermission"):
+Intermission
 %   else:
-${data["game"]["liveData"]["linescore"]["currentPeriodOrdinal"]}${' Period' if data["game"]["liveData"]["linescore"]["currentPeriod"] <= 3 else ''} - ${data["game"]["liveData"]["linescore"]["currentPeriodTimeRemaining"]} \
-%       if data["game"]["liveData"]["linescore"]["teams"]["away"]["powerPlay"]:
-- ${data["game"]["gameData"]["teams"]["away"]["teamName"]} Power Play (${data["game"]["liveData"]["linescore"]["teams"]["away"]["numSkaters"]} on ${data["game"]["liveData"]["linescore"]["teams"]["home"]["numSkaters"]}) \
-%       elif data["game"]["liveData"]["linescore"]["teams"]["home"]["powerPlay"]:
-- ${data["game"]["gameData"]["teams"]["home"]["teamName"]} Power Play (${data["game"]["liveData"]["linescore"]["teams"]["home"]["numSkaters"]} on ${data["game"]["liveData"]["linescore"]["teams"]["away"]["numSkaters"]}) \
-%       endif
-%       if data["game"]["liveData"]["linescore"]["teams"]["away"]["goaliePulled"]:
-- ${data["game"]["gameData"]["teams"]["away"]["teamName"]} Goalie Pulled \
-%       endif
-%       if data["game"]["liveData"]["linescore"]["teams"]["home"]["goaliePulled"]:
-- ${data["game"]["gameData"]["teams"]["home"]["teamName"]} Goalie Pulled \
-%   endif
+${periodOrd[data["game_boxscore"]["period"]]}${' Period' if data["game_boxscore"]["period"] <= 3 else ''} - ${data["game"]["clock"]["timeRemaining"]} \
+##%       if data["game"]["liveData"]["linescore"]["teams"]["away"]["powerPlay"]:
+##- ${data["game"]["gameData"]["teams"]["away"]["teamName"]} Power Play (${data["game"]["liveData"]["linescore"]["teams"]["away"]["numSkaters"]} on ${data["game"]["liveData"]["linescore"]["teams"]["home"]["numSkaters"]}) \
+##%       elif data["game"]["liveData"]["linescore"]["teams"]["home"]["powerPlay"]:
+##- ${data["game"]["gameData"]["teams"]["home"]["teamName"]} Power Play (${data["game"]["liveData"]["linescore"]["teams"]["home"]["numSkaters"]} on ${data["game"]["liveData"]["linescore"]["teams"]["away"]["numSkaters"]}) \
+##%       endif
+##%       if data["game"]["liveData"]["linescore"]["teams"]["away"]["goaliePulled"]:
+##- ${data["game"]["gameData"]["teams"]["away"]["teamName"]} Goalie Pulled \
+##%       endif
+##%       if data["game"]["liveData"]["linescore"]["teams"]["home"]["goaliePulled"]:
+##- ${data["game"]["gameData"]["teams"]["home"]["teamName"]} Goalie Pulled \
+##%   endif
 % endif
 
 %elif result == "postponed":
 ${'##'} Game Status: Postponed
 %elif result:
-${'##'} Final${f'/{data["game"]["liveData"]["linescore"]["currentPeriodOrdinal"]}' if data["game"]["liveData"]["linescore"]["currentPeriod"] > 3 else ""}: \
-${max(int(data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"]), int(data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]))}\
--\
-${min(int(data["game"]["liveData"]["linescore"]["teams"]["away"]["goals"]), int(data["game"]["liveData"]["linescore"]["teams"]["home"]["goals"]))} \
+${'##'} Final${f'/{periodOrd[data["game_boxscore"]["period"]]}' if data["game_boxscore"]["period"] > 3 else ""}: \
+${maxScore} - ${minScore} \
 %   if result == "tie":
 TIE
 %   elif result == "win":
-${data["myTeam"]["teamName"]}
+${data["myTeam"]["commonName"]}
 %   elif result == "loss":
-${data["oppTeam"]["teamName"]}
+${data["oppTeam"]["commonName"]}
 %   endif
 %endif
 
-%if data["game"]["gameData"]["status"]["abstractGameState"] == "Final" and len(data["game"]["liveData"].get("decisions", {})):
+%if data["game"]["gameState"] in ["FINAL", "OFF", "OVER"] and len(data["game"].get("summary", {}).get("threeStars", {})):
 ## Only include decisions if the game has ended
 <%include file="decisions.mako" />
 
 %endif
-%if data["game"]["gameData"]["status"]["abstractGameState"] in ["Live", "Final"]:
+%if data["game"]["gameState"] in ["LIVE", "CRIT", "OFF", "OVER", "FINAL"]:
 ## Only include the line score if the game has already started
 <%include file="linescore.mako" />
 
@@ -86,16 +95,16 @@ ${data["oppTeam"]["teamName"]}
 <%include file="penalties.mako" />
 
 %endif
-%if data["game"]["gameData"]["status"]["abstractGameState"] == "Preview" and data["game"]["gameData"]["status"]["statusCode"] != "9":
+%if data["game"]["gameState"] in ["FUT", "PRE"] and data["game"].get("gameScheduleState") not in ["PPD", "SUSP", "CNCL"]:
 <%include file="skaters.mako" />
 
 %endif
-%if data["game"]["gameData"]["status"]["statusCode"] != "9":
+%if data["game"].get("gameScheduleState") not in ["PPD", "SUSP", "CNCL"]:
 <%include file="scratches.mako" />
 
 %endif
 
-%if data["game"]["gameData"]["status"]["abstractGameState"] in ["Live", "Final"]:
+%if data["game"]["gameState"] in ["LIVE", "CRIT", "OFF", "OVER", "FINAL"]:
 <%include file="game_stats.mako" />
 
 %endif
