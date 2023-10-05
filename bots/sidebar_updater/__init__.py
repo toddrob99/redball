@@ -27,7 +27,7 @@ from ..nba_game_threads import pynbaapi
 from ..nhl_game_threads import pynhlapi
 from ..nfl_game_threads import mynflapi
 
-__version__ = "1.1.2"
+__version__ = "1.2.0"
 
 
 def run(bot, settings):
@@ -538,12 +538,12 @@ class SidebarUpdaterBot:
                 self.bot.STOP = True
                 return
             nhl = pynhlapi.API()
-            all_teams = nhl.teams()
+            all_teams = nhl.teams_with_conf_div()
             my_team = next(
                 (
-                    x
-                    for x in all_teams
-                    if x["id"] == int(self.settings["NHL"]["TEAM"].split("|")[1])
+                    t
+                    for t in all_teams
+                    if t["id"] == int(self.settings["NHL"]["TEAM"].split("|")[1])
                 ),
                 None,
             )
@@ -688,36 +688,36 @@ class SidebarUpdaterBot:
     }
 
     nhl_team_subs = {
-        1: "/r/devils",
-        2: "/r/newyorkislanders",
-        3: "/r/rangers",
-        4: "/r/flyers",
-        5: "/r/penguins",
-        6: "/r/bostonbruins",
-        7: "/r/sabres",
-        8: "/r/habs",
-        9: "/r/ottawasenators",
-        10: "/r/leafs",
-        12: "/r/canes",
-        13: "/r/floridapanthers",
-        14: "/r/tampabaylightning",
-        15: "/r/caps",
-        16: "/r/hawks",
-        17: "/r/detroitredwings",
-        18: "/r/predators",
-        19: "/r/stlouisblues",
-        20: "/r/calgaryflames",
-        21: "/r/coloradoavalanche",
-        22: "/r/edmontonoilers",
-        23: "/r/canucks",
-        24: "/r/anaheimducks",
-        25: "/r/dallasstars",
-        26: "/r/losangeleskings",
-        28: "/r/sanjosesharks",
-        29: "/r/bluejackets",
-        30: "/r/wildhockey",
-        52: "/r/winnipegjets",
-        53: "/r/coyotes",
-        54: "/r/goldenknights",
-        55: "/r/seattlekraken",
+        "ANA": "/r/anaheimducks",
+        "ARI": "/r/coyotes",
+        "BOS": "/r/bostonbruins",
+        "BUF": "/r/sabres",
+        "CAR": "/r/canes",
+        "CBJ": "/r/bluejackets",
+        "CGY": "/r/calgaryflames",
+        "CHI": "/r/hawks",
+        "COL": "/r/coloradoavalanche",
+        "DAL": "/r/dallasstars",
+        "DET": "/r/detroitredwings",
+        "EDM": "/r/edmontonoilers",
+        "FLA": "/r/floridapanthers",
+        "LAK": "/r/losangeleskings",
+        "MIN": "/r/wildhockey",
+        "MTL": "/r/habs",
+        "NJD": "/r/devils",
+        "NSH": "/r/predators",
+        "NYI": "/r/newyorkislanders",
+        "NYR": "/r/rangers",
+        "OTT": "/r/ottawasenators",
+        "PHI": "/r/flyers",
+        "PIT": "/r/penguins",
+        "SEA": "/r/seattlekraken",
+        "SJS": "/r/sanjosesharks",
+        "STL": "/r/stlouisblues",
+        "TBL": "/r/tampabaylightning",
+        "TOR": "/r/leafs",
+        "VAN": "/r/canucks",
+        "VGK": "/r/goldenknights",
+        "WPG": "/r/winnipegjets",
+        "WSH": "/r/caps",
     }

@@ -2,19 +2,19 @@
     from datetime import datetime
     if not len(standings):
         return
-    myDivStandings = next((
-        x["teamRecords"]
-        for x in standings
-        if x["division"]["id"] == my_team["division"]["id"]
-    ), [])[:num_to_show]
+    myDivStandings = [x for x in standings if x.get("divisionAbbrev") == my_team.get("divisionAbbrev", "UNK")][:num_to_show]
 %>\
 [](/redball/standings)\
-${my_team["division"]["nameShort"]} Division Standings
+${my_team["divisionName"]} Division Standings
 --------
 
-|Team|W|L|OT|Pts|
-|:--|:-:|:-:|:-:|:-:|
-${"\n".join([f"|[{x['team']['name']}]({team_subs[x['team']['id']]})|\
-{x['leagueRecord']['wins']}|{x['leagueRecord']['losses']}|{x['leagueRecord']['ot']}|{x['points']}|" for x in myDivStandings])}
+
+|Rank|Team|W|L|OT|Pts|
+|:--|:--|:--|:--|:--|:--|
+% for x in myDivStandings:
+|${x["divisionSequence"]}|\
+[${next((t['commonName'] for t in all_teams if t['abbrev'] == x['teamAbbrev']['default']), x['teamAbbrev']['default'])}](${team_subs.get(x["teamAbbrev"]["default"], "")})|\
+${x["wins"]}|${x["losses"]}|${x["otLosses"]}|${x["points"]}|
+% endfor
 
 ^Updated: ^${datetime.now().strftime("%Y-%m-%d ^%H:%M")}[](/redball/standings)

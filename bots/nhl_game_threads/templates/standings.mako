@@ -8,6 +8,6 @@ ${'##'} ${data["myTeam"]["divisionName"]} Standings
 |:--|:--|:--|:--|:--|:--|
 % for x in myDivStandings:
 |${x["divisionSequence"]}|\
-[${x["teamName"]["default"]}]({data["teamSubs"][x["teamAbbrev"]]})|\
+[${x["teamName"]["default"]}](${data["teamSubs"][x["teamAbbrev"]["default"]]})|\
 ${x["wins"]}|${x["losses"]}|${x["otLosses"]}|${x["points"]}|
 % endfor
