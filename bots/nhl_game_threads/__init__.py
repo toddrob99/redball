@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "2.0.1"
+__version__ = "2.0.2"
 
 DATA_LOCK = threading.Lock()
 
@@ -1293,7 +1293,7 @@ class Bot(object):
                     (
                         True
                         for x in self.allData["todayOtherGames"]
-                        if self.game_is_final(x)
+                        if not self.game_is_final(x)
                     ),
                     False,
                 ):
@@ -1581,7 +1581,7 @@ class Bot(object):
                         (
                             True
                             for x in self.allData["todayOtherDivisionGames"]
-                            if self.game_is_final(x)
+                            if not self.game_is_final(x)
                         ),
                         False,
                     )
@@ -1597,7 +1597,7 @@ class Bot(object):
                     (
                         True
                         for x in self.allData["todayOtherGames"]
-                        if self.game_is_final(x)
+                        if not self.game_is_final(x)
                     ),
                     False,
                 ):
