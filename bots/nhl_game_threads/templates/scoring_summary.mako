@@ -3,11 +3,20 @@
     if not data["game"].get("summary", {}).get("scoring", []):
         return
 
+    something_to_do = False
+    for x in data["game"].get("summary", {}).get("scoring", []):
+        if len(x.get("goals", [])):
+            something_to_do = True
+
+    if not something_to_do:
+        return
+
     def highlight_url(clip_id):
         return f"https://players.brightcove.net/6415718365001/EXtG1xJ7H_default/index.html?videoId={clip_id}"
     ordDict = {1:{1:'1st',2:'2nd',3:'3rd',4:'OT',5:'SO'},2:{1:'1st',2:'2nd',3:'3rd',4:'OT',5:'SO'},3:{1:'1st',2:'2nd',3:'3rd',4:'OT1',5:'OT2',6:'OT3',7:'OT4',8:'OT5'}}
     periodOrd = ordDict[data["game"]["gameType"]]
 %>
+
 ${'##'} Scoring Summary
 |Per./Time|Team|Description & Video Link|Score|
 |:--|:--|:--|:--|

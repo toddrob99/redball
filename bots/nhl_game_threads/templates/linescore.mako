@@ -23,7 +23,7 @@
         headerLine += "|TOTAL|"
         alignmentLine += ":--|:--|"
         awayLine += f'|{data["game"].get("summary", {}).get("linescore", {}).get("totals", {}).get("away")}|'
-        homeLine += f'|{data["game"].get("summary", {}).get("linescore", {}).get("totals", {}).get("away")}|'
+        homeLine += f'|{data["game"].get("summary", {}).get("linescore", {}).get("totals", {}).get("home")}|'
 %>\
 % if linescore:
 ${'##'} Linescore

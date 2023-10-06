@@ -19,9 +19,9 @@ ${'##'} ${data["myTeam"]["divisionName"]} Division Scoreboard
 % if data["game"].get("gameScheduleState") in ["PPD", "SUSP", "CNCL"]:
 ${subLink(game["awayTeam"])} @ ${subLink(game["homeTeam"])} - ${data["game"].get("gameScheduleState")}
 % elif game["gameState"] in ["FINAL", "OFF", "OVER"]:
-${subLink(game["awayTeam"])} @ ${subLink(game["homeTeam"])} - Final
+${subLink(game["awayTeam"])} (${game["awayTeam"].get("score", 0)}) @ (${game["homeTeam"].get("score", 0)}) ${subLink(game["homeTeam"])} - Final
 % elif game["gameState"] in ["LIVE", "CRIT"]:
-${subLink(game["awayTeam"])} @ ${subLink(game["homeTeam"])} - ${format_period(game)} ${game.get("clock", {}).get("timeRemaining", "")}
+${subLink(game["awayTeam"])} (${game["awayTeam"].get("score", 0)}) @ (${game["homeTeam"].get("score", 0)}) ${subLink(game["homeTeam"])} - ${format_period(game)} ${game.get("clock", {}).get("timeRemaining", "")}
 % else:
 ${subLink(game["awayTeam"])} @ ${subLink(game["homeTeam"])} - ${formattedGameTime}
 % endif

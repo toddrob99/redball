@@ -14,10 +14,10 @@ ${'##'} Game Stats
 ||SOG|FO%|PP|PIM|Hits|Blks|
 |:--|:--|:--|:--|:--|:--|:--|
 ## Team
-|[${awayTeam["commonName"]}](${data["teamSubs"][awayTeam["abbrev"]]})|${awayStats.get("sog", "-")}|${round(float(awayStats.get("faceoffWinningPctg", 0)))}%|\
+|[${awayTeam["commonName"]}](${data["teamSubs"][awayTeam["abbrev"]]})|${awayStats.get("sog", "-")}|${str(round(float(awayStats["faceoffWinningPctg"]))) + "%" if awayStats.get("faceoffWinningPctg") else "-"}|\
 ${awayStats.get("powerPlayConversion", "-")}|\
 ${awayStats.get("pim", "-")}|${awayStats.get("hits", "-")}|${awayStats.get("blocks", "-")}|
-|[${homeTeam["commonName"]}](${data["teamSubs"][homeTeam["abbrev"]]})|${homeStats.get("sog", "-")}|${round(float(homeStats.get("faceoffWinningPctg", 0)))}%|\
+|[${homeTeam["commonName"]}](${data["teamSubs"][homeTeam["abbrev"]]})|${homeStats.get("sog", "-")}|${str(round(float(homeStats.get("faceoffWinningPctg", 0)))) + "%" if awayStats.get("faceoffWinningPctg") else "-"}|\
 ${homeStats.get("powerPlayConversion", "-")}|\
 ${homeStats.get("pim", "-")}|${homeStats.get("hits", "-")}|${homeStats.get("blocks", "-")}|
 
@@ -29,7 +29,8 @@ ${homeStats.get("pim", "-")}|${homeStats.get("hits", "-")}|${homeStats.get("bloc
     awayD = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("awayTeam", {}).get("defense", [])
     awayG = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("awayTeam", {}).get("goalies", [])
     awaySkaters = awayF + awayD
-    awayOnIce = data["game_pbp"].get("awayTeam", {}).get("onIce", [])
+    awayOnIce_dict = data["game_pbp"].get("awayTeam", {}).get("onIce", [])
+    awayOnIce = [x.get("playerId") for x in awayOnIce_dict]
     awaySkatersOnIce = [x for x in awaySkaters if x["playerId"] in awayOnIce]
     awaySkatersOnBench = [x for x in awaySkaters if x["playerId"] not in awayOnIce]
     homeF = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("homeTeam", {}).get("forwards", [])
@@ -39,7 +40,8 @@ ${homeStats.get("pim", "-")}|${homeStats.get("hits", "-")}|${homeStats.get("bloc
     homeD = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("homeTeam", {}).get("defense", [])
     homeG = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("homeTeam", {}).get("goalies", [])
     homeSkaters = homeF + homeD
-    homeOnIce = data["game_pbp"].get("homeTeam", {}).get("onIce", [])
+    homeOnIce_dict = data["game_pbp"].get("homeTeam", {}).get("onIce", [])
+    homeOnIce = [x.get("playerId") for x in homeOnIce_dict]
     homeSkatersOnIce = [x for x in homeSkaters if x["playerId"] in homeOnIce]
     homeSkatersOnBench = [x for x in homeSkaters if x["playerId"] not in homeOnIce]
     def playerLink(p):
@@ -54,14 +56,14 @@ ${homeStats.get("pim", "-")}|${homeStats.get("hits", "-")}|${homeStats.get("bloc
 |:--|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 %       for p in info[1] + info[2]:
 |^${p['position']} ${'**' if p in info[1] else ''}${playerLink(p)}${'**' if p in info[1] else ''}|\
-${p["goals"]}|\
-${p["assists"]}|\
-${p["plusMinus"]}|\
-${p["shots"]}|\
-${p["blockedShots"]}|\
-${p["pim"]}|\
-${p["faceoffs"]}|\
-${p["toi"]}|
+${p.get("goals", "-")}|\
+${p.get("assists", "-")}|\
+${p.get("plusMinus", "-")}|\
+${p.get("shots", "-")}|\
+${p.get("blockedShots", "-")}|\
+${p.get("pim", "-")}|\
+${p.get("faceoffs", "-")}|\
+${p.get("toi", "-")}|
 %       endfor
 %   endif
 
@@ -70,9 +72,9 @@ ${p["toi"]}|
 |:--|:-:|:-:|:-:|
 %       for g in info[3]:
 |${'**' if g["playerId"] in info[4] else ''}${playerLink(g)}${'**' if g["playerId"] in info[4] else ''}|\
-${g.get("saveShotsAgainst", "-")}|\
-${f'{float(g["savePctg"])*100:.1f}%' if g.get("savePctg") is not None else "-"}|\
-${g["toi"]}|
+${g.get("saveShotsAgainst", "-") if g.get("toi", "00:00") != "00:00" else "-"}|\
+${f'{float(g["savePctg"])*100:.1f}%' if g.get("savePctg") is not None and g.get("toi", "00:00") != "00:00" else "-"}|\
+${g.get("toi", "-")}|
 %       endfor
 %   endif
 
