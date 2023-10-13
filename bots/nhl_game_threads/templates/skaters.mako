@@ -23,7 +23,7 @@
     homeG = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("homeTeam", {}).get("goalies", [])
     homeOnIce = data["game_pbp"].get("homeTeam", {}).get("onIce", [])
     def playerLink(p):
-        return f"[{p['name']}](https://www.nhl.com/player/{p['playerId']})"
+        return f"[{p['name']['default']}](https://www.nhl.com/player/{p['playerId']})"
 %>
 % if len(awayF) or len(awayD) or len(awayG):
 ${'##'} ${awayTeam["commonName"]} Players

@@ -13,7 +13,7 @@
 * Game Time: ${data["gameTime"]["myTeam"].strftime(settings.get("Game Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y @ %I:%M %p %Z"))}
 % endif
 ## Venue
-* Venue: ${data["game"].get("venue", "Unknown")}
+* Venue: ${data["game"].get("venue", {}).get("default", "Unknown")}
 <%
     awayTv = [x for x in data['game'].get('tvBroadcasts', []) if x.get('market')=='A']
     homeTv = [x for x in data['game'].get('tvBroadcasts', []) if x.get('market')=='H']
@@ -23,7 +23,7 @@
 <%
     tv = ''
     flag = False
-    for info in [(nationalTv, "National"), (awayTv, data["game"]["awayTeam"]["name"]), (homeTv, data["game"]["homeTeam"]["name"])]:
+    for info in [(nationalTv, "National"), (awayTv, data["game"]["awayTeam"]["name"]["default"]), (homeTv, data["game"]["homeTeam"]["name"]["default"])]:
         if len(info[0]):
             if flag: tv += ', '
             flag = True

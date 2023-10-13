@@ -2,7 +2,7 @@
     from datetime import datetime
     import pytz
     def subLink(t):
-        return f"[{t['name']}]({data['teamSubs'].get(t['abbrev'], '')})"
+        return f"[{t['name']['default']}]({data['teamSubs'].get(t['abbrev'], '')})"
     ordDict = {1:{1:'1st',2:'2nd',3:'3rd',4:'OT',5:'SO'},2:{1:'1st',2:'2nd',3:'3rd',4:'OT',5:'SO'},3:{1:'1st',2:'2nd',3:'3rd',4:'OT1',5:'OT2',6:'OT3',7:'OT4',8:'OT5'}}
     def format_period(game):
         return ordDict[game["gameType"]].get(game.get("period"), "")

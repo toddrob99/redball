@@ -26,7 +26,7 @@
     #awayScratches = [{"id": s["person"]["id"], "name":s["person"]["fullName"], "position_abbreviation": s["position"]["abbreviation"], "position_name": s["position"]["name"], "position_type": s["position"]["type"]} for k, s in awayPlayers.items() if int(k[2:]) in awayScratchIds]
     #homeScratches = [{"id": s["person"]["id"], "name":s["person"]["fullName"], "position_abbreviation": s["position"]["abbreviation"], "position_name": s["position"]["name"], "position_type": s["position"]["type"]} for k, s in homePlayers.items() if int(k[2:]) in homeScratchIds]
     def playerLink(p):
-        return f"[{p['firstName']} {p['lastName']}](https://www.nhl.com/player/{p['id']})"
+        return f"[{p['firstName']['default']} {p['lastName']['default']}](https://www.nhl.com/player/{p['id']})"
 %>
 % if len(awayScratches) or len(homeScratches):
 ${'##'} Scratches

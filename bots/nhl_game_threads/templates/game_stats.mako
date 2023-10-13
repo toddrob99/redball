@@ -45,7 +45,7 @@ ${homeStats.get("pim", "-")}|${homeStats.get("hits", "-")}|${homeStats.get("bloc
     homeSkatersOnIce = [x for x in homeSkaters if x["playerId"] in homeOnIce]
     homeSkatersOnBench = [x for x in homeSkaters if x["playerId"] not in homeOnIce]
     def playerLink(p):
-        return f"[{p['name']}](https://www.nhl.com/player/{p['playerId']})"
+        return f"[{p['name']['default']}](https://www.nhl.com/player/{p['playerId']})"
     if not (awaySkaters or awayG or homeSkaters or homeG):
         return
 %>\
