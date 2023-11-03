@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "2.0.5"
+__version__ = "2.0.6"
 
 DATA_LOCK = threading.Lock()
 
@@ -2054,8 +2054,8 @@ class Bot(object):
             else:
                 self.notify_prowl(
                     apiKey=prowlKey,
-                    event=f"{self.myTeam['commonName']} {thread.title()} Thread Posted",
-                    description=f"""{self.myTeam['commonName']} {thread} thread was posted to r/{self.settings["Reddit"]["SUBREDDIT"]} at {self.convert_timezone(datetime.utcfromtimestamp(theThread.created_utc),'local').strftime('%I:%M %p %Z')}\nThread title: {theThread.title}\nURL: {theThread.shortlink}""",
+                    event=f"{self.myTeam['commonName']['default']} {thread.title()} Thread Posted",
+                    description=f"""{self.myTeam['commonName']['default']} {thread} thread was posted to r/{self.settings["Reddit"]["SUBREDDIT"]} at {self.convert_timezone(datetime.utcfromtimestamp(theThread.created_utc),'local').strftime('%I:%M %p %Z')}\nThread title: {theThread.title}\nURL: {theThread.shortlink}""",
                     priority=prowlPriority,
                     url=theThread.shortlink,
                     appName=f"redball - {self.bot.name}",
@@ -2078,11 +2078,11 @@ class Bot(object):
                 self.log.debug("Twitter disabled or not configured")
             else:
                 if thread == "game":
-                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['commonName'].replace(' ','')}"""
+                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['commonName']['default'].replace(' ','')}"""
                 elif thread == "tailgate":
-                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['commonName'].replace(' ','')}"""
+                    message = f"""{theThread.title} - Join the discussion: {theThread.shortlink} #{self.myTeam['commonName']['default'].replace(' ','')}"""
                 elif thread == "post":
-                    message = f"""{theThread.title} - The discussion continues: {theThread.shortlink} #{self.myTeam['commonName'].replace(' ','')}"""
+                    message = f"""{theThread.title} - The discussion continues: {theThread.shortlink} #{self.myTeam['commonName']['default'].replace(' ','')}"""
                 else:
                     self.log.error(f"Can't tweet about unknown thread type [{thread}]!")
                     return (None, text)
@@ -2819,13 +2819,13 @@ class Bot(object):
 
                 botStatus["summary"][
                     "text"
-                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam']['name']}"
+                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam']['name']['default']}"
                 botStatus["summary"][
                     "html"
-                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam']['name']}"
+                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam']['name']['default']}"
                 botStatus["summary"][
                     "markdown"
-                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam']['name']}"
+                ] += f"Today's game: {botStatus['game']['gameTime']} {'@' if botStatus['game']['homeAway']=='away' else 'vs.'} {botStatus['game']['oppTeam']['name']['default']}"
 
                 if not botStatus["tailgateThread"]["enabled"]:
                     # Tailgate thread is disabled
