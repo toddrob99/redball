@@ -13,10 +13,10 @@
     awayTeam = data["myTeam"] if data["homeAway"] == "away" else data["oppTeam"]
 %>\
 ## Visiting Team
-${'##'} [${awayTeam["name"]}](${data["teamSubs"][awayTeam["abbrev"]]})${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
+${'##'} [${awayTeam["name"]["default"]}](${data["teamSubs"][awayTeam["abbrev"]]})${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
 @ \
 ## Home Team
-[${homeTeam["name"]}](${data["teamSubs"][homeTeam["abbrev"]]})${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
+[${homeTeam["name"]["default"]}](${data["teamSubs"][homeTeam["abbrev"]]})${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
 
 <%include file="game_info.mako" />
 

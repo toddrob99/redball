@@ -14,10 +14,10 @@ ${'##'} Game Stats
 ||SOG|FO%|PP|PIM|Hits|Blks|
 |:--|:--|:--|:--|:--|:--|:--|
 ## Team
-|[${awayTeam["commonName"]}](${data["teamSubs"][awayTeam["abbrev"]]})|${awayStats.get("sog", "-")}|${str(round(float(awayStats["faceoffWinningPctg"]))) + "%" if awayStats.get("faceoffWinningPctg") else "-"}|\
+|[${awayTeam["commonName"]["default"]}](${data["teamSubs"][awayTeam["abbrev"]]})|${awayStats.get("sog", "-")}|${str(round(float(awayStats["faceoffWinningPctg"]))) + "%" if awayStats.get("faceoffWinningPctg") else "-"}|\
 ${awayStats.get("powerPlayConversion", "-")}|\
 ${awayStats.get("pim", "-")}|${awayStats.get("hits", "-")}|${awayStats.get("blocks", "-")}|
-|[${homeTeam["commonName"]}](${data["teamSubs"][homeTeam["abbrev"]]})|${homeStats.get("sog", "-")}|${str(round(float(homeStats.get("faceoffWinningPctg", 0)))) + "%" if awayStats.get("faceoffWinningPctg") else "-"}|\
+|[${homeTeam["commonName"]["default"]}](${data["teamSubs"][homeTeam["abbrev"]]})|${homeStats.get("sog", "-")}|${str(round(float(homeStats.get("faceoffWinningPctg", 0)))) + "%" if awayStats.get("faceoffWinningPctg") else "-"}|\
 ${homeStats.get("powerPlayConversion", "-")}|\
 ${homeStats.get("pim", "-")}|${homeStats.get("hits", "-")}|${homeStats.get("blocks", "-")}|
 
@@ -52,7 +52,7 @@ ${homeStats.get("pim", "-")}|${homeStats.get("hits", "-")}|${homeStats.get("bloc
 \
 % for info in [(awayTeam, awaySkatersOnIce, awaySkatersOnBench, awayG, awayOnIce), (homeTeam, homeSkatersOnIce, homeSkatersOnBench, homeG, homeOnIce)]:
 %   if len(info[1]) or len(info[2]):
-|[${info[0]["commonName"]}](${data["teamSubs"][info[0]["abbrev"]]}) Skaters|G|A|+/-|S|Blk|PIM|FO|TOI|
+|[${info[0]["commonName"]["default"]}](${data["teamSubs"][info[0]["abbrev"]]}) Skaters|G|A|+/-|S|Blk|PIM|FO|TOI|
 |:--|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 %       for p in info[1] + info[2]:
 |^${p['position']} ${'**' if p in info[1] else ''}${playerLink(p)}${'**' if p in info[1] else ''}|\
@@ -68,7 +68,7 @@ ${p.get("toi", "-")}|
 %   endif
 
 %   if len(info[3]):
-|[${info[0]["commonName"]}](${data["teamSubs"][info[0]["abbrev"]]}) Goalies|Saves/Shots|Save %|TOI|
+|[${info[0]["commonName"]["default"]}](${data["teamSubs"][info[0]["abbrev"]]}) Goalies|Saves/Shots|Save %|TOI|
 |:--|:-:|:-:|:-:|
 %       for g in info[3]:
 |${'**' if g["playerId"] in info[4] else ''}${playerLink(g)}${'**' if g["playerId"] in info[4] else ''}|\

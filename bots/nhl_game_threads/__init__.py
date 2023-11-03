@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "2.0.4"
+__version__ = "2.0.5"
 
 DATA_LOCK = threading.Lock()
 
@@ -211,7 +211,7 @@ class Bot(object):
                 )
                 self.bot.STOP = True
                 break
-            self.log.info("Configured team: {}".format(self.myTeam["name"]))
+            self.log.info("Configured team: {}".format(self.myTeam["name"]["default"]))
             self.log.debug(f"{self.myTeam=}")
 
             # Other division teams
@@ -2709,10 +2709,10 @@ class Bot(object):
                 "lastUpdated": datetime.today().strftime("%m/%d/%Y %I:%M:%S %p"),
                 "myTeam": {
                     "id": self.myTeam["id"],
-                    "name": self.myTeam["name"],
+                    "name": self.myTeam["name"]["default"],
                     "abbreviation": self.myTeam["abbrev"],
-                    "teamName": self.myTeam["commonName"],
-                    "locationName": self.myTeam["placeName"],
+                    "teamName": self.myTeam["commonName"]["default"],
+                    "locationName": self.myTeam["placeName"]["default"],
                 },
                 "today": self.today,
                 "tailgateThread": {

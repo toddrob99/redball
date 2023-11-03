@@ -36,10 +36,10 @@
         return f"https://players.brightcove.net/6415718365001/EXtG1xJ7H_default/index.html?videoId={clip_id}"
 %>\
 ## Visiting Team
-${'##'} [${awayTeam["name"]}](${data["teamSubs"][awayTeam["abbrev"]]})${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
+${'##'} [${awayTeam["name"]["default"]}](${data["teamSubs"][awayTeam["abbrev"]]})${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
 @ \
 ## Home Team
-[${homeTeam["name"]}](${data["teamSubs"][homeTeam["abbrev"]]})${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
+[${homeTeam["name"]["default"]}](${data["teamSubs"][homeTeam["abbrev"]]})${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
 
 %if result == "postponed":
 ${'##'} Game Status: Postponed
@@ -49,9 +49,9 @@ ${maxScore} - ${minScore} \
 %   if result == "tie":
 TIE
 %   elif result == "win":
-${data["myTeam"]["commonName"]}
+${data["myTeam"]["commonName"]["default"]}
 %   elif result == "loss":
-${data["oppTeam"]["commonName"]}
+${data["oppTeam"]["commonName"]["default"]}
 %   endif
 %endif
 
@@ -97,10 +97,10 @@ ${'##'} Game Videos/Summaries
 %       if data["game_boxscore"]["boxscore"]["gameReports"].get("toiAway") or data["game_boxscore"]["boxscore"]["gameReports"].get("toiHome"):
 * TOI Report: \
 %           if data["game_boxscore"]["boxscore"]["gameReports"].get("toiAway"):
-[${awayTeam["commonName"]}](${data["game_boxscore"]["boxscore"]["gameReports"]["toiAway"]}) \
+[${awayTeam["commonName"]["default"]}](${data["game_boxscore"]["boxscore"]["gameReports"]["toiAway"]}) \
 %           endif
 %           if data["game_boxscore"]["boxscore"]["gameReports"].get("toiHome"):
-[${homeTeam["commonName"]}](${data["game_boxscore"]["boxscore"]["gameReports"]["toiHome"]})
+[${homeTeam["commonName"]["default"]}](${data["game_boxscore"]["boxscore"]["gameReports"]["toiHome"]})
 %           endif
 %       endif
 %   endif

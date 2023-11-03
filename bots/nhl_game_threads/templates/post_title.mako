@@ -21,7 +21,7 @@
 ## Prefix
 ${prefix + (" " if len(prefix) and not prefix.endswith(" ") else "")}\
 ## My Team
-The ${data["myTeam"]["commonName"]} \
+The ${data["myTeam"]["commonName"]["default"]} \
 ## Result
 %if result == "tie":
 ## TIE
@@ -41,7 +41,7 @@ will have to wait to finish playing the \
 were supposed to play the \
 %endif
 ## Opposing Team
-${data["oppTeam"]["commonName"]} \
+${data["oppTeam"]["commonName"]["default"]} \
 ## Score
 %if result == "tie":
 ## TIE

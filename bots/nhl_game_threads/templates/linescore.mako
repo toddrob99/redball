@@ -13,8 +13,8 @@
     if linescore:
         headerLine = "||"
         alignmentLine = "|:--|"
-        awayLine = f'|[{awayTeam["commonName"]}]({data["teamSubs"][awayTeam["abbrev"]]})|'
-        homeLine = f'|[{homeTeam["commonName"]}]({data["teamSubs"][homeTeam["abbrev"]]})|'
+        awayLine = f'|[{awayTeam["commonName"]["default"]}]({data["teamSubs"][awayTeam["abbrev"]]})|'
+        homeLine = f'|[{homeTeam["commonName"]["default"]}]({data["teamSubs"][homeTeam["abbrev"]]})|'
         for period in linescore:
             headerLine += f'{periodOrd[period["period"]]}|'
             alignmentLine += ":--|"

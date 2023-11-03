@@ -13,10 +13,10 @@
 ## Prefix
 ${prefix + (" " if len(prefix) and not prefix.endswith(" ") else "")}\
 ## Visiting Team
-${data["myTeam"]["name"] if data["homeAway"] == "away" else data["oppTeam"]["name"]}${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
+${data["myTeam"]["name"]["default"] if data["homeAway"] == "away" else data["oppTeam"]["name"]["default"]}${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
 @ \
 ## Home Team
-${data["myTeam"]["name"] if data["homeAway"] == "home" else data["oppTeam"]["name"]}${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord} \
+${data["myTeam"]["name"]["default"] if data["homeAway"] == "home" else data["oppTeam"]["name"]["default"]}${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord} \
 - \
 ## Date/Time
 ${data["gameTime"]["myTeam"].strftime(settings.get("Tailgate Thread", {}).get("TITLE_DATE_FORMAT","%B %d, %Y @ %I:%M %p %Z"))}

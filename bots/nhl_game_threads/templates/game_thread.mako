@@ -36,10 +36,10 @@
     periodOrd = ordDict[data["game"]["gameType"]]
 %>\
 ## Visiting Team
-${'##'} [${awayTeam["name"]}](${data["teamSubs"][awayTeam["abbrev"]]})${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
+${'##'} [${awayTeam["name"]["default"]}](${data["teamSubs"][awayTeam["abbrev"]]})${myTeamRecord if data["homeAway"] == "away" else oppTeamRecord} \
 @ \
 ## Home Team
-[${homeTeam["name"]}](${data["teamSubs"][homeTeam["abbrev"]]})${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
+[${homeTeam["name"]["default"]}](${data["teamSubs"][homeTeam["abbrev"]]})${myTeamRecord if data["homeAway"] == "home" else oppTeamRecord}
 
 <%include file="game_info.mako" />
 
@@ -49,7 +49,7 @@ ${'##'} Game Status - \
 <%
     shootout_data = data["game_boxscore"].get("boxscore", {}).get("linescore", {}).get("shootout", {})
 %>
-Shootout! ${data["game"]["awayTeam"]["name"]}: ${shootout_data.get("awayConversions", 0)}/${shootout_data.get("awayAttempts", 0)}, ${data["game"]["homeTeam"]["name"]}: ${shootout_data.get("homeConversions", 0)}/${shootout_data.get("homeAttempts", 0)}
+Shootout! ${data["game"]["awayTeam"]["name"]["default"]}: ${shootout_data.get("awayConversions", 0)}/${shootout_data.get("awayAttempts", 0)}, ${data["game"]["homeTeam"]["name"]["default"]}: ${shootout_data.get("homeConversions", 0)}/${shootout_data.get("homeAttempts", 0)}
 %   elif data["game"].get("clock", {}).get("inIntermission"):
 Intermission
 %   else:
@@ -75,9 +75,9 @@ ${maxScore} - ${minScore} \
 %   if result == "tie":
 TIE
 %   elif result == "win":
-${data["myTeam"]["commonName"]}
+${data["myTeam"]["commonName"]["default"]}
 %   elif result == "loss":
-${data["oppTeam"]["commonName"]}
+${data["oppTeam"]["commonName"]["default"]}
 %   endif
 %endif
 

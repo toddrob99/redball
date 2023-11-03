@@ -26,7 +26,7 @@
         return f"[{p['name']['default']}](https://www.nhl.com/player/{p['playerId']})"
 %>
 % if len(awayF) or len(awayD) or len(awayG):
-${'##'} ${awayTeam["commonName"]} Players
+${'##'} ${awayTeam["commonName"]["default"]} Players
 |Left|Center|Right|Defensemen|Goalies|
 |:--|:--|:--|:--|:--|
 %   for i in range(0, min(12, max(len(awayL), len(awayC), len(awayR), len(awayD), len(awayG)))):
@@ -39,7 +39,7 @@ ${"**" if len(awayG)>i and awayG[i]["playerId"] in awayOnIce else ""}${playerLin
 % endif
 
 % if len(homeF) or len(homeD) or len(homeG):
-${'##'} ${homeTeam["commonName"]} Players
+${'##'} ${homeTeam["commonName"]["default"]} Players
 |Left|Center|Right|Defensemen|Goalies|
 |:--|:--|:--|:--|:--|
 %   for i in range(0, min(12, max(len(homeL), len(homeC), len(homeR), len(homeD), len(homeG)))):

@@ -30,7 +30,7 @@
 %>
 % if len(awayScratches) or len(homeScratches):
 ${'##'} Scratches
-|${awayTeam["commonName"]}|${homeTeam["commonName"]}|
+|${awayTeam["commonName"]["default"]}|${homeTeam["commonName"]["default"]}|
 |:--|:--|
 %   for i in range(0, max(len(awayScratches), len(homeScratches))):
 |${playerLink(awayScratches[i]) if len(awayScratches)>i else ""}|\
