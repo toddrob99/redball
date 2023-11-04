@@ -2,7 +2,7 @@
     awayTeam = data["myTeam"] if data["homeAway"] == "away" else data["oppTeam"]
     homeTeam = data["myTeam"] if data["homeAway"] == "home" else data["oppTeam"]
     def playerLink(p):
-        return f"[{p['name']['default']}](https://www.nhl.com/player/{p['playerId']})"
+        return f"[{p['name']}](https://www.nhl.com/player/{p['playerId']})"
     threeStars = data["game"].get("summary", {}).get("threeStars")
     labels = ["First", "Second", "Third"]
 %>\
