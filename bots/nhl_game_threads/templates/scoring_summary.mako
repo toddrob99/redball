@@ -25,7 +25,7 @@ ${'##'} Scoring Summary
 <%
     assists = []
     for a in p.get("assists"):
-        assists.append(f"{a['firstName']} {a['lastName']} ({a['assistsToDate']})")
+        assists.append(f"{a['firstName']['default']} {a['lastName']['default']} ({a['assistsToDate']})")
     if not len(assists):
         assists_str = "unassisted"
     else:
@@ -33,13 +33,13 @@ ${'##'} Scoring Summary
     desc = ""
     desc += f"{p['strength'].upper()} - " if p['strength'] != 'ev' else ''
     desc += f"Empty Net - " if p.get('goalModifier', '').upper == 'EN' else ''
-    desc += f"{p['firstName']} {p['lastName']} ({p.get('goalsToDate', '-')}) {p.get('shotType', 'Unknown Shot Type')}, {assists_str}"
+    desc += f"{p['firstName']['default']} {p['lastName']['default']} ({p.get('goalsToDate', '-')}) {p.get('shotType', 'Unknown Shot Type')}, {assists_str}"
     if p.get("highlightClip"):
         desc = f"[{desc}]({highlight_url(p['highlightClip'])})"
 %>\
 |${periodOrd[per.get('period')]}\
 ${(' ' + p.get('timeInPeriod')) if per.get('periodDescriptor', {}).get('periodType') != 'SO' else ''}|\
-[${p['teamAbbrev']}](${data['teamSubs'].get(p['teamAbbrev'], '')})|\
+[${p.get('teamAbbrev', {}).get('default')}](${data['teamSubs'].get(p.get('teamAbbrev', {}).get('default'), '')})|\
 ${desc}|\
 %       if per.get('periodDescriptor', {}).get('periodType') != "SO":
 ${str(max(p['awayScore'],p['homeScore']))+'-'+str(min(p['awayScore'],p['homeScore']))} ${(data['game']['awayTeam']['abbrev'] if p['awayScore'] > p['homeScore'] else data['game']['homeTeam']['abbrev']) if p['awayScore'] != p['homeScore'] else ''}\
