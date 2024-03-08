@@ -53,7 +53,7 @@ Shootout! ${data["game"]["awayTeam"]["name"]["default"]}: ${shootout_data.get("a
 %   elif data["game"].get("clock", {}).get("inIntermission"):
 Intermission
 %   else:
-${periodOrd[data["game_boxscore"]["period"]]}${' Period' if data["game_boxscore"]["period"] <= 3 else ''} - ${data["game"]["clock"]["timeRemaining"]} \
+${periodOrd[data["game_boxscore"].get("period", data["game_boxscore"].get("periodDescriptor", {}).get("number"))]}${' Period' if data["game_boxscore"].get("period", data["game_boxscore"].get("periodDescriptor", {}).get("number")) <= 3 else ''} - ${data["game"]["clock"]["timeRemaining"]} \
 ##%       if data["game"]["liveData"]["linescore"]["teams"]["away"]["powerPlay"]:
 ##- ${data["game"]["gameData"]["teams"]["away"]["teamName"]} Power Play (${data["game"]["liveData"]["linescore"]["teams"]["away"]["numSkaters"]} on ${data["game"]["liveData"]["linescore"]["teams"]["home"]["numSkaters"]}) \
 ##%       elif data["game"]["liveData"]["linescore"]["teams"]["home"]["powerPlay"]:
@@ -70,7 +70,7 @@ ${periodOrd[data["game_boxscore"]["period"]]}${' Period' if data["game_boxscore"
 %elif result == "postponed":
 ${'##'} Game Status: Postponed
 %elif result:
-${'##'} Final${f'/{periodOrd[data["game_boxscore"]["period"]]}' if data["game_boxscore"]["period"] > 3 else ""}: \
+${'##'} Final${f'/{periodOrd[data["game_boxscore"].get("period", data["game_boxscore"].get("periodDescriptor", {}).get("number"))]}' if data["game_boxscore"].get("period", data["game_boxscore"].get("periodDescriptor", {}).get("number")) > 3 else ""}: \
 ${maxScore} - ${minScore} \
 %   if result == "tie":
 TIE

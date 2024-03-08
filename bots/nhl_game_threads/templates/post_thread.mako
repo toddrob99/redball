@@ -44,7 +44,7 @@ ${'##'} [${awayTeam["name"]["default"]}](${data["teamSubs"][awayTeam["abbrev"]]}
 %if result == "postponed":
 ${'##'} Game Status: Postponed
 %elif result != "":
-${'##'} Final${f'/{periodOrd[data["game_boxscore"]["period"]]}' if data["game_boxscore"]["period"] > 3 else ""}: \
+${'##'} Final${f'/{periodOrd[data["game_boxscore"].get("period", data["game_boxscore"].get("periodDescriptor", {}).get("number"))]}' if data["game_boxscore"].get("period", data["game_boxscore"].get("periodDescriptor", {}).get("number")) > 3 else ""}: \
 ${maxScore} - ${minScore} \
 %   if result == "tie":
 TIE

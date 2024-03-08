@@ -29,7 +29,7 @@ ${'##'} Penalty Summary
     if p.get("servedBy"):
         desc += f"Served by {p['servedBy']}."
 %>\
-|${periodOrd[per.get('period')]}\
+|${periodOrd[per.get("period", per.get("periodDescriptor", {}).get("number"))]}\
 ${(' ' + p.get('timeInPeriod')) if per.get('periodDescriptor', {}).get('periodType') != 'SO' else ''}|\
 [${p['teamAbbrev']}](${data['teamSubs'].get(p['teamAbbrev'], '')})|\
 ${p['duration']}:00 ${sevs.get(p['type'], "")}|\

@@ -37,7 +37,7 @@ ${'##'} Scoring Summary
     if p.get("highlightClip"):
         desc = f"[{desc}]({highlight_url(p['highlightClip'])})"
 %>\
-|${periodOrd[per.get('period')]}\
+|${periodOrd[per.get("period", per.get("periodDescriptor", {}).get("number"))]}\
 ${(' ' + p.get('timeInPeriod')) if per.get('periodDescriptor', {}).get('periodType') != 'SO' else ''}|\
 [${p.get('teamAbbrev', {}).get('default')}](${data['teamSubs'].get(p.get('teamAbbrev', {}).get('default'), '')})|\
 ${desc}|\
