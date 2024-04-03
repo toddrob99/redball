@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.5.4"
+__version__ = "1.5.5"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -99,9 +99,11 @@ class Bot(object):
                 self.log.debug(f"Could not shut down scheduler because: {e}")
 
         self.bot.SCHEDULER = BackgroundScheduler(
-            timezone=tzlocal.get_localzone()
-            if str(tzlocal.get_localzone()) != "local"
-            else "America/New_York"
+            timezone=(
+                tzlocal.get_localzone()
+                if str(tzlocal.get_localzone()) != "local"
+                else "America/New_York"
+            )
         )
         self.bot.SCHEDULER.start()
 
@@ -951,9 +953,11 @@ class Bot(object):
                     {
                         "weeklyThreadText": weeklyThreadText,
                         "weeklyThread": weeklyThread,
-                        "weeklyThreadTitle": weeklyThread.title
-                        if weeklyThread not in [None, False]
-                        else None,
+                        "weeklyThreadTitle": (
+                            weeklyThread.title
+                            if weeklyThread not in [None, False]
+                            else None
+                        ),
                     }
                 )
                 # Only sticky when posting the thread
@@ -1046,9 +1050,11 @@ class Bot(object):
                     {
                         "weeklyThreadText": weeklyThreadText,
                         "weeklyThread": weeklyThread,
-                        "weeklyThreadTitle": weeklyThread.title
-                        if weeklyThread not in [None, False]
-                        else None,
+                        "weeklyThreadTitle": (
+                            weeklyThread.title
+                            if weeklyThread not in [None, False]
+                            else None
+                        ),
                     }
                 )
 
@@ -1169,9 +1175,11 @@ class Bot(object):
                     {
                         "offDayThreadText": offDayThreadText,
                         "offDayThread": offDayThread,
-                        "offDayThreadTitle": offDayThread.title
-                        if offDayThread not in [None, False]
-                        else None,
+                        "offDayThreadTitle": (
+                            offDayThread.title
+                            if offDayThread not in [None, False]
+                            else None
+                        ),
                     }
                 )
                 # Only sticky when posting the thread
@@ -1194,9 +1202,11 @@ class Bot(object):
                 {
                     "offDayThreadText": offDayThreadText,
                     "offDayThread": offDayThread,
-                    "offDayThreadTitle": offDayThread.title
-                    if offDayThread not in [None, False]
-                    else None,
+                    "offDayThreadTitle": (
+                        offDayThread.title
+                        if offDayThread not in [None, False]
+                        else None
+                    ),
                 }
             )
             skipFlag = True
@@ -1465,9 +1475,11 @@ class Bot(object):
                     {
                         "gameDayThreadText": gameDayThreadText,
                         "gameDayThread": gameDayThread,
-                        "gameDayThreadTitle": gameDayThread.title
-                        if gameDayThread not in [None, False]
-                        else None,
+                        "gameDayThreadTitle": (
+                            gameDayThread.title
+                            if gameDayThread not in [None, False]
+                            else None
+                        ),
                     }
                 )
                 # Only sticky when posting the thread
@@ -1529,9 +1541,11 @@ class Bot(object):
                 {
                     "gameDayThreadText": gameDayThreadText,
                     "gameDayThread": gameDayThread,
-                    "gameDayThreadTitle": gameDayThread.title
-                    if gameDayThread not in [None, False]
-                    else None,
+                    "gameDayThreadTitle": (
+                        gameDayThread.title
+                        if gameDayThread not in [None, False]
+                        else None
+                    ),
                 }
             )
             skipFlag = True
@@ -1788,9 +1802,11 @@ class Bot(object):
                     {
                         "gameThread": gameThread,
                         "gameThreadText": gameThreadText,
-                        "gameThreadTitle": gameThread.title
-                        if gameThread not in [None, False]
-                        else None,
+                        "gameThreadTitle": (
+                            gameThread.title
+                            if gameThread not in [None, False]
+                            else None
+                        ),
                     }
                 )
                 # Only sticky when posting the thread
@@ -2009,12 +2025,15 @@ class Bot(object):
                         "Waiting for time to submit game {} thread: {}{}. Sleeping for 10 minutes...".format(
                             pk,
                             self.activeGames[pk]["postTime"],
-                            " (will hold past post time until doubleheader game 1 ({}) is final)".format(
-                                otherGame["schedule"]["gamePk"]
-                            )
-                            if self.commonData[pk]["schedule"]["doubleHeader"] != "N"
-                            and self.commonData[pk]["schedule"]["gameNumber"] != 1
-                            else "",
+                            (
+                                " (will hold past post time until doubleheader game 1 ({}) is final)".format(
+                                    otherGame["schedule"]["gamePk"]
+                                )
+                                if self.commonData[pk]["schedule"]["doubleHeader"]
+                                != "N"
+                                and self.commonData[pk]["schedule"]["gameNumber"] != 1
+                                else ""
+                            ),
                         )
                     )
                     self.sleep(600)
@@ -2095,9 +2114,11 @@ class Bot(object):
                     {
                         "gameThread": gameThread,
                         "gameThreadText": gameThreadText,
-                        "gameThreadTitle": gameThread.title
-                        if gameThread not in [None, False]
-                        else None,
+                        "gameThreadTitle": (
+                            gameThread.title
+                            if gameThread not in [None, False]
+                            else None
+                        ),
                     }
                 )
                 if self.activeGames[pk].get("gameThread") and self.settings.get(
@@ -2524,9 +2545,11 @@ class Bot(object):
                     {
                         "postGameThread": postGameThread,
                         "postGameThreadText": postGameThreadText,
-                        "postGameThreadTitle": postGameThread.title
-                        if postGameThread not in [None, False]
-                        else None,
+                        "postGameThreadTitle": (
+                            postGameThread.title
+                            if postGameThread not in [None, False]
+                            else None
+                        ),
                     }
                 )
                 # Only sticky when posting the thread
@@ -2536,36 +2559,50 @@ class Bot(object):
             "EXCEPTION"
             if self.commonData[pk]["schedule"]["status"]["codedGameState"]
             in ["C", "D", "U", "T"]  # Suspended: U, T; Cancelled: C, Postponed: D
-            else "TIE"
-            if self.commonData[pk]["schedule"]["teams"]["home"]["score"]
-            == self.commonData[pk]["schedule"]["teams"]["away"]["score"]
-            else "WIN"
-            if (
-                (
-                    self.commonData[pk]["schedule"]["teams"]["home"]["score"]
-                    > self.commonData[pk]["schedule"]["teams"]["away"]["score"]
-                    and self.commonData[pk]["homeAway"] == "home"
-                )
-                or (
-                    self.commonData[pk]["schedule"]["teams"]["home"]["score"]
-                    < self.commonData[pk]["schedule"]["teams"]["away"]["score"]
-                    and self.commonData[pk]["homeAway"] == "away"
+            else (
+                "TIE"
+                if self.commonData[pk]["schedule"]["teams"]["home"]["score"]
+                == self.commonData[pk]["schedule"]["teams"]["away"]["score"]
+                else (
+                    "WIN"
+                    if (
+                        (
+                            self.commonData[pk]["schedule"]["teams"]["home"]["score"]
+                            > self.commonData[pk]["schedule"]["teams"]["away"]["score"]
+                            and self.commonData[pk]["homeAway"] == "home"
+                        )
+                        or (
+                            self.commonData[pk]["schedule"]["teams"]["home"]["score"]
+                            < self.commonData[pk]["schedule"]["teams"]["away"]["score"]
+                            and self.commonData[pk]["homeAway"] == "away"
+                        )
+                    )
+                    else (
+                        "LOSS"
+                        if (
+                            (
+                                self.commonData[pk]["schedule"]["teams"]["home"][
+                                    "score"
+                                ]
+                                < self.commonData[pk]["schedule"]["teams"]["away"][
+                                    "score"
+                                ]
+                                and self.commonData[pk]["homeAway"] == "home"
+                            )
+                            or (
+                                self.commonData[pk]["schedule"]["teams"]["home"][
+                                    "score"
+                                ]
+                                > self.commonData[pk]["schedule"]["teams"]["away"][
+                                    "score"
+                                ]
+                                and self.commonData[pk]["homeAway"] == "away"
+                            )
+                        )
+                        else "EXCEPTION"
+                    )
                 )
             )
-            else "LOSS"
-            if (
-                (
-                    self.commonData[pk]["schedule"]["teams"]["home"]["score"]
-                    < self.commonData[pk]["schedule"]["teams"]["away"]["score"]
-                    and self.commonData[pk]["homeAway"] == "home"
-                )
-                or (
-                    self.commonData[pk]["schedule"]["teams"]["home"]["score"]
-                    > self.commonData[pk]["schedule"]["teams"]["away"]["score"]
-                    and self.commonData[pk]["homeAway"] == "away"
-                )
-            )
-            else "EXCEPTION"
         )
         wanted_results = self.settings.get("Post Game Thread", {}).get(
             "ONLY_IF_THESE_RESULTS", ["ALL"]
@@ -2591,9 +2628,11 @@ class Bot(object):
                 {
                     "postGameThread": postGameThread,
                     "postGameThreadText": postGameThreadText,
-                    "postGameThreadTitle": postGameThread.title
-                    if postGameThread not in [None, False]
-                    else None,
+                    "postGameThreadTitle": (
+                        postGameThread.title
+                        if postGameThread not in [None, False]
+                        else None
+                    ),
                 }
             )
             if not postGameThread:
@@ -2909,11 +2948,13 @@ class Bot(object):
                                     .lower()
                                     .replace(" ", "_"),
                                 ),
-                                "/scoring_play"
-                                if atBat["playEvents"][actionIndex]["details"].get(
-                                    "isScoringPlay"
-                                )
-                                else "",
+                                (
+                                    "/scoring_play"
+                                    if atBat["playEvents"][actionIndex]["details"].get(
+                                        "isScoringPlay"
+                                    )
+                                    else ""
+                                ),
                                 myTeamBatting,
                             )
                         )
@@ -2952,11 +2993,13 @@ class Bot(object):
                                     gameThreadId=gameThreadId,
                                     atBatIndex=atBat["atBatIndex"],
                                     actionIndex=actionIndex,
-                                    isScoringPlay=1
-                                    if atBat["playEvents"][actionIndex]["details"].get(
-                                        "isScoringPlay"
-                                    )
-                                    else 0,
+                                    isScoringPlay=(
+                                        1
+                                        if atBat["playEvents"][actionIndex][
+                                            "details"
+                                        ].get("isScoringPlay")
+                                        else 0
+                                    ),
                                     eventType=atBat["playEvents"][actionIndex][
                                         "details"
                                     ].get(
@@ -3078,9 +3121,11 @@ class Bot(object):
                                     .lower()
                                     .replace(" ", "_"),
                                 ),
-                                "/scoring_play"
-                                if atBat["about"].get("isScoringPlay")
-                                else "",
+                                (
+                                    "/scoring_play"
+                                    if atBat["about"].get("isScoringPlay")
+                                    else ""
+                                ),
                                 myTeamBatting,
                             )
                         )
@@ -3116,9 +3161,9 @@ class Bot(object):
                                     gameThreadId=gameThreadId,
                                     atBatIndex=atBat["atBatIndex"],
                                     actionIndex=None,
-                                    isScoringPlay=1
-                                    if atBat["about"].get("isScoringPlay")
-                                    else 0,
+                                    isScoringPlay=(
+                                        1 if atBat["about"].get("isScoringPlay") else 0
+                                    ),
                                     eventType=atBat["result"].get(
                                         "eventType",
                                         atBat["result"]
@@ -3293,9 +3338,11 @@ class Bot(object):
                     self.log.info(
                         "Webhook [{}] result: {}.".format(
                             webhook_url,
-                            webhook_result
-                            if isinstance(webhook_result, str)
-                            else "success",
+                            (
+                                webhook_result
+                                if isinstance(webhook_result, str)
+                                else "success"
+                            ),
                         )
                     )
             else:
@@ -3843,48 +3890,52 @@ class Bot(object):
             lookAfter = (
                 self.commonData[max(self.commonData.keys())]["gameTime"]["utc"]
                 if len(self.commonData) > 1
-                else datetime.strptime(
-                    (
-                        datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d")
-                        + timedelta(days=1)
-                    ).strftime("%Y-%m-%d")
-                    + "T"
-                    + datetime.utcnow().strftime("%H:%M:%SZ"),
-                    "%Y-%m-%dT%H:%M:%SZ",
-                ).replace(
-                    tzinfo=pytz.utc
-                )  # UTC time is in the next day
-                if (
+                else (
                     datetime.strptime(
-                        self.today["Y-m-d"]
+                        (
+                            datetime.strptime(self.today["Y-m-d"], "%Y-%m-%d")
+                            + timedelta(days=1)
+                        ).strftime("%Y-%m-%d")
                         + "T"
-                        + datetime.now().strftime("%H:%M:%SZ"),
+                        + datetime.utcnow().strftime("%H:%M:%SZ"),
                         "%Y-%m-%dT%H:%M:%SZ",
-                    ).replace(tzinfo=tzlocal.get_localzone())
-                    - datetime.strptime(
+                    ).replace(
+                        tzinfo=pytz.utc
+                    )  # UTC time is in the next day
+                    if (
+                        datetime.strptime(
+                            self.today["Y-m-d"]
+                            + "T"
+                            + datetime.now().strftime("%H:%M:%SZ"),
+                            "%Y-%m-%dT%H:%M:%SZ",
+                        ).replace(tzinfo=tzlocal.get_localzone())
+                        - datetime.strptime(
+                            self.today["Y-m-d"]
+                            + "T"
+                            + datetime.utcnow().strftime("%H:%M:%SZ"),
+                            "%Y-%m-%dT%H:%M:%SZ",
+                        ).replace(tzinfo=pytz.utc)
+                    ).total_seconds()
+                    / 60
+                    / 60
+                    / 24
+                    > 0.5  # With "today" date, difference between time in UTC and local is more than 12hr
+                    else datetime.strptime(
                         self.today["Y-m-d"]
                         + "T"
                         + datetime.utcnow().strftime("%H:%M:%SZ"),
                         "%Y-%m-%dT%H:%M:%SZ",
                     ).replace(tzinfo=pytz.utc)
-                ).total_seconds()
-                / 60
-                / 60
-                / 24
-                > 0.5  # With "today" date, difference between time in UTC and local is more than 12hr
-                else datetime.strptime(
-                    self.today["Y-m-d"] + "T" + datetime.utcnow().strftime("%H:%M:%SZ"),
-                    "%Y-%m-%dT%H:%M:%SZ",
-                ).replace(
-                    tzinfo=pytz.utc
                 )  # Date is still the same when time is converted to UTC
             )
             self.log.debug(
                 "Looking for next game starting after {} ({})...".format(
                     lookAfter,
-                    "start time of game {}".format(max(self.commonData.keys()))
-                    if len(self.commonData) > 1
-                    else "current time",
+                    (
+                        "start time of game {}".format(max(self.commonData.keys()))
+                        if len(self.commonData) > 1
+                        else "current time"
+                    ),
                 )
             )
             nextGame = next(
@@ -3945,7 +3996,9 @@ class Bot(object):
 
         if gamePk == 0:
             # Generic data used by all threads
-            with GENERIC_DATA_LOCK:  # Use lock to prevent multiple threads from updating data at the same time
+            with (
+                GENERIC_DATA_LOCK
+            ):  # Use lock to prevent multiple threads from updating data at the same time
                 if self.commonData.get(gamePk) and self.commonData[gamePk].get(
                     "lastUpdate", datetime.today() - timedelta(hours=1)
                 ) >= datetime.today() - timedelta(seconds=cache_seconds):
@@ -4201,7 +4254,9 @@ class Bot(object):
             if not self.commonData.get(0):
                 self.collect_data(0)
 
-            with GAME_DATA_LOCK:  # Use lock to prevent multiple threads from updating data at the same time
+            with (
+                GAME_DATA_LOCK
+            ):  # Use lock to prevent multiple threads from updating data at the same time
                 # Update game-specific data
                 if not isinstance(gamePk, list):
                     gamePks = [gamePk]
@@ -4410,9 +4465,12 @@ class Bot(object):
                     # Store a key to indicate if myTeam is home or away
                     pkData.update(
                         {
-                            "homeAway": "home"
-                            if game["teams"]["home"]["team"]["id"] == self.myTeam["id"]
-                            else "away"
+                            "homeAway": (
+                                "home"
+                                if game["teams"]["home"]["team"]["id"]
+                                == self.myTeam["id"]
+                                else "away"
+                            )
                         }
                     )
                     self.log.debug("Added homeAway for pk {}".format(pk))
@@ -4719,14 +4777,16 @@ class Bot(object):
                         "ID" + batterId
                     ]["battingOrder"]
                 ),
-                "substitution": False
-                if str(
-                    gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
-                        "ID" + batterId
-                    ]["battingOrder"]
-                )[-1]
-                == "0"
-                else True,
+                "substitution": (
+                    False
+                    if str(
+                        gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
+                            "ID" + batterId
+                        ]["battingOrder"]
+                    )[-1]
+                    == "0"
+                    else True
+                ),
                 "note": gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
                     "ID" + batterId
                 ]["stats"]["batting"].get("note", ""),
@@ -4856,14 +4916,16 @@ class Bot(object):
                         "ID" + batterId
                     ]["battingOrder"]
                 ),
-                "substitution": False
-                if str(
-                    gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
-                        "ID" + batterId
-                    ]["battingOrder"]
-                )[-1]
-                == "0"
-                else True,
+                "substitution": (
+                    False
+                    if str(
+                        gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
+                            "ID" + batterId
+                        ]["battingOrder"]
+                    )[-1]
+                    == "0"
+                    else True
+                ),
                 "note": gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
                     "ID" + batterId
                 ]["stats"]["batting"].get("note", ""),
@@ -5053,37 +5115,37 @@ class Bot(object):
                 "ip": str(
                     gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["inningsPitched"]
+                    ]["stats"]["pitching"].get("inningsPitched", 0)
                 ),
                 "h": str(
                     gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["hits"]
+                    ]["stats"]["pitching"].get("hits", 0)
                 ),
                 "r": str(
                     gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["runs"]
+                    ]["stats"]["pitching"].get("runs", 0)
                 ),
                 "er": str(
                     gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["earnedRuns"]
+                    ]["stats"]["pitching"].get("earnedRuns", 0)
                 ),
                 "bb": str(
                     gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["baseOnBalls"]
+                    ]["stats"]["pitching"].get("baseOnBalls", 0)
                 ),
                 "k": str(
                     gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["strikeOuts"]
+                    ]["stats"]["pitching"].get("strikeOuts", 0)
                 ),
                 "hr": str(
                     gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["homeRuns"]
+                    ]["stats"]["pitching"].get("homeRuns", 0)
                 ),
                 "p": str(
                     gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
@@ -5098,7 +5160,7 @@ class Bot(object):
                 "s": str(
                     gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["strikes"]
+                    ]["stats"]["pitching"].get("strikes", 0)
                 ),
                 "era": str(
                     gumbo["liveData"]["boxscore"]["teams"]["away"]["players"][
@@ -5157,37 +5219,37 @@ class Bot(object):
                 "ip": str(
                     gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["inningsPitched"]
+                    ]["stats"]["pitching"].get("inningsPitched", 0)
                 ),
                 "h": str(
                     gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["hits"]
+                    ]["stats"]["pitching"].get("hits", 0)
                 ),
                 "r": str(
                     gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["runs"]
+                    ]["stats"]["pitching"].get("runs", 0)
                 ),
                 "er": str(
                     gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["earnedRuns"]
+                    ]["stats"]["pitching"].get("earnedRuns", 0)
                 ),
                 "bb": str(
                     gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["baseOnBalls"]
+                    ]["stats"]["pitching"].get("baseOnBalls", 0)
                 ),
                 "k": str(
                     gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["strikeOuts"]
+                    ]["stats"]["pitching"].get("strikeOuts", 0)
                 ),
                 "hr": str(
                     gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["homeRuns"]
+                    ]["stats"]["pitching"].get("homeRuns", 0)
                 ),
                 "p": str(
                     gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
@@ -5202,7 +5264,7 @@ class Bot(object):
                 "s": str(
                     gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
                         "ID" + pitcherId
-                    ]["stats"]["pitching"]["strikes"]
+                    ]["stats"]["pitching"].get("strikes", 0)
                 ),
                 "era": str(
                     gumbo["liveData"]["boxscore"]["teams"]["home"]["players"][
@@ -5506,72 +5568,120 @@ class Bot(object):
         flair = (
             self.settings.get("Weekly Thread", {}).get("FLAIR", "")
             if thread == "weekly"
-            else self.settings.get("Off Day Thread", {}).get("FLAIR", "")
-            if thread == "off"
-            else self.settings.get("Game Day Thread", {}).get("FLAIR", "")
-            if thread == "gameday"
-            else self.settings.get("Game Thread", {}).get("FLAIR", "")
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get("FLAIR", "")
-            if thread == "post"
-            else ""
+            else (
+                self.settings.get("Off Day Thread", {}).get("FLAIR", "")
+                if thread == "off"
+                else (
+                    self.settings.get("Game Day Thread", {}).get("FLAIR", "")
+                    if thread == "gameday"
+                    else (
+                        self.settings.get("Game Thread", {}).get("FLAIR", "")
+                        if thread == "game"
+                        else (
+                            self.settings.get("Post Game Thread", {}).get("FLAIR", "")
+                            if thread == "post"
+                            else ""
+                        )
+                    )
+                )
+            )
         )
         sort = (
             self.settings.get("Weekly Thread", {}).get("SUGGESTED_SORT", "new")
             if thread == "weekly"
-            else self.settings.get("Off Day Thread", {}).get("SUGGESTED_SORT", "new")
-            if thread == "off"
-            else self.settings.get("Game Day Thread", {}).get("SUGGESTED_SORT", "new")
-            if thread == "gameday"
-            else self.settings.get("Game Thread", {}).get("SUGGESTED_SORT", "new")
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get("SUGGESTED_SORT", "new")
-            if thread == "post"
-            else "new"
+            else (
+                self.settings.get("Off Day Thread", {}).get("SUGGESTED_SORT", "new")
+                if thread == "off"
+                else (
+                    self.settings.get("Game Day Thread", {}).get(
+                        "SUGGESTED_SORT", "new"
+                    )
+                    if thread == "gameday"
+                    else (
+                        self.settings.get("Game Thread", {}).get(
+                            "SUGGESTED_SORT", "new"
+                        )
+                        if thread == "game"
+                        else (
+                            self.settings.get("Post Game Thread", {}).get(
+                                "SUGGESTED_SORT", "new"
+                            )
+                            if thread == "post"
+                            else "new"
+                        )
+                    )
+                )
+            )
         )
         liveDiscussion = (
             self.settings.get("Weekly Thread", {}).get("LIVE_DISCUSSION", False)
             if thread == "weekly"
-            else self.settings.get("Off Day Thread", {}).get("LIVE_DISCUSSION", False)
-            if thread == "off"
-            else self.settings.get("Game Day Thread", {}).get("LIVE_DISCUSSION", False)
-            if thread == "gameday"
-            else self.settings.get("Game Thread", {}).get("LIVE_DISCUSSION", False)
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get("LIVE_DISCUSSION", False)
-            if thread == "post"
-            else False
+            else (
+                self.settings.get("Off Day Thread", {}).get("LIVE_DISCUSSION", False)
+                if thread == "off"
+                else (
+                    self.settings.get("Game Day Thread", {}).get(
+                        "LIVE_DISCUSSION", False
+                    )
+                    if thread == "gameday"
+                    else (
+                        self.settings.get("Game Thread", {}).get(
+                            "LIVE_DISCUSSION", False
+                        )
+                        if thread == "game"
+                        else (
+                            self.settings.get("Post Game Thread", {}).get(
+                                "LIVE_DISCUSSION", False
+                            )
+                            if thread == "post"
+                            else False
+                        )
+                    )
+                )
+            )
         )
         lockPrevious = (
             self.settings.get("Game Thread", {}).get("LOCK_GAMEDAY_THREAD", False)
             if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get(
-                "LOCK_GAME_THREAD", False
+            else (
+                self.settings.get("Post Game Thread", {}).get("LOCK_GAME_THREAD", False)
+                if thread == "post"
+                else False
             )
-            if thread == "post"
-            else False
         )
         linkPrevious = (
             self.settings.get("Game Thread", {}).get("LINK_IN_GAMEDAY_THREAD", False)
             if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get(
-                "LINK_IN_GAME_THREAD", False
+            else (
+                self.settings.get("Post Game Thread", {}).get(
+                    "LINK_IN_GAME_THREAD", False
+                )
+                if thread == "post"
+                else False
             )
-            if thread == "post"
-            else False
         )
         title_mod = (
             self.settings.get("Weekly Thread", {}).get("TITLE_MOD", "")
             if thread == "weekly"
-            else self.settings.get("Off Day Thread", {}).get("TITLE_MOD", "")
-            if thread == "off"
-            else self.settings.get("Game Day Thread", {}).get("TITLE_MOD", "")
-            if thread == "gameday"
-            else self.settings.get("Game Thread", {}).get("TITLE_MOD", "")
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get("TITLE_MOD", "")
-            if thread == "post"
-            else ""
+            else (
+                self.settings.get("Off Day Thread", {}).get("TITLE_MOD", "")
+                if thread == "off"
+                else (
+                    self.settings.get("Game Day Thread", {}).get("TITLE_MOD", "")
+                    if thread == "gameday"
+                    else (
+                        self.settings.get("Game Thread", {}).get("TITLE_MOD", "")
+                        if thread == "game"
+                        else (
+                            self.settings.get("Post Game Thread", {}).get(
+                                "TITLE_MOD", ""
+                            )
+                            if thread == "post"
+                            else ""
+                        )
+                    )
+                )
+            )
         )
         if "upper" in title_mod.lower():
             title = title.upper()
@@ -5698,23 +5808,31 @@ class Bot(object):
                         "WEBHOOK{}_URL".format(s)
                     )
                     if thread == "weekly"
-                    else self.settings.get("Off Day Thread", {}).get(
-                        "WEBHOOK{}_URL".format(s)
+                    else (
+                        self.settings.get("Off Day Thread", {}).get(
+                            "WEBHOOK{}_URL".format(s)
+                        )
+                        if thread == "off"
+                        else (
+                            self.settings.get("Game Day Thread", {}).get(
+                                "WEBHOOK{}_URL".format(s)
+                            )
+                            if thread == "gameday"
+                            else (
+                                self.settings.get("Game Thread", {}).get(
+                                    "WEBHOOK{}_URL".format(s)
+                                )
+                                if thread == "game"
+                                else (
+                                    self.settings.get("Post Game Thread", {}).get(
+                                        "WEBHOOK{}_URL".format(s)
+                                    )
+                                    if thread == "post"
+                                    else None
+                                )
+                            )
+                        )
                     )
-                    if thread == "off"
-                    else self.settings.get("Game Day Thread", {}).get(
-                        "WEBHOOK{}_URL".format(s)
-                    )
-                    if thread == "gameday"
-                    else self.settings.get("Game Thread", {}).get(
-                        "WEBHOOK{}_URL".format(s)
-                    )
-                    if thread == "game"
-                    else self.settings.get("Post Game Thread", {}).get(
-                        "WEBHOOK{}_URL".format(s)
-                    )
-                    if thread == "post"
-                    else None
                 )
                 if webhook_url:
                     self.log.debug(
@@ -5738,9 +5856,11 @@ class Bot(object):
                         self.log.info(
                             "Webhook [{}] result: {}.".format(
                                 webhook_url,
-                                webhook_result
-                                if isinstance(webhook_result, str)
-                                else "success",
+                                (
+                                    webhook_result
+                                    if isinstance(webhook_result, str)
+                                    else "success"
+                                ),
                             )
                         )
                 else:
@@ -5809,9 +5929,11 @@ class Bot(object):
                 if previousThread := (
                     self.activeGames[pk].get("gameDayThread")
                     if thread == "game"
-                    else self.activeGames[pk].get("gameThread")
-                    if thread == "post"
-                    else None
+                    else (
+                        self.activeGames[pk].get("gameThread")
+                        if thread == "post"
+                        else None
+                    )
                 ):
                     if lockPrevious:
                         try:
@@ -5830,11 +5952,13 @@ class Bot(object):
                                 "GAMEDAY_THREAD_MESSAGE", None
                             )
                             if thread == "game"
-                            else self.settings.get("Post Game Thread", {}).get(
-                                "GAME_THREAD_MESSAGE", None
+                            else (
+                                self.settings.get("Post Game Thread", {}).get(
+                                    "GAME_THREAD_MESSAGE", None
+                                )
+                                if thread == "post"
+                                else None
                             )
-                            if thread == "post"
-                            else None
                         )
                         if not commentText:
                             commentText = f"{'This thread has been locked. ' if lockPrevious else ''}Please continue the discussion in the [{'game' if thread == 'game' else 'post game' if thread == 'post' else 'new'} thread](link)."
@@ -6042,17 +6166,27 @@ class Bot(object):
         template = (
             self.settings.get("Weekly Thread", {}).get(setting, "")
             if thread == "weekly"
-            else self.settings.get("Off Day Thread", {}).get(setting, "")
-            if thread == "off"
-            else self.settings.get("Game Day Thread", {}).get(setting, "")
-            if thread == "gameday"
-            else self.settings.get("Game Thread", {}).get(setting, "")
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get(setting, "")
-            if thread == "post"
-            else self.settings.get("Comments", {}).get(setting, "")
-            if thread == "comment"
-            else ""
+            else (
+                self.settings.get("Off Day Thread", {}).get(setting, "")
+                if thread == "off"
+                else (
+                    self.settings.get("Game Day Thread", {}).get(setting, "")
+                    if thread == "gameday"
+                    else (
+                        self.settings.get("Game Thread", {}).get(setting, "")
+                        if thread == "game"
+                        else (
+                            self.settings.get("Post Game Thread", {}).get(setting, "")
+                            if thread == "post"
+                            else (
+                                self.settings.get("Comments", {}).get(setting, "")
+                                if thread == "comment"
+                                else ""
+                            )
+                        )
+                    )
+                )
+            )
         )
         try:
             template = self.LOOKUP.get_template(template)
@@ -6438,74 +6572,101 @@ class Bot(object):
                             "OFFSEASON_ONLY", True
                         )
                     ),
-                    "postTime": self.weekly.get("postTime_local").strftime(
-                        "%m/%d/%Y %I:%M:%S %p"
-                    )
-                    if isinstance(self.weekly.get("postTime_local"), datetime)
-                    else "",
+                    "postTime": (
+                        self.weekly.get("postTime_local").strftime(
+                            "%m/%d/%Y %I:%M:%S %p"
+                        )
+                        if isinstance(self.weekly.get("postTime_local"), datetime)
+                        else ""
+                    ),
                     "posted": True if self.weekly.get("weeklyThread") else False,
-                    "id": self.weekly.get("weeklyThread").id
-                    if self.weekly.get("weeklyThread")
-                    else None,
-                    "url": self.weekly.get("weeklyThread").shortlink
-                    if self.weekly.get("weeklyThread")
-                    else None,
-                    "title": self.weekly.get("weeklyThreadTitle")
-                    if self.weekly.get("weeklyThread")
-                    else None,
+                    "id": (
+                        self.weekly.get("weeklyThread").id
+                        if self.weekly.get("weeklyThread")
+                        else None
+                    ),
+                    "url": (
+                        self.weekly.get("weeklyThread").shortlink
+                        if self.weekly.get("weeklyThread")
+                        else None
+                    ),
+                    "title": (
+                        self.weekly.get("weeklyThreadTitle")
+                        if self.weekly.get("weeklyThread")
+                        else None
+                    ),
                 },
                 "offDayThread": {
                     "enabled": self.settings.get("Off Day Thread", {}).get(
                         "ENABLED", True
                     ),
-                    "postTime": self.activeGames.get("off", {})
-                    .get("postTime_local")
-                    .strftime("%m/%d/%Y %I:%M:%S %p")
-                    if isinstance(
-                        self.activeGames.get("off", {}).get("postTime_local"), datetime
-                    )
-                    else "",
-                    "posted": True
-                    if self.activeGames.get("off", {}).get("offDayThread")
-                    else False,
-                    "id": self.activeGames.get("off", {}).get("offDayThread").id
-                    if self.activeGames.get("off", {}).get("offDayThread")
-                    else None,
-                    "url": self.activeGames.get("off", {}).get("offDayThread").shortlink
-                    if self.activeGames.get("off", {}).get("offDayThread")
-                    else None,
-                    "title": self.activeGames.get("off", {}).get("offDayThreadTitle")
-                    if self.activeGames.get("off", {}).get("offDayThread")
-                    else None,
+                    "postTime": (
+                        self.activeGames.get("off", {})
+                        .get("postTime_local")
+                        .strftime("%m/%d/%Y %I:%M:%S %p")
+                        if isinstance(
+                            self.activeGames.get("off", {}).get("postTime_local"),
+                            datetime,
+                        )
+                        else ""
+                    ),
+                    "posted": (
+                        True
+                        if self.activeGames.get("off", {}).get("offDayThread")
+                        else False
+                    ),
+                    "id": (
+                        self.activeGames.get("off", {}).get("offDayThread").id
+                        if self.activeGames.get("off", {}).get("offDayThread")
+                        else None
+                    ),
+                    "url": (
+                        self.activeGames.get("off", {}).get("offDayThread").shortlink
+                        if self.activeGames.get("off", {}).get("offDayThread")
+                        else None
+                    ),
+                    "title": (
+                        self.activeGames.get("off", {}).get("offDayThreadTitle")
+                        if self.activeGames.get("off", {}).get("offDayThread")
+                        else None
+                    ),
                 },
                 "gameDayThread": {
                     "enabled": self.settings.get("Game Day Thread", {}).get(
                         "ENABLED", True
                     ),
-                    "postTime": self.activeGames.get("gameday", {})
-                    .get("postTime_local")
-                    .strftime("%m/%d/%Y %I:%M:%S %p")
-                    if isinstance(
-                        self.activeGames.get("gameday", {}).get("postTime_local"),
-                        datetime,
-                    )
-                    else "",
-                    "posted": True
-                    if self.activeGames.get("gameday", {}).get("gameDayThread")
-                    else False,
-                    "id": self.activeGames.get("gameday", {}).get("gameDayThread").id
-                    if self.activeGames.get("gameday", {}).get("gameDayThread")
-                    else None,
-                    "url": self.activeGames.get("gameday", {})
-                    .get("gameDayThread")
-                    .shortlink
-                    if self.activeGames.get("gameday", {}).get("gameDayThread")
-                    else None,
-                    "title": self.activeGames.get("gameday", {}).get(
-                        "gameDayThreadTitle"
-                    )
-                    if self.activeGames.get("gameday", {}).get("gameDayThread")
-                    else None,
+                    "postTime": (
+                        self.activeGames.get("gameday", {})
+                        .get("postTime_local")
+                        .strftime("%m/%d/%Y %I:%M:%S %p")
+                        if isinstance(
+                            self.activeGames.get("gameday", {}).get("postTime_local"),
+                            datetime,
+                        )
+                        else ""
+                    ),
+                    "posted": (
+                        True
+                        if self.activeGames.get("gameday", {}).get("gameDayThread")
+                        else False
+                    ),
+                    "id": (
+                        self.activeGames.get("gameday", {}).get("gameDayThread").id
+                        if self.activeGames.get("gameday", {}).get("gameDayThread")
+                        else None
+                    ),
+                    "url": (
+                        self.activeGames.get("gameday", {})
+                        .get("gameDayThread")
+                        .shortlink
+                        if self.activeGames.get("gameday", {}).get("gameDayThread")
+                        else None
+                    ),
+                    "title": (
+                        self.activeGames.get("gameday", {}).get("gameDayThreadTitle")
+                        if self.activeGames.get("gameday", {}).get("gameDayThread")
+                        else None
+                    ),
                 },
                 "games": [
                     {
@@ -6519,38 +6680,52 @@ class Bot(object):
                                     "enabled": self.settings.get("Game Thread", {}).get(
                                         "ENABLED", True
                                     ),
-                                    "postTime": v.get("postTime_local").strftime(
-                                        "%m/%d/%Y %I:%M:%S %p"
-                                    )
-                                    if isinstance(v.get("postTime_local"), datetime)
-                                    else "",
+                                    "postTime": (
+                                        v.get("postTime_local").strftime(
+                                            "%m/%d/%Y %I:%M:%S %p"
+                                        )
+                                        if isinstance(v.get("postTime_local"), datetime)
+                                        else ""
+                                    ),
                                     "posted": True if v.get("gameThread") else False,
-                                    "id": v.get("gameThread").id
-                                    if v.get("gameThread")
-                                    else None,
-                                    "url": v.get("gameThread").shortlink
-                                    if v.get("gameThread")
-                                    else None,
-                                    "title": v.get("gameThreadTitle")
-                                    if v.get("gameThread")
-                                    else None,
+                                    "id": (
+                                        v.get("gameThread").id
+                                        if v.get("gameThread")
+                                        else None
+                                    ),
+                                    "url": (
+                                        v.get("gameThread").shortlink
+                                        if v.get("gameThread")
+                                        else None
+                                    ),
+                                    "title": (
+                                        v.get("gameThreadTitle")
+                                        if v.get("gameThread")
+                                        else None
+                                    ),
                                 },
                                 "post": {
                                     "enabled": self.settings.get(
                                         "Post Game Thread", {}
                                     ).get("ENABLED", True),
-                                    "posted": True
-                                    if v.get("postGameThread")
-                                    else False,
-                                    "id": v.get("postGameThread").id
-                                    if v.get("postGameThread")
-                                    else None,
-                                    "url": v.get("postGameThread").shortlink
-                                    if v.get("postGameThread")
-                                    else None,
-                                    "title": v.get("postGameThreadTitle")
-                                    if v.get("postGameThread")
-                                    else None,
+                                    "posted": (
+                                        True if v.get("postGameThread") else False
+                                    ),
+                                    "id": (
+                                        v.get("postGameThread").id
+                                        if v.get("postGameThread")
+                                        else None
+                                    ),
+                                    "url": (
+                                        v.get("postGameThread").shortlink
+                                        if v.get("postGameThread")
+                                        else None
+                                    ),
+                                    "title": (
+                                        v.get("postGameThreadTitle")
+                                        if v.get("postGameThread")
+                                        else None
+                                    ),
                                 },
                             },
                         }
@@ -6581,24 +6756,35 @@ class Bot(object):
             botStatus["summary"]["text"] += "\n\nWeekly thread{}".format(
                 " disabled."
                 if not botStatus["weeklyThread"]["enabled"]
-                else " suppressed except during off season."
-                if self.settings.get("Weekly Thread", {}).get("OFFSEASON_ONLY", True)
-                and not (
-                    botStatus["seasonState"].startswith("off")
-                    or botStatus["seasonState"] == "post:out"
-                )
-                else " failed to post (check log for error)"
-                if not botStatus["weeklyThread"]["posted"]
-                and datetime.strptime(
-                    botStatus["weeklyThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
-                )
-                < datetime.today()
-                else " post time: {}".format(botStatus["weeklyThread"]["postTime"])
-                if not botStatus["weeklyThread"]["posted"]
-                else ": {} ({} - {})".format(
-                    botStatus["weeklyThread"]["title"],
-                    botStatus["weeklyThread"]["id"],
-                    botStatus["weeklyThread"]["url"],
+                else (
+                    " suppressed except during off season."
+                    if self.settings.get("Weekly Thread", {}).get(
+                        "OFFSEASON_ONLY", True
+                    )
+                    and not (
+                        botStatus["seasonState"].startswith("off")
+                        or botStatus["seasonState"] == "post:out"
+                    )
+                    else (
+                        " failed to post (check log for error)"
+                        if not botStatus["weeklyThread"]["posted"]
+                        and datetime.strptime(
+                            botStatus["weeklyThread"]["postTime"],
+                            "%m/%d/%Y %I:%M:%S %p",
+                        )
+                        < datetime.today()
+                        else (
+                            " post time: {}".format(
+                                botStatus["weeklyThread"]["postTime"]
+                            )
+                            if not botStatus["weeklyThread"]["posted"]
+                            else ": {} ({} - {})".format(
+                                botStatus["weeklyThread"]["title"],
+                                botStatus["weeklyThread"]["id"],
+                                botStatus["weeklyThread"]["url"],
+                            )
+                        )
+                    )
                 )
             )
             botStatus["summary"][
@@ -6606,47 +6792,69 @@ class Bot(object):
             ] += "<br /><br /><strong>Weekly thread</strong>{}".format(
                 " disabled."
                 if not botStatus["weeklyThread"]["enabled"]
-                else " suppressed except during off season."
-                if self.settings.get("Weekly Thread", {}).get("OFFSEASON_ONLY", True)
-                and not (
-                    botStatus["seasonState"].startswith("off")
-                    or botStatus["seasonState"] == "post:out"
-                )
-                else " failed to post (check log for error)"
-                if not botStatus["weeklyThread"]["posted"]
-                and datetime.strptime(
-                    botStatus["weeklyThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
-                )
-                < datetime.today()
-                else " post time: {}".format(botStatus["weeklyThread"]["postTime"])
-                if not botStatus["weeklyThread"]["posted"]
-                else ': {} (<a href="{}" target="_blank">{}</a>)'.format(
-                    botStatus["weeklyThread"]["title"],
-                    botStatus["weeklyThread"]["url"],
-                    botStatus["weeklyThread"]["id"],
+                else (
+                    " suppressed except during off season."
+                    if self.settings.get("Weekly Thread", {}).get(
+                        "OFFSEASON_ONLY", True
+                    )
+                    and not (
+                        botStatus["seasonState"].startswith("off")
+                        or botStatus["seasonState"] == "post:out"
+                    )
+                    else (
+                        " failed to post (check log for error)"
+                        if not botStatus["weeklyThread"]["posted"]
+                        and datetime.strptime(
+                            botStatus["weeklyThread"]["postTime"],
+                            "%m/%d/%Y %I:%M:%S %p",
+                        )
+                        < datetime.today()
+                        else (
+                            " post time: {}".format(
+                                botStatus["weeklyThread"]["postTime"]
+                            )
+                            if not botStatus["weeklyThread"]["posted"]
+                            else ': {} (<a href="{}" target="_blank">{}</a>)'.format(
+                                botStatus["weeklyThread"]["title"],
+                                botStatus["weeklyThread"]["url"],
+                                botStatus["weeklyThread"]["id"],
+                            )
+                        )
+                    )
                 )
             )
             botStatus["summary"]["markdown"] += "\n\n**Weekly thread**{}".format(
                 " disabled."
                 if not botStatus["weeklyThread"]["enabled"]
-                else " suppressed except during off season."
-                if self.settings.get("Weekly Thread", {}).get("OFFSEASON_ONLY", True)
-                and not (
-                    botStatus["seasonState"].startswith("off")
-                    or botStatus["seasonState"] == "post:out"
-                )
-                else " failed to post (check log for error)"
-                if not botStatus["weeklyThread"]["posted"]
-                and datetime.strptime(
-                    botStatus["weeklyThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
-                )
-                < datetime.today()
-                else " post time: {}".format(botStatus["weeklyThread"]["postTime"])
-                if not botStatus["weeklyThread"]["posted"]
-                else ": {} ([{}]({}))".format(
-                    botStatus["weeklyThread"]["title"],
-                    botStatus["weeklyThread"]["id"],
-                    botStatus["weeklyThread"]["url"],
+                else (
+                    " suppressed except during off season."
+                    if self.settings.get("Weekly Thread", {}).get(
+                        "OFFSEASON_ONLY", True
+                    )
+                    and not (
+                        botStatus["seasonState"].startswith("off")
+                        or botStatus["seasonState"] == "post:out"
+                    )
+                    else (
+                        " failed to post (check log for error)"
+                        if not botStatus["weeklyThread"]["posted"]
+                        and datetime.strptime(
+                            botStatus["weeklyThread"]["postTime"],
+                            "%m/%d/%Y %I:%M:%S %p",
+                        )
+                        < datetime.today()
+                        else (
+                            " post time: {}".format(
+                                botStatus["weeklyThread"]["postTime"]
+                            )
+                            if not botStatus["weeklyThread"]["posted"]
+                            else ": {} ([{}]({}))".format(
+                                botStatus["weeklyThread"]["title"],
+                                botStatus["weeklyThread"]["id"],
+                                botStatus["weeklyThread"]["url"],
+                            )
+                        )
+                    )
                 )
             )
 
@@ -6655,91 +6863,130 @@ class Bot(object):
                 botStatus["summary"][
                     "text"
                 ] += "\n\nToday is an off day{}.\n\nOff day thread{}".format(
-                    " (Season Suspended)"
-                    if self.commonData.get("seasonSuspended")
-                    else "",
-                    " disabled."
-                    if not botStatus["offDayThread"]["enabled"]
-                    else " suppressed during off season."
-                    if self.settings.get("Off Day Thread", {}).get(
-                        "SUPPRESS_OFFSEASON", True
-                    )
-                    and (
-                        botStatus["seasonState"].startswith("off")
-                        or botStatus["seasonState"] == "post:out"
-                    )
-                    else " failed to post (check log for error)"
-                    if not botStatus["offDayThread"]["posted"]
-                    and datetime.strptime(
-                        botStatus["offDayThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
-                    )
-                    < datetime.today()
-                    else " post time: {}".format(botStatus["offDayThread"]["postTime"])
-                    if not botStatus["offDayThread"]["posted"]
-                    else ": {} ({} - {})".format(
-                        botStatus["offDayThread"]["title"],
-                        botStatus["offDayThread"]["id"],
-                        botStatus["offDayThread"]["url"],
+                    (
+                        " (Season Suspended)"
+                        if self.commonData.get("seasonSuspended")
+                        else ""
+                    ),
+                    (
+                        " disabled."
+                        if not botStatus["offDayThread"]["enabled"]
+                        else (
+                            " suppressed during off season."
+                            if self.settings.get("Off Day Thread", {}).get(
+                                "SUPPRESS_OFFSEASON", True
+                            )
+                            and (
+                                botStatus["seasonState"].startswith("off")
+                                or botStatus["seasonState"] == "post:out"
+                            )
+                            else (
+                                " failed to post (check log for error)"
+                                if not botStatus["offDayThread"]["posted"]
+                                and datetime.strptime(
+                                    botStatus["offDayThread"]["postTime"],
+                                    "%m/%d/%Y %I:%M:%S %p",
+                                )
+                                < datetime.today()
+                                else (
+                                    " post time: {}".format(
+                                        botStatus["offDayThread"]["postTime"]
+                                    )
+                                    if not botStatus["offDayThread"]["posted"]
+                                    else ": {} ({} - {})".format(
+                                        botStatus["offDayThread"]["title"],
+                                        botStatus["offDayThread"]["id"],
+                                        botStatus["offDayThread"]["url"],
+                                    )
+                                )
+                            )
+                        )
                     ),
                 )
                 botStatus["summary"][
                     "html"
                 ] += "<br /><br />Today is an off day{}.<br /><br /><strong>Off day thread</strong>{}".format(
-                    " (<strong>Season Suspended</strong>)"
-                    if self.commonData.get("seasonSuspended")
-                    else "",
-                    " disabled."
-                    if not botStatus["offDayThread"]["enabled"]
-                    else " suppressed during off season."
-                    if self.settings.get("Off Day Thread", {}).get(
-                        "SUPPRESS_OFFSEASON", True
-                    )
-                    and (
-                        botStatus["seasonState"].startswith("off")
-                        or botStatus["seasonState"] == "post:out"
-                    )
-                    else " failed to post (check log for error)"
-                    if not botStatus["offDayThread"]["posted"]
-                    and datetime.strptime(
-                        botStatus["offDayThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
-                    )
-                    < datetime.today()
-                    else " post time: {}".format(botStatus["offDayThread"]["postTime"])
-                    if not botStatus["offDayThread"]["posted"]
-                    else ': {} (<a href="{}" target="_blank">{}</a>)'.format(
-                        botStatus["offDayThread"]["title"],
-                        botStatus["offDayThread"]["url"],
-                        botStatus["offDayThread"]["id"],
+                    (
+                        " (<strong>Season Suspended</strong>)"
+                        if self.commonData.get("seasonSuspended")
+                        else ""
+                    ),
+                    (
+                        " disabled."
+                        if not botStatus["offDayThread"]["enabled"]
+                        else (
+                            " suppressed during off season."
+                            if self.settings.get("Off Day Thread", {}).get(
+                                "SUPPRESS_OFFSEASON", True
+                            )
+                            and (
+                                botStatus["seasonState"].startswith("off")
+                                or botStatus["seasonState"] == "post:out"
+                            )
+                            else (
+                                " failed to post (check log for error)"
+                                if not botStatus["offDayThread"]["posted"]
+                                and datetime.strptime(
+                                    botStatus["offDayThread"]["postTime"],
+                                    "%m/%d/%Y %I:%M:%S %p",
+                                )
+                                < datetime.today()
+                                else (
+                                    " post time: {}".format(
+                                        botStatus["offDayThread"]["postTime"]
+                                    )
+                                    if not botStatus["offDayThread"]["posted"]
+                                    else ': {} (<a href="{}" target="_blank">{}</a>)'.format(
+                                        botStatus["offDayThread"]["title"],
+                                        botStatus["offDayThread"]["url"],
+                                        botStatus["offDayThread"]["id"],
+                                    )
+                                )
+                            )
+                        )
                     ),
                 )
                 botStatus["summary"][
                     "markdown"
                 ] += "\n\nToday is an off day{}.\n\n**Off day thread**{}".format(
-                    " (**Season Suspended**)"
-                    if self.commonData.get("seasonSuspended")
-                    else "",
-                    " disabled."
-                    if not botStatus["offDayThread"]["enabled"]
-                    else " suppressed during off season."
-                    if self.settings.get("Off Day Thread", {}).get(
-                        "SUPPRESS_OFFSEASON", True
-                    )
-                    and (
-                        botStatus["seasonState"].startswith("off")
-                        or botStatus["seasonState"] == "post:out"
-                    )
-                    else " failed to post (check log for error)"
-                    if not botStatus["offDayThread"]["posted"]
-                    and datetime.strptime(
-                        botStatus["offDayThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
-                    )
-                    < datetime.today()
-                    else " post time: {}".format(botStatus["offDayThread"]["postTime"])
-                    if not botStatus["offDayThread"]["posted"]
-                    else ": {} ([{}]({}))".format(
-                        botStatus["offDayThread"]["title"],
-                        botStatus["offDayThread"]["id"],
-                        botStatus["offDayThread"]["url"],
+                    (
+                        " (**Season Suspended**)"
+                        if self.commonData.get("seasonSuspended")
+                        else ""
+                    ),
+                    (
+                        " disabled."
+                        if not botStatus["offDayThread"]["enabled"]
+                        else (
+                            " suppressed during off season."
+                            if self.settings.get("Off Day Thread", {}).get(
+                                "SUPPRESS_OFFSEASON", True
+                            )
+                            and (
+                                botStatus["seasonState"].startswith("off")
+                                or botStatus["seasonState"] == "post:out"
+                            )
+                            else (
+                                " failed to post (check log for error)"
+                                if not botStatus["offDayThread"]["posted"]
+                                and datetime.strptime(
+                                    botStatus["offDayThread"]["postTime"],
+                                    "%m/%d/%Y %I:%M:%S %p",
+                                )
+                                < datetime.today()
+                                else (
+                                    " post time: {}".format(
+                                        botStatus["offDayThread"]["postTime"]
+                                    )
+                                    if not botStatus["offDayThread"]["posted"]
+                                    else ": {} ([{}]({}))".format(
+                                        botStatus["offDayThread"]["title"],
+                                        botStatus["offDayThread"]["id"],
+                                        botStatus["offDayThread"]["url"],
+                                    )
+                                )
+                            )
+                        )
                     ),
                 )
             else:
@@ -6769,18 +7016,25 @@ class Bot(object):
                 botStatus["summary"]["text"] += "\n\nGame Day Thread{}.".format(
                     " disabled"
                     if not botStatus["gameDayThread"]["enabled"]
-                    else " skipped or failed to post (check log for error)"
-                    if not botStatus["gameDayThread"]["posted"]
-                    and datetime.strptime(
-                        botStatus["gameDayThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
-                    )
-                    < datetime.today()
-                    else " post time: {}".format(botStatus["gameDayThread"]["postTime"])
-                    if not botStatus["gameDayThread"]["posted"]
-                    else ": {} ({} - {})".format(
-                        botStatus["gameDayThread"]["title"],
-                        botStatus["gameDayThread"]["id"],
-                        botStatus["gameDayThread"]["url"],
+                    else (
+                        " skipped or failed to post (check log for error)"
+                        if not botStatus["gameDayThread"]["posted"]
+                        and datetime.strptime(
+                            botStatus["gameDayThread"]["postTime"],
+                            "%m/%d/%Y %I:%M:%S %p",
+                        )
+                        < datetime.today()
+                        else (
+                            " post time: {}".format(
+                                botStatus["gameDayThread"]["postTime"]
+                            )
+                            if not botStatus["gameDayThread"]["posted"]
+                            else ": {} ({} - {})".format(
+                                botStatus["gameDayThread"]["title"],
+                                botStatus["gameDayThread"]["id"],
+                                botStatus["gameDayThread"]["url"],
+                            )
+                        )
                     )
                 )
                 botStatus["summary"][
@@ -6788,43 +7042,59 @@ class Bot(object):
                 ] += "<br /><br /><strong>Game Day Thread</strong>{}.".format(
                     " disabled"
                     if not botStatus["gameDayThread"]["enabled"]
-                    else " skipped or failed to post (check log for error)"
-                    if not botStatus["gameDayThread"]["posted"]
-                    and datetime.strptime(
-                        botStatus["gameDayThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
-                    )
-                    < datetime.today()
-                    else " post time: {}".format(botStatus["gameDayThread"]["postTime"])
-                    if not botStatus["gameDayThread"]["posted"]
-                    else ': {} (<a href="{}" target="_blank">{}</a>)'.format(
-                        botStatus["gameDayThread"]["title"],
-                        botStatus["gameDayThread"]["url"],
-                        botStatus["gameDayThread"]["id"],
+                    else (
+                        " skipped or failed to post (check log for error)"
+                        if not botStatus["gameDayThread"]["posted"]
+                        and datetime.strptime(
+                            botStatus["gameDayThread"]["postTime"],
+                            "%m/%d/%Y %I:%M:%S %p",
+                        )
+                        < datetime.today()
+                        else (
+                            " post time: {}".format(
+                                botStatus["gameDayThread"]["postTime"]
+                            )
+                            if not botStatus["gameDayThread"]["posted"]
+                            else ': {} (<a href="{}" target="_blank">{}</a>)'.format(
+                                botStatus["gameDayThread"]["title"],
+                                botStatus["gameDayThread"]["url"],
+                                botStatus["gameDayThread"]["id"],
+                            )
+                        )
                     )
                 )
                 botStatus["summary"]["markdown"] += "\n\n**Game Day Thread**{}.".format(
                     " disabled"
                     if not botStatus["gameDayThread"]["enabled"]
-                    else " suppressed during off season."
-                    if self.settings.get("Off Day Thread", {}).get(
-                        "SUPPRESS_OFFSEASON", True
-                    )
-                    and (
-                        botStatus["seasonState"].startswith("off")
-                        or botStatus["seasonState"] == "post:out"
-                    )
-                    else " skipped or failed to post (check log for error)"
-                    if not botStatus["gameDayThread"]["posted"]
-                    and datetime.strptime(
-                        botStatus["gameDayThread"]["postTime"], "%m/%d/%Y %I:%M:%S %p"
-                    )
-                    < datetime.today()
-                    else " post time: {}".format(botStatus["gameDayThread"]["postTime"])
-                    if not botStatus["gameDayThread"]["posted"]
-                    else ": {} ([{}]({}))".format(
-                        botStatus["gameDayThread"]["title"],
-                        botStatus["gameDayThread"]["id"],
-                        botStatus["gameDayThread"]["url"],
+                    else (
+                        " suppressed during off season."
+                        if self.settings.get("Off Day Thread", {}).get(
+                            "SUPPRESS_OFFSEASON", True
+                        )
+                        and (
+                            botStatus["seasonState"].startswith("off")
+                            or botStatus["seasonState"] == "post:out"
+                        )
+                        else (
+                            " skipped or failed to post (check log for error)"
+                            if not botStatus["gameDayThread"]["posted"]
+                            and datetime.strptime(
+                                botStatus["gameDayThread"]["postTime"],
+                                "%m/%d/%Y %I:%M:%S %p",
+                            )
+                            < datetime.today()
+                            else (
+                                " post time: {}".format(
+                                    botStatus["gameDayThread"]["postTime"]
+                                )
+                                if not botStatus["gameDayThread"]["posted"]
+                                else ": {} ([{}]({}))".format(
+                                    botStatus["gameDayThread"]["title"],
+                                    botStatus["gameDayThread"]["id"],
+                                    botStatus["gameDayThread"]["url"],
+                                )
+                            )
+                        )
                     )
                 )
 
@@ -6838,36 +7108,49 @@ class Bot(object):
                                 v.get("status", {}).get(
                                     "detailedState", "Unknown Status"
                                 ),
-                                " disabled."
-                                if not v["threads"]["game"]["enabled"]
-                                else " skipped"
-                                if v["threads"]["game"].get("postTime", "") == ""
-                                and not v["threads"]["game"]["posted"]
-                                else " not posted (check log for errors; this is normal if DH Game 2)"
-                                if not v["threads"]["game"]["posted"]
-                                and datetime.strptime(
-                                    v["threads"]["game"]["postTime"],
-                                    "%m/%d/%Y %I:%M:%S %p",
-                                )
-                                < datetime.today()
-                                else " post time: {}.".format(
-                                    v["threads"]["game"]["postTime"]
-                                )
-                                if not v["threads"]["game"]["posted"]
-                                else ": {} ({} - {})".format(
-                                    v["threads"]["game"]["title"],
-                                    v["threads"]["game"]["id"],
-                                    v["threads"]["game"]["url"],
+                                (
+                                    " disabled."
+                                    if not v["threads"]["game"]["enabled"]
+                                    else (
+                                        " skipped"
+                                        if v["threads"]["game"].get("postTime", "")
+                                        == ""
+                                        and not v["threads"]["game"]["posted"]
+                                        else (
+                                            " not posted (check log for errors; this is normal if DH Game 2)"
+                                            if not v["threads"]["game"]["posted"]
+                                            and datetime.strptime(
+                                                v["threads"]["game"]["postTime"],
+                                                "%m/%d/%Y %I:%M:%S %p",
+                                            )
+                                            < datetime.today()
+                                            else (
+                                                " post time: {}.".format(
+                                                    v["threads"]["game"]["postTime"]
+                                                )
+                                                if not v["threads"]["game"]["posted"]
+                                                else ": {} ({} - {})".format(
+                                                    v["threads"]["game"]["title"],
+                                                    v["threads"]["game"]["id"],
+                                                    v["threads"]["game"]["url"],
+                                                )
+                                            )
+                                        )
+                                    )
                                 ),
-                                "\n\nPost game thread: {} ({} - {}).".format(
-                                    v["threads"]["post"]["title"],
-                                    v["threads"]["post"]["id"],
-                                    v["threads"]["post"]["url"],
-                                )
-                                if v["threads"]["post"]["posted"]
-                                else "\n\nPost game thread disabled."
-                                if not v["threads"]["post"]["enabled"]
-                                else "",
+                                (
+                                    "\n\nPost game thread: {} ({} - {}).".format(
+                                        v["threads"]["post"]["title"],
+                                        v["threads"]["post"]["id"],
+                                        v["threads"]["post"]["url"],
+                                    )
+                                    if v["threads"]["post"]["posted"]
+                                    else (
+                                        "\n\nPost game thread disabled."
+                                        if not v["threads"]["post"]["enabled"]
+                                        else ""
+                                    )
+                                ),
                             )
                         )
 
@@ -6879,36 +7162,49 @@ class Bot(object):
                                 v.get("status", {}).get(
                                     "detailedState", "Unknown Status"
                                 ),
-                                " disabled."
-                                if not v["threads"]["game"]["enabled"]
-                                else " skipped"
-                                if v["threads"]["game"].get("postTime", "") == ""
-                                and not v["threads"]["game"]["posted"]
-                                else " not posted (check log for errors; this is normal if DH Game 2)"
-                                if not v["threads"]["game"]["posted"]
-                                and datetime.strptime(
-                                    v["threads"]["game"]["postTime"],
-                                    "%m/%d/%Y %I:%M:%S %p",
-                                )
-                                < datetime.today()
-                                else " post time: {}.".format(
-                                    v["threads"]["game"]["postTime"]
-                                )
-                                if not v["threads"]["game"]["posted"]
-                                else ': {} (<a href="{}" target="_blank">{}</a>)'.format(
-                                    v["threads"]["game"]["title"],
-                                    v["threads"]["game"]["url"],
-                                    v["threads"]["game"]["id"],
+                                (
+                                    " disabled."
+                                    if not v["threads"]["game"]["enabled"]
+                                    else (
+                                        " skipped"
+                                        if v["threads"]["game"].get("postTime", "")
+                                        == ""
+                                        and not v["threads"]["game"]["posted"]
+                                        else (
+                                            " not posted (check log for errors; this is normal if DH Game 2)"
+                                            if not v["threads"]["game"]["posted"]
+                                            and datetime.strptime(
+                                                v["threads"]["game"]["postTime"],
+                                                "%m/%d/%Y %I:%M:%S %p",
+                                            )
+                                            < datetime.today()
+                                            else (
+                                                " post time: {}.".format(
+                                                    v["threads"]["game"]["postTime"]
+                                                )
+                                                if not v["threads"]["game"]["posted"]
+                                                else ': {} (<a href="{}" target="_blank">{}</a>)'.format(
+                                                    v["threads"]["game"]["title"],
+                                                    v["threads"]["game"]["url"],
+                                                    v["threads"]["game"]["id"],
+                                                )
+                                            )
+                                        )
+                                    )
                                 ),
-                                '<br /><br /><strong>Post game thread</strong>: {} (<a href="{}" target="_blank">{}</a>).'.format(
-                                    v["threads"]["post"]["title"],
-                                    v["threads"]["post"]["url"],
-                                    v["threads"]["post"]["id"],
-                                )
-                                if v["threads"]["post"]["posted"]
-                                else "<br /><br /><strong>Post game thread</strong> disabled."
-                                if not v["threads"]["post"]["enabled"]
-                                else "",
+                                (
+                                    '<br /><br /><strong>Post game thread</strong>: {} (<a href="{}" target="_blank">{}</a>).'.format(
+                                        v["threads"]["post"]["title"],
+                                        v["threads"]["post"]["url"],
+                                        v["threads"]["post"]["id"],
+                                    )
+                                    if v["threads"]["post"]["posted"]
+                                    else (
+                                        "<br /><br /><strong>Post game thread</strong> disabled."
+                                        if not v["threads"]["post"]["enabled"]
+                                        else ""
+                                    )
+                                ),
                             )
                         )
 
@@ -6920,36 +7216,49 @@ class Bot(object):
                                 v.get("status", {}).get(
                                     "detailedState", "Unknown Status"
                                 ),
-                                " disabled."
-                                if not v["threads"]["game"]["enabled"]
-                                else " skipped"
-                                if v["threads"]["game"].get("postTime", "") == ""
-                                and not v["threads"]["game"]["posted"]
-                                else " not posted (check log for errors; this is normal if DH Game 2)"
-                                if not v["threads"]["game"]["posted"]
-                                and datetime.strptime(
-                                    v["threads"]["game"]["postTime"],
-                                    "%m/%d/%Y %I:%M:%S %p",
-                                )
-                                < datetime.today()
-                                else " post time: {}.".format(
-                                    v["threads"]["game"]["postTime"]
-                                )
-                                if not v["threads"]["game"]["posted"]
-                                else ": {} ([{}]({}))".format(
-                                    v["threads"]["game"]["title"],
-                                    v["threads"]["game"]["id"],
-                                    v["threads"]["game"]["url"],
+                                (
+                                    " disabled."
+                                    if not v["threads"]["game"]["enabled"]
+                                    else (
+                                        " skipped"
+                                        if v["threads"]["game"].get("postTime", "")
+                                        == ""
+                                        and not v["threads"]["game"]["posted"]
+                                        else (
+                                            " not posted (check log for errors; this is normal if DH Game 2)"
+                                            if not v["threads"]["game"]["posted"]
+                                            and datetime.strptime(
+                                                v["threads"]["game"]["postTime"],
+                                                "%m/%d/%Y %I:%M:%S %p",
+                                            )
+                                            < datetime.today()
+                                            else (
+                                                " post time: {}.".format(
+                                                    v["threads"]["game"]["postTime"]
+                                                )
+                                                if not v["threads"]["game"]["posted"]
+                                                else ": {} ([{}]({}))".format(
+                                                    v["threads"]["game"]["title"],
+                                                    v["threads"]["game"]["id"],
+                                                    v["threads"]["game"]["url"],
+                                                )
+                                            )
+                                        )
+                                    )
                                 ),
-                                "\n\n**Post game thread**: {} ([{}]({})).".format(
-                                    v["threads"]["post"]["title"],
-                                    v["threads"]["post"]["id"],
-                                    v["threads"]["post"]["url"],
-                                )
-                                if v["threads"]["post"]["posted"]
-                                else "\n\n>**Post game thread** disabled."
-                                if not v["threads"]["post"]["enabled"]
-                                else "",
+                                (
+                                    "\n\n**Post game thread**: {} ([{}]({})).".format(
+                                        v["threads"]["post"]["title"],
+                                        v["threads"]["post"]["id"],
+                                        v["threads"]["post"]["url"],
+                                    )
+                                    if v["threads"]["post"]["posted"]
+                                    else (
+                                        "\n\n>**Post game thread** disabled."
+                                        if not v["threads"]["post"]["enabled"]
+                                        else ""
+                                    )
+                                ),
                             )
                         )
 
