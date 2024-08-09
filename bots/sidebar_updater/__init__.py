@@ -27,7 +27,7 @@ from ..nba_game_threads import pynbaapi
 from ..nhl_game_threads import pynhlapi
 from ..nfl_game_threads import mynflapi
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 
 def run(bot, settings):
@@ -194,17 +194,21 @@ class SidebarUpdaterBot:
 
     def get_nfl_token(self):
         self.log.debug("Retrieving fresh NFL API token...")
-        url = "https://api.nfl.com/v1/reroute"
+        url = "https://api.nfl.com/identity/v3/token"
         headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "x-domain-id": "100",
+            "Content-Type": "application/json",
         }
         body = {
-            "grant_type": "client_credentials",
+            "clientKey": self.settings.get("NFL", {}).get("NFL_API_CLIENT_KEY", "4cFUW6DmwJpzT9L7LrG3qRAcABG5s04g"),
+            "clientSecret": self.settings.get("NFL", {}).get("NFL_API_CLIENT_SECRET", "CZuvCL49d9OwfGsR"),
+            "deviceId": "",
+            "deviceInfo": "",
+            "networkType": "other",
+            "peacockUUID": "undefined",
         }
 
         try:
-            r = requests.post(url, data=body, headers=headers)
+            r = requests.post(url, json=body, headers=headers)
             content = json.loads(r.content)
         except Exception as e:
             self.log.error(f"Caught exception requesting NFL API token: {e}")

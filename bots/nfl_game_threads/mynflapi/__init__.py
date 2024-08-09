@@ -183,7 +183,11 @@ class APISession(object):
         self.token = token
 
     def api_call(self, endpoint, query="", headers={}, data={}, method="GET"):
-        headers.update({"Authorization": f"Bearer {self.token['access_token']}"})
+        headers.update(
+            {
+                "Authorization": f"Bearer {self.token.get('accessToken', self.token.get('access_token', ''))}"
+            }
+        )
         if method == "GET":
             r = requests.get(API_BASE_URL + endpoint + query, headers=headers)
         elif method == "POST":

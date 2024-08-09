@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "2.3.1"
+__version__ = "2.4"
 
 DATA_LOCK = threading.Lock()
 
@@ -3192,17 +3192,21 @@ class Bot(object):
 
     def getNflToken(self, nflSession=None):
         self.log.debug("Retrieving fresh NFL API token...")
-        url = "https://api.nfl.com/v1/reroute"
+        url = "https://api.nfl.com/identity/v3/token"
         headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "x-domain-id": "100",
+            "Content-Type": "application/json",
         }
         body = {
-            "grant_type": "client_credentials",
+            "clientKey": self.settings.get("NFL", {}).get("NFL_API_CLIENT_KEY", "4cFUW6DmwJpzT9L7LrG3qRAcABG5s04g"),
+            "clientSecret": self.settings.get("NFL", {}).get("NFL_API_CLIENT_SECRET", "CZuvCL49d9OwfGsR"),
+            "deviceId": "",
+            "deviceInfo": "",
+            "networkType": "other",
+            "peacockUUID": "undefined",
         }
 
         try:
-            r = requests.post(url, data=body, headers=headers)
+            r = requests.post(url, json=body, headers=headers)
             content = json.loads(r.content)
         except Exception as e:
             self.log.error(f"Caught exception requesting NFL API token: {e}")
