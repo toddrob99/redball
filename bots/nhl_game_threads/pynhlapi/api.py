@@ -75,7 +75,12 @@ class API:
             (
                 x
                 for x in relevant_seasons
-                if date_obj >= (datetime.fromisoformat(x["preseasonStartdate"]))
+                if date_obj
+                >= (
+                    datetime.fromisoformat(
+                        x.get("preseasonStartdate", x.get("preseasonStartDate"))
+                    )
+                )
                 and date_obj <= datetime.fromisoformat(x["endDate"])
             ),
             None,
@@ -86,7 +91,14 @@ class API:
             relevant_seasons[0]
             if (
                 date_obj - datetime.fromisoformat(relevant_seasons[0]["endDate"])
-                < (datetime.fromisoformat(relevant_seasons[1]["preseasonStartDate"]))
+                < (
+                    datetime.fromisoformat(
+                        relevant_seasons[1].get(
+                            "preseasonStartdate",
+                            relevant_seasons[1].get("preseasonStartDate"),
+                        )
+                    )
+                )
                 - date_obj
             )
             else relevant_seasons[1]
