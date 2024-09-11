@@ -1,7 +1,9 @@
 <%
     from datetime import datetime
     import tzlocal
-    if not data["next_game"]:
+    if not data.get("next_game"):
+        return
+    if not data["next_game"].away_team.team_id or not data["next_game"].home_team.team_id:
         return
     team_timezone = settings.get("Bot", {}).get("TEAM_TIMEZONE", "America/New_York")
     game_datetime = convert_timezone(  # Convert Zulu to my team TZ
