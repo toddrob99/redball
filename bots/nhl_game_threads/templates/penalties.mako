@@ -31,7 +31,7 @@ ${'##'} Penalty Summary
 %>\
 |${periodOrd[per.get("period", per.get("periodDescriptor", {}).get("number"))]}\
 ${(' ' + p.get('timeInPeriod')) if per.get('periodDescriptor', {}).get('periodType') != 'SO' else ''}|\
-[${p['teamAbbrev']}](${data['teamSubs'].get(p['teamAbbrev'], '')})|\
+[${p['teamAbbrev']["default"]}](${data['teamSubs'].get(p['teamAbbrev']["default"], '')})|\
 ${p['duration']}:00 ${sevs.get(p['type'], "")}|\
 ${desc}|
 %   endfor
