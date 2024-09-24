@@ -1,3 +1,3 @@
 #!/usr/bin/env python
 
-VERSION = "2024.9.4"
+VERSION = "2024.9.5"
