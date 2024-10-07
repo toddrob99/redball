@@ -1,6 +1,6 @@
 <%
-    away_sub_url = data["teamSubs"][data["game"]["summary"].box_score_summary.away_team.team_tricode]
-    home_sub_url = data["teamSubs"][data["game"]["summary"].box_score_summary.home_team.team_tricode]
+    away_sub_url = data["teamSubs"].get(data["game"]["summary"].box_score_summary.away_team.team_tricode, "")
+    home_sub_url = data["teamSubs"].get(data["game"]["summary"].box_score_summary.home_team.team_tricode, "")
     a = data["game"]["summary"].box_score_summary.pregame_charts.away_team.statistics
     h = data["game"]["summary"].box_score_summary.pregame_charts.home_team.statistics
     def playerLink(f, l, i):

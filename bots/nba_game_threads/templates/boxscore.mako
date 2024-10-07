@@ -21,7 +21,7 @@ ${'##'} Game Stats
 |Team|PTS|FG|3P|FT|REB (O+D)|AST|PF|STL|TO|BLK|
 |:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|
 %   if abts:
-|[${a.team_name}](${data["teamSubs"][a.team_tricode]})${" ^BONUS" if a.in_bonus == '1' else ""}|\
+|[${a.team_name}](${data["teamSubs"].get(a.team_tricode, "")})${" ^BONUS" if a.in_bonus == '1' else ""}|\
 ${abts.points}|${abts.field_goals_made}/${abts.field_goals_attempted} (${round(abts.field_goals_percentage * 100, 1)}%)|\
 ${abts.three_pointers_made}/${abts.three_pointers_attempted} (${round(abts.three_pointers_percentage * 100, 1)}%)|\
 ${abts.free_throws_made}/${abts.free_throws_attempted} (${round(abts.free_throws_percentage * 100, 1)}%)|\
@@ -29,7 +29,7 @@ ${abts.rebounds_offensive}+${abts.rebounds_defensive}|\
 ${abts.assists}|${abts.fouls_personal}|${abts.steals}|${abts.turnovers}|${abts.blocks}|
 %   endif
 %   if hbts is not None:
-|[${h.team_name}](${data["teamSubs"][h.team_tricode]})${" ^BONUS" if a.in_bonus == '1' else ""}|\
+|[${h.team_name}](${data["teamSubs"].get(h.team_tricode, "")})${" ^BONUS" if a.in_bonus == '1' else ""}|\
 ${hbts.points}|${hbts.field_goals_made}/${hbts.field_goals_attempted} (${round_and_truncate(hbts.field_goals_percentage)}%)|\
 ${hbts.three_pointers_made}/${hbts.three_pointers_attempted} (${round_and_truncate(hbts.three_pointers_percentage)}%)|\
 ${hbts.free_throws_made}/${hbts.free_throws_attempted} (${round_and_truncate(hbts.free_throws_percentage)}%)|\
@@ -42,7 +42,7 @@ ${hbts.assists}|${hbts.fouls_personal}|${hbts.steals}|${hbts.turnovers}|${hbts.b
     abtp = [p for p in abt.players if p.played == '1']
     hbtp = [p for p in hbt.players if p.played == '1']
 %>\
-% for info in ({"t": a, "btp": abtp, "sl": f"[{a.team_name}]({data['teamSubs'][a.team_tricode]})"}, {"t": h, "btp": hbtp, "sl": f"[{h.team_name}]({data['teamSubs'][h.team_tricode]})"}):
+% for info in ({"t": a, "btp": abtp, "sl": f"[{a.team_name}]({data['teamSubs'].get(a.team_tricode, '')})"}, {"t": h, "btp": hbtp, "sl": f"[{h.team_name}]({data['teamSubs'].get(h.team_tricode, '')})"}):
 %   if len(info["btp"]):
 |${info["sl"]}|MIN|PTS|FG|3P|FT|REB (O+D)|AST|STL|BLK|TO|PF|+/-|
 |:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|

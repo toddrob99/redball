@@ -3,8 +3,8 @@
     h = data["game"]["summary"].box_score_summary.home_team
     headerLine = "||"
     alignmentLine = "|:--|"
-    awayLine = f'|[{a.team_name}]({data["teamSubs"][a.team_tricode]})|'
-    homeLine = f'|[{h.team_name}]({data["teamSubs"][h.team_tricode]})|'
+    awayLine = f'|[{a.team_name}]({data["teamSubs"].get(a.team_tricode, "")})|'
+    homeLine = f'|[{h.team_name}]({data["teamSubs"].get(h.team_tricode, "")})|'
     for i in range(0, len(a.periods)):
         a_p = a.periods[i]
         h_p = h.periods[i]
