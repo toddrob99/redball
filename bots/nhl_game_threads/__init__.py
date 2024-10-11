@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "2.0.12"
+__version__ = "2.0.13"
 
 DATA_LOCK = threading.Lock()
 
@@ -220,7 +220,8 @@ class Bot(object):
             self.otherDivisionTeams = [
                 t
                 for t in self.allTeams
-                if t["isNhl"] and t["divisionAbbrev"] == self.myTeam["divisionAbbrev"]
+                if t.get("isNhl")
+                and t.get("divisionAbbrev") == self.myTeam["divisionAbbrev"]
             ]
             self.otherDivisionTeamIds = [t["id"] for t in self.otherDivisionTeams]
             self.otherDivisionTeamAbbrevs = [
