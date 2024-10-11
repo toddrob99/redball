@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "2.0.13"
+__version__ = "2.0.14"
 
 DATA_LOCK = threading.Lock()
 
@@ -2710,6 +2710,7 @@ class Bot(object):
         "VGK": "/r/goldenknights",
         "WPG": "/r/winnipegjets",
         "WSH": "/r/caps",
+        "UTA": "/r/utah_hockey",
     }
 
     teamSubsById = {
@@ -2745,6 +2746,7 @@ class Bot(object):
         53: "/r/coyotes",
         54: "/r/goldenknights",
         55: "/r/seattlekraken",
+        59: "/r/utah_hockey",
     }
 
     def bot_state(self):

@@ -445,4 +445,12 @@ upgradeScripts = {
             time.time()
         ),
     ],
+    14: [
+        # Update Arizona Coyotes id=53 to Utah Hockey Club id=59 in NHL Game Thread bot settings
+        """UPDATE rb_botConfig set val=REPLACE(val, 'Arizona Coyotes|53', 'Utah Hockey Club|59'), options=REPLACE(options, 'Arizona Coyotes|53', 'Utah Hockey Club|59') WHERE category='NHL' and key='TEAM';""",
+        # Update DB version to 14
+        "UPDATE rb_meta SET val='14', lastUpdate='{}' WHERE key='dbVersion';".format(
+            time.time()
+        ),
+    ],
 }
