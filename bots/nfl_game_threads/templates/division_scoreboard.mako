@@ -32,6 +32,8 @@ ${'##'} Division Scoreboard
     toTz = pytz.timezone(settings.get("Bot", {}).get("TEAM_TIMEZONE", "America/New_York"))
     formattedGameTime = dt.astimezone(toTz).strftime("%I:%M %p")
     gd = data["otherTodayGamesDetails"].get(game["id"], {})
+    if not gd.get("visitorTeam") or not gd.get("homeTeam"):
+        continue
 %>\
 |${qtrDesc[gd["period"]] if gd.get("period") else ""} ${gd["gameClock"] if gd.get("phase") == "INGAME" else gameStatusDesc[gd["phase"]] if gd.get("phase") != "PREGAME" else formattedGameTime}||
 |:--|:--|
