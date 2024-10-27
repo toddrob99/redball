@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "2.0.14"
+__version__ = "2.1"
 
 DATA_LOCK = threading.Lock()
 
@@ -283,6 +283,7 @@ class Bot(object):
                 self.log.info("IT'S GAME DAY!")
                 self.log.debug(f"Gathering initial data for gamePk [{gamePk}]...")
                 game = self.nhl.game(gamePk)
+                game_right_rail = self.nhl.game_right_rail(gamePk)
                 homeAway = (
                     "home"
                     if game["homeTeam"]["id"] == self.myTeam["id"]
@@ -347,6 +348,7 @@ class Bot(object):
                             "myTeam": gameTime,
                         },
                         "game": game,
+                        "game_right_rail": game_right_rail,
                         "game_boxscore": game_boxscore,
                         "game_pbp": game_pbp,
                         "standings": standings,
@@ -1685,6 +1687,7 @@ class Bot(object):
             ]
             self.log.debug(f"Gathering data for gamePk [{self.allData['gamePk']}]...")
             game = self.nhl.game(self.allData["gamePk"])
+            game_right_rail = self.nhl.game_right_rail(self.allData["gamePk"])
             homeAway = (
                 "home"
                 if game["homeTeam"]["id"] == self.myTeam["id"]
@@ -1749,6 +1752,7 @@ class Bot(object):
                         "myTeam": gameTime,
                     },
                     "game": game,
+                    "game_right_rail": game_right_rail,
                     "game_boxscore": game_boxscore,
                     "game_pbp": game_pbp,
                     "todayOtherGames": todayOtherGames,

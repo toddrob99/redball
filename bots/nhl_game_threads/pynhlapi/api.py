@@ -18,6 +18,13 @@ class API:
         if json:
             return json
 
+    def game_right_rail(self, game_pk, **kwargs):
+        url = f"{constants.RIGHT_RAIL_ENDPOINT.format(game_pk=game_pk)}"
+        url = self.add_kwargs_to_url(url, kwargs)
+        json = self.get_json(url)
+        if json:
+            return json
+
     def game_boxscore(self, game_pk, **kwargs):
         url = f"{constants.GAME_BOXSCORE_ENDPOINT.format(game_pk=game_pk)}"
         url = self.add_kwargs_to_url(url, kwargs)
