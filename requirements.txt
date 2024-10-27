@@ -3,7 +3,7 @@ requests
 apscheduler
 pytz
 tzlocal<3
-praw
+praw<=7.7.1
 mlb-statsapi
 pyOpenSSL
 mako
