@@ -55,52 +55,52 @@ ${data["oppTeam"]["commonName"]["default"]}
 %   endif
 %endif
 
-% if data["game_boxscore"].get("gameVideo", {}).get("threeMinRecap") or data["game_boxscore"].get("gameVideo", {}).get("condensedGame") or data["game_boxscore"].get("boxscore", {}).get("gameReports"):
+% if data["game_right_rail"].get("gameVideo", {}).get("threeMinRecap") or data["game_right_rail"].get("gameVideo", {}).get("condensedGame") or data["game_right_rail"].get("gameReports"):
 ${'##'} Game Videos/Summaries
-%   if data["game_boxscore"].get("gameVideo", {}).get("threeMinRecap"):
-* [Three Minute Recap Video](${highlight_url(data["game_boxscore"]["gameVideo"]["threeMinRecap"])})
+%   if data["game_right_rail"].get("gameVideo", {}).get("threeMinRecap"):
+* [Three Minute Recap Video](${highlight_url(data["game_right_rail"]["gameVideo"]["threeMinRecap"])})
 %   endif
-%   if data["game_boxscore"].get("gameVideo", {}).get("condensedGame"):
-* [Condensed Game Video](${highlight_url(data["game_boxscore"]["gameVideo"]["condensedGame"])})
+%   if data["game_right_rail"].get("gameVideo", {}).get("condensedGame"):
+* [Condensed Game Video](${highlight_url(data["game_right_rail"]["gameVideo"]["condensedGame"])})
 %   endif
-%   if data["game_boxscore"].get("boxscore", {}).get("gameReports"):
-%       if data["game_boxscore"]["boxscore"]["gameReports"].get("gameSummary"):
-* [Game Summary](${data["game_boxscore"]["boxscore"]["gameReports"]["gameSummary"]})
+%   if data["game_right_rail"].get("gameReports"):
+%       if data["game_right_rail"]["gameReports"].get("gameSummary"):
+* [Game Summary](${data["game_right_rail"]["gameReports"]["gameSummary"]})
 %       endif
-%       if data["game_boxscore"]["boxscore"]["gameReports"].get("eventSummary"):
-* [Event Summary](${data["game_boxscore"]["boxscore"]["gameReports"]["eventSummary"]})
+%       if data["game_right_rail"]["gameReports"].get("eventSummary"):
+* [Event Summary](${data["game_right_rail"]["gameReports"]["eventSummary"]})
 %       endif
-%       if data["game_boxscore"]["boxscore"]["gameReports"].get("playByPlay"):
-* [Play by Play](${data["game_boxscore"]["boxscore"]["gameReports"]["playByPlay"]})
+%       if data["game_right_rail"]["gameReports"].get("playByPlay"):
+* [Play by Play](${data["game_right_rail"]["gameReports"]["playByPlay"]})
 %       endif
-%       if data["game_boxscore"]["boxscore"]["gameReports"].get("faceoffSummary") or data["game_boxscore"]["boxscore"]["gameReports"].get("faceoffComparison"):
+%       if data["game_right_rail"]["gameReports"].get("faceoffSummary") or data["game_right_rail"]["gameReports"].get("faceoffComparison"):
 * Face Off \
-%           if data["game_boxscore"]["boxscore"]["gameReports"].get("faceoffSummary"):
-[Summary](${data["game_boxscore"]["boxscore"]["gameReports"]["faceoffSummary"]}) \
+%           if data["game_right_rail"]["gameReports"].get("faceoffSummary"):
+[Summary](${data["game_right_rail"]["gameReports"]["faceoffSummary"]}) \
 %           endif
-%           if data["game_boxscore"]["boxscore"]["gameReports"].get("faceoffComparison"):
-[Comparison](${data["game_boxscore"]["boxscore"]["gameReports"]["faceoffComparison"]})
+%           if data["game_right_rail"]["gameReports"].get("faceoffComparison"):
+[Comparison](${data["game_right_rail"]["gameReports"]["faceoffComparison"]})
 %           endif
 %       endif
-##%       if data["game_boxscore"]["boxscore"]["gameReports"].get("rosters"):
-##* [Rosters](${data["game_boxscore"]["boxscore"]["gameReports"]["rosters"]})
-##%       endif
-%       if data["game_boxscore"]["boxscore"]["gameReports"].get("shotSummary"):
-* [Shot Summary](${data["game_boxscore"]["boxscore"]["gameReports"]["shotSummary"]})
+%       if data["game_right_rail"]["gameReports"].get("rosters"):
+* [Rosters](${data["game_right_rail"]["gameReports"]["rosters"]})
 %       endif
-%       if data["game_boxscore"]["boxscore"]["gameReports"].get("shootoutSummary"):
-* [Shootout Summary](${data["game_boxscore"]["boxscore"]["gameReports"]["shootoutSummary"]})
+%       if data["game_right_rail"]["gameReports"].get("shotSummary"):
+* [Shot Summary](${data["game_right_rail"]["gameReports"]["shotSummary"]})
 %       endif
-%       if data["game_boxscore"]["boxscore"]["gameReports"].get("shiftChart"):
-* [Shift Chart](${data["game_boxscore"]["boxscore"]["gameReports"]["shiftChart"]})
+%       if data["game_right_rail"]["gameReports"].get("shootoutSummary"):
+* [Shootout Summary](${data["game_right_rail"]["gameReports"]["shootoutSummary"]})
 %       endif
-%       if data["game_boxscore"]["boxscore"]["gameReports"].get("toiAway") or data["game_boxscore"]["boxscore"]["gameReports"].get("toiHome"):
+%       if data["game_right_rail"]["gameReports"].get("shiftChart"):
+* [Shift Chart](${data["game_right_rail"]["gameReports"]["shiftChart"]})
+%       endif
+%       if data["game_right_rail"]["gameReports"].get("toiAway") or data["game_right_rail"]["gameReports"].get("toiHome"):
 * TOI Report: \
-%           if data["game_boxscore"]["boxscore"]["gameReports"].get("toiAway"):
-[${awayTeam["commonName"]["default"]}](${data["game_boxscore"]["boxscore"]["gameReports"]["toiAway"]}) \
+%           if data["game_right_rail"]["gameReports"].get("toiAway"):
+[${awayTeam["commonName"]["default"]}](${data["game_right_rail"]["gameReports"]["toiAway"]}) \
 %           endif
-%           if data["game_boxscore"]["boxscore"]["gameReports"].get("toiHome"):
-[${homeTeam["commonName"]["default"]}](${data["game_boxscore"]["boxscore"]["gameReports"]["toiHome"]})
+%           if data["game_right_rail"]["gameReports"].get("toiHome"):
+[${homeTeam["commonName"]["default"]}](${data["game_right_rail"]["gameReports"]["toiHome"]})
 %           endif
 %       endif
 %   endif

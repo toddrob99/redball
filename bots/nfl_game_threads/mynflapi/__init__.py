@@ -265,6 +265,9 @@ class APISession(object):
         )
 
     def team_roster(self, propertyId, query=None):
+        return {"data": {"viewer": {"clubs": {"currentClubRoster": {}}}}}
+
+    def team_roster_shield(self, propertyId, query=None):
         if not query:
             query = QUERIES["shield"]["teamRoster"].format(param_propertyId=propertyId)
         return self.api_call(

@@ -3,11 +3,15 @@
     awayScratches = data["game"].get("matchup", {}).get("gameInfo", {}).get("awayTeam", {}).get("scratches", None)
     if not awayScratches:
         awayScratches = data["game"].get("summary", {}).get("gameInfo", {}).get("awayTeam", {}).get("scratches", None)
+    if not awayScratches:
+        awayScratches = data["game_right_rail"].get("gameInfo", {}).get("awayTeam", {}).get("scratches", None)
     if awayScratches is None:
         awayScratches = []
     homeScratches = data["game"].get("matchup", {}).get("gameInfo", {}).get("homeTeam", {}).get("scratches", None)
     if not homeScratches:
         homeScratches = data["game"].get("summary", {}).get("gameInfo", {}).get("homeTeam", {}).get("scratches", None)
+    if not homeScratches:
+        homeScratches = data["game_right_rail"].get("gameInfo", {}).get("homeTeam", {}).get("scratches", None)
     if homeScratches is None:
         homeScratches = []
     

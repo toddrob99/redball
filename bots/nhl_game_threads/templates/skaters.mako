@@ -8,19 +8,19 @@
         data["myTeam"] if data["homeAway"] == "home"
         else data["oppTeam"]
     )
-    awayF = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("awayTeam", {}).get("forwards", [])
+    awayF = data["game_boxscore"].get("playerByGameStats", {}).get("awayTeam", {}).get("forwards", [])
     awayL = [x for x in awayF if x["position"] == "L"]
     awayC = [x for x in awayF if x["position"] == "C"]
     awayR = [x for x in awayF if x["position"] == "R"]
-    awayD = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("awayTeam", {}).get("defense", [])
-    awayG = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("awayTeam", {}).get("goalies", [])
+    awayD = data["game_boxscore"].get("playerByGameStats", {}).get("awayTeam", {}).get("defense", [])
+    awayG = data["game_boxscore"].get("playerByGameStats", {}).get("awayTeam", {}).get("goalies", [])
     awayOnIce = data["game_pbp"].get("awayTeam", {}).get("onIce", [])
-    homeF = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("homeTeam", {}).get("forwards", [])
+    homeF = data["game_boxscore"].get("playerByGameStats", {}).get("homeTeam", {}).get("forwards", [])
     homeL = [x for x in homeF if x["position"] == "L"]
     homeC = [x for x in homeF if x["position"] == "C"]
     homeR = [x for x in homeF if x["position"] == "R"]
-    homeD = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("homeTeam", {}).get("defense", [])
-    homeG = data["game_boxscore"].get("boxscore", {}).get("playerByGameStats", {}).get("homeTeam", {}).get("goalies", [])
+    homeD = data["game_boxscore"].get("playerByGameStats", {}).get("homeTeam", {}).get("defense", [])
+    homeG = data["game_boxscore"].get("playerByGameStats", {}).get("homeTeam", {}).get("goalies", [])
     homeOnIce = data["game_pbp"].get("homeTeam", {}).get("onIce", [])
     def playerLink(p):
         return f"[{p['name']['default']}](https://www.nhl.com/player/{p['playerId']})"

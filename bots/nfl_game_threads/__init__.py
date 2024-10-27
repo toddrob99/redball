@@ -32,7 +32,7 @@ import twitter
 
 import praw
 
-__version__ = "2.4.1"
+__version__ = "2.4.2"
 
 DATA_LOCK = threading.Lock()
 
@@ -99,9 +99,11 @@ class Bot(object):
                 self.log.debug(f"Could not shut down scheduler because: {e}")
 
         self.bot.SCHEDULER = BackgroundScheduler(
-            timezone=tzlocal.get_localzone()
-            if str(tzlocal.get_localzone()) != "local"
-            else "America/New_York"
+            timezone=(
+                tzlocal.get_localzone()
+                if str(tzlocal.get_localzone()) != "local"
+                else "America/New_York"
+            )
         )
         self.bot.SCHEDULER.start()
 
@@ -334,11 +336,12 @@ class Bot(object):
 
             isCanceled = False
             if myTeamTodayGameId:
+                gameInsights = None  # TODO: Need data source
                 # Get game insights now so we can check for cancelation headlines
-                gameInsights = self.nfl.gameInsights(gameId=myTeamTodayGameId)["data"][
-                    "viewer"
-                ]["gameInsight"]["insightsByGames"]
-                isCanceled = self.isGameCanceled(gameInsights)
+                # gameInsights = self.nfl.gameInsights(gameId=myTeamTodayGameId)["data"][
+                #     "viewer"
+                # ]["gameInsight"]["insightsByGames"]
+                # isCanceled = self.isGameCanceled(gameInsights)
 
             if not myTeamTodayGameId or (myTeamTodayGameId and isCanceled):
                 # It's not a game day
@@ -362,9 +365,12 @@ class Bot(object):
                 homeAway = (
                     "home"
                     if todayGames[myGameIndex]["homeTeam"]["id"] == self.myTeam["id"]
-                    else "away"
-                    if todayGames[myGameIndex]["awayTeam"]["id"] == self.myTeam["id"]
-                    else None
+                    else (
+                        "away"
+                        if todayGames[myGameIndex]["awayTeam"]["id"]
+                        == self.myTeam["id"]
+                        else None
+                    )
                 )
                 self.log.debug(f"My team is [{homeAway}] (homeAway)")
                 oppTeam = todayGames[myGameIndex][
@@ -872,9 +878,11 @@ class Bot(object):
                     {
                         "text": tailgateThreadText,
                         "thread": tailgateThread,
-                        "title": tailgateThread.title
-                        if tailgateThread not in [None, False]
-                        else None,
+                        "title": (
+                            tailgateThread.title
+                            if tailgateThread not in [None, False]
+                            else None
+                        ),
                     }
                 )
                 # Only sticky when posting the thread
@@ -901,9 +909,11 @@ class Bot(object):
                 {
                     "text": tailgateThreadText,
                     "thread": tailgateThread,
-                    "title": tailgateThread.title
-                    if tailgateThread not in [None, False]
-                    else None,
+                    "title": (
+                        tailgateThread.title
+                        if tailgateThread not in [None, False]
+                        else None
+                    ),
                 }
             )
             skipFlag = True
@@ -1132,9 +1142,11 @@ class Bot(object):
                     {
                         "thread": gameThread,
                         "text": gameThreadText,
-                        "title": gameThread.title
-                        if gameThread not in [None, False]
-                        else None,
+                        "title": (
+                            gameThread.title
+                            if gameThread not in [None, False]
+                            else None
+                        ),
                     }
                 )
                 # Only sticky when posting the thread
@@ -1295,9 +1307,11 @@ class Bot(object):
                     {
                         "thread": gameThread,
                         "text": gameThreadText,
-                        "title": gameThread.title
-                        if gameThread not in [None, False]
-                        else None,
+                        "title": (
+                            gameThread.title
+                            if gameThread not in [None, False]
+                            else None
+                        ),
                     }
                 )
 
@@ -1335,16 +1349,15 @@ class Bot(object):
                 if text != self.threadCache["game"].get("text") and text != "":
                     self.threadCache["game"].update({"text": text})
                     # Add last updated timestamp
-                    text += (
-                        """
+                    text += """
 
-^^^Last ^^^Updated: ^^^"""
-                        + self.convert_timezone(
-                            datetime.utcnow(),
-                            self.settings.get("Bot", {}).get(
-                                "TEAM_TIMEZONE", "America/New_York"
-                            ),
-                        ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
+^^^Last ^^^Updated: ^^^""" + self.convert_timezone(
+                        datetime.utcnow(),
+                        self.settings.get("Bot", {}).get(
+                            "TEAM_TIMEZONE", "America/New_York"
+                        ),
+                    ).strftime(
+                        "%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z"
                     )
                     self.threadCache["game"]["thread"].edit(text)
                     self.log.info("Edits submitted for game thread.")
@@ -1634,9 +1647,11 @@ class Bot(object):
                     {
                         "thread": postGameThread,
                         "text": postGameThreadText,
-                        "title": postGameThread.title
-                        if postGameThread not in [None, False]
-                        else None,
+                        "title": (
+                            postGameThread.title
+                            if postGameThread not in [None, False]
+                            else None
+                        ),
                     }
                 )
                 # Only sticky when posting the thread
@@ -1660,9 +1675,11 @@ class Bot(object):
                 {
                     "thread": postGameThread,
                     "text": postGameThreadText,
-                    "title": postGameThread.title
-                    if postGameThread not in [None, False]
-                    else None,
+                    "title": (
+                        postGameThread.title
+                        if postGameThread not in [None, False]
+                        else None
+                    ),
                 }
             )
             if not postGameThread:
@@ -1692,16 +1709,15 @@ class Bot(object):
                     self.log.debug(f"Rendered post game thread text: {text}")
                     if text != self.threadCache["post"]["text"] and text != "":
                         self.threadCache["post"]["text"] = text
-                        text += (
-                            """
+                        text += """
 
-^^^Last ^^^Updated: ^^^"""
-                            + self.convert_timezone(
-                                datetime.utcnow(),
-                                self.settings.get("Bot", {}).get(
-                                    "TEAM_TIMEZONE", "America/New_York"
-                                ),
-                            ).strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
+^^^Last ^^^Updated: ^^^""" + self.convert_timezone(
+                            datetime.utcnow(),
+                            self.settings.get("Bot", {}).get(
+                                "TEAM_TIMEZONE", "America/New_York"
+                            ),
+                        ).strftime(
+                            "%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z"
                         )
                         self.threadCache["post"]["thread"].edit(text)
                         self.log.info("Post game thread edits submitted.")
@@ -1936,9 +1952,10 @@ class Bot(object):
                     "otherTodayGamesDetails": otherTodayGamesDetails,
                 }
             )
-            gameInsights = self.nfl.gameInsights(gameId=self.allData["gameId"])["data"][
-                "viewer"
-            ]["gameInsight"]["insightsByGames"]
+            # gameInsights = self.nfl.gameInsights(gameId=self.allData["gameId"])["data"][
+            #    "viewer"
+            # ]["gameInsight"]["insightsByGames"]
+            gameInsights = None
             gameTime = next(
                 (
                     self.convert_timezone(  # Convert Zulu to my team TZ
@@ -2156,40 +2173,60 @@ class Bot(object):
         flair = (
             self.settings.get("Tailgate Thread", {}).get("FLAIR", "")
             if thread == "tailgate"
-            else self.settings.get("Game Thread", {}).get("FLAIR", "")
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get("FLAIR", "")
-            if thread == "post"
-            else ""
+            else (
+                self.settings.get("Game Thread", {}).get("FLAIR", "")
+                if thread == "game"
+                else (
+                    self.settings.get("Post Game Thread", {}).get("FLAIR", "")
+                    if thread == "post"
+                    else ""
+                )
+            )
         )
         sort = (
             self.settings.get("Tailgate Thread", {}).get("SUGGESTED_SORT", "new")
             if thread == "tailgate"
-            else self.settings.get("Game Thread", {}).get("SUGGESTED_SORT", "new")
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get("SUGGESTED_SORT", "new")
-            if thread == "post"
-            else "new"
+            else (
+                self.settings.get("Game Thread", {}).get("SUGGESTED_SORT", "new")
+                if thread == "game"
+                else (
+                    self.settings.get("Post Game Thread", {}).get(
+                        "SUGGESTED_SORT", "new"
+                    )
+                    if thread == "post"
+                    else "new"
+                )
+            )
         )
         liveDiscussion = (
             self.settings.get("Tailgate Thread", {}).get("LIVE_DISCUSSION", False)
             if thread == "tailgate"
-            else self.settings.get("Game Thread", {}).get("LIVE_DISCUSSION", False)
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get("LIVE_DISCUSSION", False)
-            if thread == "post"
-            else False
+            else (
+                self.settings.get("Game Thread", {}).get("LIVE_DISCUSSION", False)
+                if thread == "game"
+                else (
+                    self.settings.get("Post Game Thread", {}).get(
+                        "LIVE_DISCUSSION", False
+                    )
+                    if thread == "post"
+                    else False
+                )
+            )
         )
         lockPrevious = (
             False
             if thread == "tailgate"
-            else self.settings.get("Game Thread", {}).get("LOCK_TAILGATE_THREAD", False)
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get(
-                "LOCK_GAME_THREAD", False
+            else (
+                self.settings.get("Game Thread", {}).get("LOCK_TAILGATE_THREAD", False)
+                if thread == "game"
+                else (
+                    self.settings.get("Post Game Thread", {}).get(
+                        "LOCK_GAME_THREAD", False
+                    )
+                    if thread == "post"
+                    else False
+                )
             )
-            if thread == "post"
-            else False
         )
         restrictSelfPosts = (
             False
@@ -2285,15 +2322,19 @@ class Bot(object):
                         "WEBHOOK{}_URL".format(s)
                     )
                     if thread == "tailgate"
-                    else self.settings.get("Game Thread", {}).get(
-                        "WEBHOOK{}_URL".format(s)
+                    else (
+                        self.settings.get("Game Thread", {}).get(
+                            "WEBHOOK{}_URL".format(s)
+                        )
+                        if thread == "game"
+                        else (
+                            self.settings.get("Post Game Thread", {}).get(
+                                "WEBHOOK{}_URL".format(s)
+                            )
+                            if thread == "post"
+                            else None
+                        )
                     )
-                    if thread == "game"
-                    else self.settings.get("Post Game Thread", {}).get(
-                        "WEBHOOK{}_URL".format(s)
-                    )
-                    if thread == "post"
-                    else None
                 )
                 if webhook_url:
                     self.log.debug(
@@ -2316,9 +2357,11 @@ class Bot(object):
                         self.log.info(
                             "Webhook [{}] result: {}.".format(
                                 webhook_url,
-                                webhook_result
-                                if isinstance(webhook_result, str)
-                                else "success",
+                                (
+                                    webhook_result
+                                    if isinstance(webhook_result, str)
+                                    else "success"
+                                ),
                             )
                         )
                 else:
@@ -2383,18 +2426,22 @@ class Bot(object):
                 if threadToLock := (
                     self.threadCache["tailgate"].get("thread")
                     if thread == "game"
-                    else self.threadCache["game"].get("thread")
-                    if thread == "post"
-                    else None
+                    else (
+                        self.threadCache["game"].get("thread")
+                        if thread == "post"
+                        else None
+                    )
                 ):
                     commentText = (
                         self.settings.get("Game Thread", {}).get("LOCK_MESSAGE", None)
                         if thread == "game"
-                        else self.settings.get("Post Game Thread", {}).get(
-                            "LOCK_MESSAGE", None
+                        else (
+                            self.settings.get("Post Game Thread", {}).get(
+                                "LOCK_MESSAGE", None
+                            )
+                            if thread == "post"
+                            else None
                         )
-                        if thread == "post"
-                        else None
                     )
                     if not commentText:
                         commentText = f"This thread has been locked. Please continue the discussion in the [{'game' if thread == 'game' else 'post game' if thread == 'post' else 'new'} thread](link)."
@@ -2616,11 +2663,15 @@ class Bot(object):
         templateFilename = (
             self.settings.get("Tailgate Thread", {}).get(setting, "")
             if thread == "tailgate"
-            else self.settings.get("Game Thread", {}).get(setting, "")
-            if thread == "game"
-            else self.settings.get("Post Game Thread", {}).get(setting, "")
-            if thread == "post"
-            else ""
+            else (
+                self.settings.get("Game Thread", {}).get(setting, "")
+                if thread == "game"
+                else (
+                    self.settings.get("Post Game Thread", {}).get(setting, "")
+                    if thread == "post"
+                    else ""
+                )
+            )
         )
         self.log.debug(f"templateFilename: {templateFilename}")
         try:
@@ -2947,78 +2998,107 @@ class Bot(object):
                     "enabled": self.settings.get("Tailgate Thread", {}).get(
                         "ENABLED", True
                     ),
-                    "postTime": self.threadCache.get("tailgate", {})
-                    .get("postTime_local")
-                    .strftime("%m/%d/%Y %I:%M:%S %p")
-                    if isinstance(
-                        self.threadCache.get("tailgate", {}).get("postTime_local"),
-                        datetime,
-                    )
-                    else "",
-                    "posted": True
-                    if self.threadCache.get("tailgate", {}).get("thread")
-                    else False,
-                    "id": self.threadCache.get("tailgate", {}).get("thread").id
-                    if self.threadCache.get("tailgate", {}).get("thread")
-                    else None,
-                    "url": self.threadCache.get("tailgate", {}).get("thread").shortlink
-                    if self.threadCache.get("tailgate", {}).get("thread")
-                    else None,
-                    "title": self.threadCache.get("tailgate", {}).get("title")
-                    if self.threadCache.get("tailgate", {}).get("thread")
-                    else None,
+                    "postTime": (
+                        self.threadCache.get("tailgate", {})
+                        .get("postTime_local")
+                        .strftime("%m/%d/%Y %I:%M:%S %p")
+                        if isinstance(
+                            self.threadCache.get("tailgate", {}).get("postTime_local"),
+                            datetime,
+                        )
+                        else ""
+                    ),
+                    "posted": (
+                        True
+                        if self.threadCache.get("tailgate", {}).get("thread")
+                        else False
+                    ),
+                    "id": (
+                        self.threadCache.get("tailgate", {}).get("thread").id
+                        if self.threadCache.get("tailgate", {}).get("thread")
+                        else None
+                    ),
+                    "url": (
+                        self.threadCache.get("tailgate", {}).get("thread").shortlink
+                        if self.threadCache.get("tailgate", {}).get("thread")
+                        else None
+                    ),
+                    "title": (
+                        self.threadCache.get("tailgate", {}).get("title")
+                        if self.threadCache.get("tailgate", {}).get("thread")
+                        else None
+                    ),
                 },
                 "game": {
                     "gameId": self.allData.get("gameId"),
                     "status": self.allData.get("gameDetails", {}).get("phase"),
                     "oppTeam": deepcopy(self.allData.get("oppTeam")),
                     "homeAway": self.allData.get("homeAway"),
-                    "gameTime": self.allData["gameTime"]["myTeam"].strftime(
-                        "%I:%M %p %Z"
-                    )
-                    if self.allData.get("gameTime", {}).get("myTeam")
-                    else "Unknown game time",
+                    "gameTime": (
+                        self.allData["gameTime"]["myTeam"].strftime("%I:%M %p %Z")
+                        if self.allData.get("gameTime", {}).get("myTeam")
+                        else "Unknown game time"
+                    ),
                     "threads": {
                         "game": {
                             "enabled": self.settings.get("Game Thread", {}).get(
                                 "ENABLED", True
                             ),
-                            "postTime": self.threadCache["game"]
-                            .get("postTime_local")
-                            .strftime("%m/%d/%Y %I:%M:%S %p")
-                            if isinstance(
-                                self.threadCache["game"].get("postTime_local"), datetime
-                            )
-                            else "",
-                            "posted": True
-                            if self.threadCache["game"].get("thread")
-                            else False,
-                            "id": self.threadCache["game"].get("thread").id
-                            if self.threadCache["game"].get("thread")
-                            else None,
-                            "url": self.threadCache["game"].get("thread").shortlink
-                            if self.threadCache["game"].get("thread")
-                            else None,
-                            "title": self.threadCache["game"].get("title")
-                            if self.threadCache["game"].get("thread")
-                            else None,
+                            "postTime": (
+                                self.threadCache["game"]
+                                .get("postTime_local")
+                                .strftime("%m/%d/%Y %I:%M:%S %p")
+                                if isinstance(
+                                    self.threadCache["game"].get("postTime_local"),
+                                    datetime,
+                                )
+                                else ""
+                            ),
+                            "posted": (
+                                True
+                                if self.threadCache["game"].get("thread")
+                                else False
+                            ),
+                            "id": (
+                                self.threadCache["game"].get("thread").id
+                                if self.threadCache["game"].get("thread")
+                                else None
+                            ),
+                            "url": (
+                                self.threadCache["game"].get("thread").shortlink
+                                if self.threadCache["game"].get("thread")
+                                else None
+                            ),
+                            "title": (
+                                self.threadCache["game"].get("title")
+                                if self.threadCache["game"].get("thread")
+                                else None
+                            ),
                         },
                         "post": {
                             "enabled": self.settings.get("Post Game Thread", {}).get(
                                 "ENABLED", True
                             ),
-                            "posted": True
-                            if self.threadCache["post"].get("thread")
-                            else False,
-                            "id": self.threadCache["post"].get("thread").id
-                            if self.threadCache["post"].get("thread")
-                            else None,
-                            "url": self.threadCache["post"].get("thread").shortlink
-                            if self.threadCache["post"].get("thread")
-                            else None,
-                            "title": self.threadCache["post"].get("title")
-                            if self.threadCache["post"].get("thread")
-                            else None,
+                            "posted": (
+                                True
+                                if self.threadCache["post"].get("thread")
+                                else False
+                            ),
+                            "id": (
+                                self.threadCache["post"].get("thread").id
+                                if self.threadCache["post"].get("thread")
+                                else None
+                            ),
+                            "url": (
+                                self.threadCache["post"].get("thread").shortlink
+                                if self.threadCache["post"].get("thread")
+                                else None
+                            ),
+                            "title": (
+                                self.threadCache["post"].get("title")
+                                if self.threadCache["post"].get("thread")
+                                else None
+                            ),
                         },
                     },
                 },
@@ -3197,8 +3277,12 @@ class Bot(object):
             "Content-Type": "application/json",
         }
         body = {
-            "clientKey": self.settings.get("NFL", {}).get("NFL_API_CLIENT_KEY", "4cFUW6DmwJpzT9L7LrG3qRAcABG5s04g"),
-            "clientSecret": self.settings.get("NFL", {}).get("NFL_API_CLIENT_SECRET", "CZuvCL49d9OwfGsR"),
+            "clientKey": self.settings.get("NFL", {}).get(
+                "NFL_API_CLIENT_KEY", "4cFUW6DmwJpzT9L7LrG3qRAcABG5s04g"
+            ),
+            "clientSecret": self.settings.get("NFL", {}).get(
+                "NFL_API_CLIENT_SECRET", "CZuvCL49d9OwfGsR"
+            ),
             "deviceId": "",
             "deviceInfo": "",
             "networkType": "other",
@@ -3220,7 +3304,7 @@ class Bot(object):
 
     def checkNflToken(self, nfl):
         try:
-            nfl.currentWeek()
+            nfl.weekByDate(self.today["Y-m-d"])
         except requests.exceptions.HTTPError as e:
             if "401" in str(e):
                 self.log.warning(
