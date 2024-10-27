@@ -2,6 +2,7 @@
 
 import json
 import praw
+from praw.util.token_manager import BaseTokenManager
 from threading import Lock
 import uuid
 
@@ -714,7 +715,7 @@ def callBack_redditAuth(state, code):
         return False
 
 
-class RedditAuthDBTokenManager(praw.util.token_manager.BaseTokenManager):
+class RedditAuthDBTokenManager(BaseTokenManager):
     def __init__(self, redditAuthId):
         super().__init__()
         self._reddit_auth_id = redditAuthId
