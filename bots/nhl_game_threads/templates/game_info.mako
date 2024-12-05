@@ -23,7 +23,7 @@
 <%
     tv = ''
     flag = False
-    for info in [(nationalTv, "National"), (awayTv, data["game"]["awayTeam"]["name"]["default"]), (homeTv, data["game"]["homeTeam"]["name"]["default"])]:
+    for info in [(nationalTv, "National"), (awayTv, data["game"]["awayTeam"].get("name", data["game"]["awayTeam"]["commonName"])["default"]), (homeTv, data["game"]["homeTeam"].get("name", data["game"]["homeTeam"]["commonName"])["default"])]:
         if len(info[0]):
             if flag: tv += ', '
             flag = True
