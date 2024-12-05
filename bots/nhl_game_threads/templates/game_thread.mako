@@ -49,7 +49,7 @@ ${'##'} Game Status - \
 <%
     shootout_data = data["game_boxscore"].get("boxscore", {}).get("linescore", {}).get("shootout", {})
 %>
-Shootout! ${data["game"]["awayTeam"]["name"]["default"]}: ${shootout_data.get("awayConversions", 0)}/${shootout_data.get("awayAttempts", 0)}, ${data["game"]["homeTeam"]["name"]["default"]}: ${shootout_data.get("homeConversions", 0)}/${shootout_data.get("homeAttempts", 0)}
+Shootout! ${data["game"]["awayTeam"].get("name", data["game"]["awayTeam"]["commonName"])["default"]}: ${shootout_data.get("awayConversions", 0)}/${shootout_data.get("awayAttempts", 0)}, ${data["game"]["homeTeam"].get("name", data["game"]["homeTeam"]["commonName"])["default"]}: ${shootout_data.get("homeConversions", 0)}/${shootout_data.get("homeAttempts", 0)}
 %   elif data["game"].get("clock", {}).get("inIntermission"):
 Intermission
 %   else:
