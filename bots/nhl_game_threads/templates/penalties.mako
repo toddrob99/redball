@@ -23,11 +23,11 @@ ${'##'} Penalty Summary
 <%
     desc = (p.get("descKey", "").title() + " - ") if p.get("descKey") else ""
     if p.get("committedByPlayer"):
-        desc += f"Committed by {p['committedByPlayer']}. "
+        desc += f"Committed by {p['committedByPlayer'].get('default', p['committedByPlayer'])}. "
     if p.get("drawnBy"):
-        desc += f"Drawn by {p['drawnBy']}. "
+        desc += f"Drawn by {p['drawnBy'].get('default', p['drawnBy'])}. "
     if p.get("servedBy"):
-        desc += f"Served by {p['servedBy']}."
+        desc += f"Served by {p['servedBy'].get('default', p['servedBy'])}."
 %>\
 |${periodOrd[per.get("period", per.get("periodDescriptor", {}).get("number"))]}\
 ${(' ' + p.get('timeInPeriod')) if per.get('periodDescriptor', {}).get('periodType') != 'SO' else ''}|\

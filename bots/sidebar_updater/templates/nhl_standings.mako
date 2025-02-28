@@ -13,7 +13,7 @@ ${my_team["divisionName"]} Division Standings
 |:--|:--|:--|:--|:--|:--|
 % for x in myDivStandings:
 |${x["divisionSequence"]}|\
-[${next((t['commonName'] for t in all_teams if t['abbrev'] == x['teamAbbrev']['default']), x['teamAbbrev']['default'])}](${team_subs.get(x["teamAbbrev"]["default"], "")})|\
+[${next((t['commonName'].get("default", t['commonName']) for t in all_teams if t['abbrev'] == x['teamAbbrev']['default']), x['teamAbbrev']['default'])}](${team_subs.get(x["teamAbbrev"]["default"], "")})|\
 ${x["wins"]}|${x["losses"]}|${x["otLosses"]}|${x["points"]}|
 % endfor
 
