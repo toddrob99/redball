@@ -14,7 +14,7 @@ import praw
 import requests
 import sqlite3
 
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 
 tl = threading.local()
 
@@ -398,6 +398,12 @@ def getUrls(submission):
         )
         if canonical and canonical["href"] == "null":
             tl.log.debug("Canonical URL is the literal string `null`; ignoring...")
+            canonical = None
+        elif canonical and canonical["href"] == "undefined":
+            tl.log.debug("Canonical URL is the literal string `undefined`; ignoring...")
+            canonical = None
+        elif canonical and "http" not in canonical["href"]:
+            tl.log.debug("Canonical URL does not contain `http`; ignoring...")
             canonical = None
 
         redir = soup.find("meta", {"http-equiv": "refresh"})
