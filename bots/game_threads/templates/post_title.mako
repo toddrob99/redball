@@ -25,7 +25,7 @@ ${settings.get("Post Game Thread", {}).get("TITLE_PREFIX_TIE","")}The ${data[0][
 ${settings.get("Post Game Thread", {}).get("TITLE_PREFIX_HOME_WIN","")}The ${data[0]['myTeam']['teamName']} defeated the ${data[gamePk]['oppTeam']['teamName']} by a score of ${data[gamePk]['schedule']['teams'][data[gamePk]['homeAway']]['score']}-${data[gamePk]['schedule']['teams']['home' if data[gamePk]['homeAway']=='away' else 'away']['score']}\
 % else:
 ## Home Loss
-${settings.get("Post Game Thread", {}).get("TITLE_PREFIX_HOME_LOSS","")}The ${data[0]['myTeam']['teamName']} fell to the ${data[gamePk]['oppTeam']['teamName']} by a score of ${data[gamePk]['schedule']['teams']['home' if data[gamePk]['homeAway']=='away' else 'away']['score']}-${data[gamePk]['schedule']['teams'][data[gamePk]['homeAway']]['score']}\
+${settings.get("Post Game Thread", {}).get("TITLE_PREFIX_HOME_LOSS","")}The ${data[0]['myTeam']['teamName']} fall to the ${data[gamePk]['oppTeam']['teamName']} by a score of ${data[gamePk]['schedule']['teams']['home' if data[gamePk]['homeAway']=='away' else 'away']['score']}-${data[gamePk]['schedule']['teams'][data[gamePk]['homeAway']]['score']}\
 % endif
 % elif data[gamePk]['schedule']['teams']['away']['score'] > data[gamePk]['schedule']['teams']['home']['score']:
 ## Away Team Won
@@ -34,7 +34,7 @@ ${settings.get("Post Game Thread", {}).get("TITLE_PREFIX_HOME_LOSS","")}The ${da
 ${settings.get("Post Game Thread", {}).get("TITLE_PREFIX_ROAD_WIN","")}The ${data[0]['myTeam']['teamName']} defeated the ${data[gamePk]['oppTeam']['teamName']} by a score of ${data[gamePk]['schedule']['teams'][data[gamePk]['homeAway']]['score']}-${data[gamePk]['schedule']['teams']['home' if data[gamePk]['homeAway']=='away' else 'away']['score']}\
 % else:
 ## Road Loss
-${settings.get("Post Game Thread", {}).get("TITLE_PREFIX_ROAD_LOSS","")}The ${data[0]['myTeam']['teamName']} fell to the ${data[gamePk]['oppTeam']['teamName']} by a score of ${data[gamePk]['schedule']['teams']['home' if data[gamePk]['homeAway']=='away' else 'away']['score']}-${data[gamePk]['schedule']['teams'][data[gamePk]['homeAway']]['score']}\
+${settings.get("Post Game Thread", {}).get("TITLE_PREFIX_ROAD_LOSS","")}The ${data[0]['myTeam']['teamName']} fall to the ${data[gamePk]['oppTeam']['teamName']} by a score of ${data[gamePk]['schedule']['teams']['home' if data[gamePk]['homeAway']=='away' else 'away']['score']}-${data[gamePk]['schedule']['teams'][data[gamePk]['homeAway']]['score']}\
 % endif
 % else:
 ## Unknown game state, use generic <TeamName> Post Game Thread title
