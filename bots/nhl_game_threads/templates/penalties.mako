@@ -14,6 +14,13 @@
     ordDict = {1:{1:'1st',2:'2nd',3:'3rd',4:'OT',5:'SO'},2:{1:'1st',2:'2nd',3:'3rd',4:'OT',5:'SO'},3:{1:'1st',2:'2nd',3:'3rd',4:'OT1',5:'OT2',6:'OT3',7:'OT4',8:'OT5'}}
     periodOrd = ordDict[data["game"]["gameType"]]
     sevs = {"MIN": "Minor", "MAJ": "Major", "BEN": "Bench", "GAM": "Game Misconduct"}
+    def formatted_player_name(p):
+        if isinstance(p, str):
+            return p
+        n = p.get("firstName", {}).get("default", "") + " " + p.get("lastName", {}).get("default", "")
+        if n == " ":
+            n = p.get("default", "Unknown Player")
+        return n
 %>
 ${'##'} Penalty Summary
 |Per./Time|Team|Type|Description|
@@ -23,11 +30,11 @@ ${'##'} Penalty Summary
 <%
     desc = (p.get("descKey", "").title() + " - ") if p.get("descKey") else ""
     if p.get("committedByPlayer"):
-        desc += f"Committed by {p['committedByPlayer'].get('default', p['committedByPlayer'])}. "
+        desc += f"Committed by {formatted_player_name(p['committedByPlayer'].get('default', p['committedByPlayer']))}. "
     if p.get("drawnBy"):
-        desc += f"Drawn by {p['drawnBy'].get('default', p['drawnBy'])}. "
+        desc += f"Drawn by {formatted_player_name(p['drawnBy'].get('default', p['drawnBy']))}. "
     if p.get("servedBy"):
-        desc += f"Served by {p['servedBy'].get('default', p['servedBy'])}."
+        desc += f"Served by {formatted_player_name(p['servedBy'].get('default', p['servedBy']))}."
 %>\
 |${periodOrd[per.get("period", per.get("periodDescriptor", {}).get("number"))]}\
 ${(' ' + p.get('timeInPeriod')) if per.get('periodDescriptor', {}).get('periodType') != 'SO' else ''}|\
