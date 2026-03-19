@@ -489,12 +489,15 @@ class SidebarUpdaterBot:
                 if int(datetime.today().strftime("%m")) >= 8
                 else str(int(datetime.today().strftime("%Y")) - 1)
             )
+            self.log.debug(f"{season=}")
             all_teams = nba.all_teams(season)
+            self.log.debug(f"{all_teams=}")
             my_team = nba.team(int(self.settings["NBA"]["TEAM"].split("|")[1]))
             if self.settings.get("Old Reddit", {}).get(
                 "STANDINGS_ENABLED"
             ) or self.settings.get("New Reddit", {}).get("STANDINGS_ENABLED"):
                 standings = nba.standings(season=season)
+                self.log.debug(f"{standings=}")
             else:
                 standings = None
             team_subs = self.nba_team_subs

@@ -163,6 +163,8 @@ class API:
         url += f"&TeamID={team_id}" if team_id else ""
         url = self.add_kwargs_to_url(url, kwargs)
         logger.debug(f"Generated API URL: {url}")
+        logger.debug(f"Overwriting API URL: https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json")
+        url = "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json"
 
         return self.from_url(url, "ScheduleLeagueV2")
 

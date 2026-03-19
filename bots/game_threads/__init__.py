@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.5.5"
+__version__ = "1.5.6"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
@@ -4132,29 +4132,36 @@ class Bot(object):
                                         "fields": "dates,date,games,gamePk,gameDate,doubleHeader,gameNumber",
                                     },
                                 )
-                                schedGames = sched["dates"][
-                                    next(
-                                        (
-                                            i
-                                            for i, y in enumerate(sched["dates"])
-                                            if y["date"] == self.today["Y-m-d"]
-                                        ),
-                                        0,
+                                if len(sched.get("dates", [])) == 0:
+                                    self.log.debug(
+                                        f"No schedule data found for team id [{self.myTeam['id']}] and date [{self.today['Y-m-d']}]."
                                     )
-                                ]["games"]
-                                otherGame = next(
-                                    (
-                                        v
-                                        for v in schedGames
-                                        if v.get("gamePk") != x["gamePk"]
-                                        and v.get("doubleHeader") == "Y"
-                                        and v.get("gameNumber") == 1
-                                    ),
-                                    None,
-                                )
-                                self.log.debug(
-                                    f"Result of check for DH game 1 in MLB schedule data: {otherGame}"
-                                )
+                                    schedGames = []
+                                    otherGame = None
+                                else:
+                                    schedGames = sched["dates"][
+                                        next(
+                                            (
+                                                i
+                                                for i, y in enumerate(sched["dates"])
+                                                if y["date"] == self.today["Y-m-d"]
+                                            ),
+                                            0,
+                                        )
+                                    ]["games"]
+                                    otherGame = next(
+                                        (
+                                            v
+                                            for v in schedGames
+                                            if v.get("gamePk") != x["gamePk"]
+                                            and v.get("doubleHeader") == "Y"
+                                            and v.get("gameNumber") == 1
+                                        ),
+                                        None,
+                                    )
+                                    self.log.debug(
+                                        f"Result of check for DH game 1 in MLB schedule data: {otherGame}"
+                                    )
 
                             if otherGame:
                                 # Replace gameDate for straight doubleheader game 2 to reflect game 1 + 3 hours
