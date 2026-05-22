@@ -1,7 +1,7 @@
 <%page args="include_wc=False,wc_num=5" />
 ## Standings for myTeam's division only:
 |${data[0]['myTeam']['division']['abbreviation']} Rank|Team|W|L|GB (E#)|WC Rank|WC GB (E#)|
-|:--|:--|:--|:--|:--|:--|:--|:--|
+|:--|:--|:--|:--|:--|:--|:--|
 % for t in data[0]['standings'][data[0]['myTeam']['division']['id']]['teams']:
 % if t['team_id'] == data[0]['myTeam']['id']:
 |**${t['div_rank']}**|**[${t['name']}](${data[0]['teamSubs'][t['team_id']]})**|**${t['w']}**|**${t['l']}**|**${t['gb']} (${t['elim_num']})**|**${t['wc_rank']}**|**${t['wc_gb']} (${t['wc_elim_num']})**|
