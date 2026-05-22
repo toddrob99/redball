@@ -32,6 +32,8 @@
                 wideBattingBox += '|'
                 if awayBatters[i]['battingOrder'] != '' and awayBatters[i]['battingOrder'][-2:]=='00':
                     wideBattingBox += awayBatters[i]['battingOrder'][0]
+                else:
+                    wideBattingBox += '&nbsp;'
 
                 wideBattingBox += '|{namefield}|{ab}|{r}|{h}|{rbi}|{bb}|{k}|{lob}|{avg}|{ops}| |'.format(**awayBatters[i])
 
@@ -40,6 +42,8 @@
 
                 if homeBatters[i]['battingOrder'] != '' and homeBatters[i]['battingOrder'][-2:]=='00':
                     wideBattingBox += homeBatters[i]['battingOrder'][0]
+                else:
+                    wideBattingBox += '&nbsp;'
 
                 wideBattingBox += '|{namefield}|{ab}|{r}|{h}|{rbi}|{bb}|{k}|{lob}|{avg}|{ops}|\n'.format(**homeBatters[i])
                 if i==0:
@@ -149,7 +153,7 @@ ${widePitchingBox}
                     if awayBatters[i]['namefield'].find('Batters') == -1 and awayBatters[i]['namefield'] != 'Totals':
                         awayBatters[i].update({'namefield' : awayBatters[i]['note'] + playerLink(awayBatters[i]['name'],awayBatters[i]['personId']) + ' - ' + awayBatters[i]['position']})
 
-                    awayBattingBox += '|' + (awayBatters[i]['battingOrder'][0] if awayBatters[i]['battingOrder'] != '' and awayBatters[i]['battingOrder'][-2:]=='00' else '') + '|{namefield}|{ab}|{r}|{h}|{rbi}|{bb}|{k}|{lob}|{avg}|{obp}|{slg}|\n'.format(**awayBatters[i])
+                    awayBattingBox += '|' + (awayBatters[i]['battingOrder'][0] if awayBatters[i]['battingOrder'] != '' and awayBatters[i]['battingOrder'][-2:]=='00' else '&nbsp;') + '|{namefield}|{ab}|{r}|{h}|{rbi}|{bb}|{k}|{lob}|{avg}|{obp}|{slg}|\n'.format(**awayBatters[i])
                     if i==0:
                         awayBattingBox += '|:--'*12 + '|\n' # Left-align cols for away, plus separator
 
@@ -193,7 +197,7 @@ ${awayBattingBox}
                 if homeBatters[i]['namefield'].find('Batters') == -1 and homeBatters[i]['namefield'] != 'Totals':
                     homeBatters[i].update({'namefield' : homeBatters[i]['note'] + playerLink(homeBatters[i]['name'],homeBatters[i]['personId']) + ' - ' + homeBatters[i]['position']})
 
-                homeBattingBox += '|' + (homeBatters[i]['battingOrder'][0] if homeBatters[i]['battingOrder'] != '' and homeBatters[i]['battingOrder'][-2:]=='00' else '') + '|{namefield}|{ab}|{r}|{h}|{rbi}|{bb}|{k}|{lob}|{avg}|{obp}|{slg}|\n'.format(**homeBatters[i])
+                homeBattingBox += '|' + (homeBatters[i]['battingOrder'][0] if homeBatters[i]['battingOrder'] != '' and homeBatters[i]['battingOrder'][-2:]=='00' else '&nbsp;') + '|{namefield}|{ab}|{r}|{h}|{rbi}|{bb}|{k}|{lob}|{avg}|{obp}|{slg}|\n'.format(**homeBatters[i])
                 if i==0:
                     homeBattingBox += '|:--'*12 + '|\n' # Left-align cols for home, plus separator
 

@@ -17,7 +17,7 @@
             away.append(' ')
             home.append(' ')
 
-    header_row.extend(['','R','H','E','LOB'])
+    header_row.extend(['&nbsp;','R','H','E','LOB'])
     away.extend([
         '',
         str(data[gamePk]['schedule']['linescore']['teams']['away'].get('runs',0)),
@@ -33,13 +33,13 @@
         str(data[gamePk]['schedule']['linescore']['teams']['home'].get('leftOnBase',0))
     ])
 %>
-% for r in [['',header_row],[data[gamePk]['schedule']['teams']['away']['team']['teamName'],away],[data[gamePk]['schedule']['teams']['home']['team']['teamName'],home]]:
+% for r in [['&nbsp;',header_row],[data[gamePk]['schedule']['teams']['away']['team']['teamName'],away],[data[gamePk]['schedule']['teams']['home']['team']['teamName'],home]]:
 |${r[0]}|\
 % for ri in r[1]:
 ${ri}|\
 % endfor
 
-% if r[0]=='':
+% if r[0]=='&nbsp;':
 |:--|\
 ${':--|'*len(r[1])}
 % endif

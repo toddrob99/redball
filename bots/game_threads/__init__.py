@@ -31,7 +31,7 @@ import twitter
 
 import praw
 
-__version__ = "1.5.7"
+__version__ = "1.5.8"
 
 GENERIC_DATA_LOCK = threading.Lock()
 GAME_DATA_LOCK = threading.Lock()
